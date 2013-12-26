@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.Contracts;
 using System.IO;
 
 namespace Evercoin.Streams
@@ -191,14 +190,6 @@ namespace Evercoin.Streams
         /// </returns>
         protected virtual int ReadInternal(byte[] buffer, int offset, int count)
         {
-            Contract.Requires<ArgumentNullException>(buffer != null, "buffer != null");
-            Contract.Requires<ArgumentOutOfRangeException>(offset >= 0, "offset >= 0");
-            Contract.Requires<ArgumentOutOfRangeException>(count >= 0, "count >= 0");
-            Contract.Requires<ArgumentOutOfRangeException>(count <= buffer.Length - offset, " count <= (buffer.Length - offset)");
-            Contract.Requires<NotSupportedException>(this.CanRead, "stream does not support reading.");
-            Contract.Requires<ObjectDisposedException>(!this.IsDisposed, "cannot read from a closed stream.");
-            Contract.Ensures(Contract.Result<int>() >= 0);
-            Contract.Ensures(Contract.Result<int>() <= count);
             throw new NotSupportedException();
         }
 
@@ -216,12 +207,6 @@ namespace Evercoin.Streams
         /// </param>
         protected virtual void WriteInternal(byte[] buffer, int offset, int count)
         {
-            Contract.Requires<ArgumentNullException>(buffer != null, "buffer != null");
-            Contract.Requires<ArgumentOutOfRangeException>(offset >= 0, "offset >= 0");
-            Contract.Requires<ArgumentOutOfRangeException>(count >= 0, "count >= 0");
-            Contract.Requires<ArgumentOutOfRangeException>(count <= buffer.Length - offset, "count <= (buffer.Length - offset)");
-            Contract.Requires<NotSupportedException>(this.CanWrite, "stream does not support writing.");
-            Contract.Requires<ObjectDisposedException>(!this.IsDisposed, "cannot write to a closed stream.");
             throw new NotSupportedException();
         }
 
@@ -249,10 +234,6 @@ namespace Evercoin.Streams
         /// </exception>
         protected void ThrowIfDisposed()
         {
-            Contract.Ensures(Contract.OldValue(this.CanRead) == this.CanRead);
-            Contract.Ensures(Contract.OldValue(this.CanWrite) == this.CanWrite);
-            Contract.Ensures(!this.IsDisposed);
-
             if (this.IsDisposed)
             {
                 throw new ObjectDisposedException(this.GetType().Name);
@@ -267,10 +248,6 @@ namespace Evercoin.Streams
         /// </exception>
         protected void ThrowIfNotWritable()
         {
-            Contract.Ensures(Contract.OldValue(this.CanRead) == this.CanRead);
-            Contract.Ensures(Contract.OldValue(this.IsDisposed) == this.IsDisposed);
-            Contract.Ensures(this.CanWrite);
-
             if (!this.CanWrite)
             {
                 throw new NotSupportedException("Stream does not support writing.");
@@ -285,10 +262,6 @@ namespace Evercoin.Streams
         /// </exception>
         protected void ThrowIfNotReadable()
         {
-            Contract.Ensures(Contract.OldValue(this.CanWrite) == this.CanWrite);
-            Contract.Ensures(Contract.OldValue(this.IsDisposed) == this.IsDisposed);
-            Contract.Ensures(this.CanRead);
-
             if (!this.CanRead)
             {
                 throw new NotSupportedException("Stream does not support reading.");

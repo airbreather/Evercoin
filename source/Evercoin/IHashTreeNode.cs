@@ -15,7 +15,7 @@ namespace Evercoin
         /// <summary>
         /// Gets the <see cref="IHashTreeNode"/> children in order.
         /// </summary>
-        ICollection<IHashTreeNode> OrderedChildren { get; }
+        IEnumerable<IHashTreeNode> Children { get; }
 
         /// <summary>
         /// Calculates the hash of this <see cref="IHashTreeNode"/> using a given <see cref="IHashAlgorithm"/>.

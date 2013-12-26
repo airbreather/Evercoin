@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 
@@ -36,9 +35,11 @@ namespace Evercoin.Streams
         /// </param>
         public ConcatenatedStream(IReadOnlyCollection<Stream> streams)
         {
-            Contract.Requires<ArgumentNullException>(streams != null);
-            Contract.Ensures(this.streams != null);
-            Contract.Ensures(this.streamIndex == 0);
+            if (streams == null)
+            {
+                throw new ArgumentNullException("streams");
+            }
+
             this.streams = streams.ToList().AsReadOnly();
         }
 
@@ -47,7 +48,7 @@ namespace Evercoin.Streams
         /// </summary>
         public override bool CanRead
         {
-            get { return true; }
+            get { return !this.IsDisposed; }
         }
 
         /// <summary>
@@ -69,6 +70,7 @@ namespace Evercoin.Streams
         {
             int bytesRead = 0;
 
+            // Idea: keep going until we read the requested number of bytes?
             while (this.streamIndex < this.streams.Count)
             {
                 Stream currentStream = this.streams[this.streamIndex];
@@ -102,23 +104,13 @@ namespace Evercoin.Streams
             {
                 // I'm tempted to do each Dispose call in a try/catch, and throw an
                 // AggregateException at the end with all the individual exceptions.
-                foreach (Stream stream in this.streams)
+                foreach (Stream stream in this.streams.Where(stream => stream != null))
                 {
-                    if (stream != null)
-                    {
-                        stream.Dispose();
-                    }
+                    stream.Dispose();
                 }
             }
 
             base.Dispose(disposing);
-        }
-
-        [ContractInvariantMethod]
-        private void ContractInvariants()
-        {
-            Contract.Invariant(this.streams != null);
-            Contract.Invariant(this.streamIndex >= 0);
         }
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using NodaTime;
@@ -13,21 +14,24 @@ namespace Evercoin
     public interface IBlock
     {
         /// <summary>
-        /// Gets the <see cref="ITransaction"/> objects contained within this block.
+        /// Gets the ordered list of <see cref="ITransaction"/> objects
+        /// contained within this block.
         /// </summary>
-        ICollection<ITransaction> Transactions { get; }
+        IList<ITransaction> Transactions { get; }
 
         /// <summary>
-        /// The <see cref="IBlock"/> that this block builds upon.
+        /// Gets the <see cref="BlockVersion"/> of this block.
         /// </summary>
-        /// <remarks>
-        /// <c>null</c> if this is the genesis block.
-        /// </remarks>
-        IBlock PreviousBlock { get; }
+        BlockVersion Version { get; }
 
         /// <summary>
-        /// The <see cref="Instant"/> in time when this block was created.
+        /// Gets the <see cref="Instant"/> in time when this block was created.
         /// </summary>
         Instant Timestamp { get; }
+
+        /// <summary>
+        /// Gets the difficulty target being used for this block.
+        /// </summary>
+        BigInteger DifficultyTarget { get; }
     }
 }
