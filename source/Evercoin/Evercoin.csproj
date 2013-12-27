@@ -50,13 +50,11 @@
     <Compile Include="BlockVersion.cs" />
     <Compile Include="IBlock.cs" />
     <Compile Include="IBlockChainNode.cs" />
-    <Compile Include="IHashAlgorithm.cs" />
-    <Compile Include="IHashTreeNode.cs" />
-    <Compile Include="Streams\BaseStream.cs" />
-    <Compile Include="Streams\ConcatenatedStream.cs" />
+    <Compile Include="ICoinbaseValueSource.cs" />
     <Compile Include="ITransaction.cs" />
+    <Compile Include="ITransactionValueSource.cs" />
+    <Compile Include="IValueSource.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Streams\HashStream.cs" />
     <Compile Include="TransactionVersion.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -17,7 +17,7 @@ namespace Evercoin
         /// Gets the ordered list of <see cref="ITransaction"/> objects
         /// contained within this block.
         /// </summary>
-        IList<ITransaction> Transactions { get; }
+        IReadOnlyList<ITransaction> Transactions { get; }
 
         /// <summary>
         /// Gets the <see cref="BlockVersion"/> of this block.
@@ -33,5 +33,16 @@ namespace Evercoin
         /// Gets the difficulty target being used for this block.
         /// </summary>
         BigInteger DifficultyTarget { get; }
+
+        /// <summary>
+        /// Gets the nonce for this block.
+        /// </summary>
+        uint Nonce { get; }
+
+        /// <summary>
+        /// Gets the <see cref="IValueSource"/> that represents the reward
+        /// for mining this block.
+        /// </summary>
+        ICoinbaseValueSource Coinbase { get; }
     }
 }
