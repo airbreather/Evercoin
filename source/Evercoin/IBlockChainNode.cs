@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -12,31 +13,46 @@ namespace Evercoin
     public interface IBlockChainNode
     {
         /// <summary>
-        /// Gets how deep this block is in the chain.
+        /// Gets the difficulty target being used for this node.
+        /// </summary>
+        BigInteger DifficultyTarget { get; }
+
+        /// <summary>
+        /// Gets how high this node is in the chain.
         /// </summary>
         /// <remarks>
-        /// In other words, how many blocks come before this one.
-        /// So, the genesis block is at depth zero.
+        /// In other words, how many nodes come before this one.
+        /// So, the genesis block is at height zero.
         /// </remarks>
-        long Depth { get; }
+        ulong Height { get; }
 
         /// <summary>
-        /// Gets the current <see cref="IBlock"/> in the chain.
+        /// Gets how deep this node is in the chain.
         /// </summary>
-        IBlock CurrentBlock { get; }
+        /// <remarks>
+        /// In other words, how many nodes come after this one.
+        /// </remarks>
+        ulong Depth { get; }
 
         /// <summary>
-        /// Gets the previous <see cref="IBlock"/> in the chain.
+        /// Gets the <see cref="IBlock"/> for this node.
+        /// </summary>
+        IBlock Block { get; }
+
+        /// <summary>
+        /// Gets the previous node in the chain.
+        /// </summary>
+        /// <remarks>
+        /// When <see cref="Height"/> equals 0, the return value is undefined.
+        /// </remarks>
+        IBlockChainNode PreviousNode { get; }
+
+        /// <summary>
+        /// Gets the next node in the chain.
         /// </summary>
         /// <remarks>
         /// When <see cref="Depth"/> equals 0, the return value is undefined.
         /// </remarks>
-        IBlock PreviousBlock { get; }
-
-        /// <summary>
-        /// Gets the next <see cref="IBlock"/> in the chain,
-        /// or <c>null</c> if this is the tail of the chain.
-        /// </summary>
-        IBlock NextBlock { get; }
+        IBlockChainNode NextNode { get; }
     }
 }

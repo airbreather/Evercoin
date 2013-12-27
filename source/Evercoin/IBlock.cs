@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using NodaTime;
@@ -28,11 +27,6 @@ namespace Evercoin
         /// Gets the <see cref="Instant"/> in time when this block was created.
         /// </summary>
         Instant Timestamp { get; }
-
-        /// <summary>
-        /// Gets the difficulty target being used for this block.
-        /// </summary>
-        BigInteger DifficultyTarget { get; }
 
         /// <summary>
         /// Gets the nonce for this block.

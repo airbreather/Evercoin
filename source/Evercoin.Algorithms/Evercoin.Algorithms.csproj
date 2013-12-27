@@ -4,16 +4,14 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{C10F2413-4E30-421A-BCFF-2DD813239323}</ProjectGuid>
+    <ProjectGuid>{288AA9D9-4549-415B-87A6-6FF60010A156}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Evercoin</RootNamespace>
-    <AssemblyName>Evercoin</AssemblyName>
+    <RootNamespace>Evercoin.Algorithms</RootNamespace>
+    <AssemblyName>Evercoin.Algorithms</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
-    <CodeContractsAssemblyMode>1</CodeContractsAssemblyMode>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
-    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -23,7 +21,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\Evercoin.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\Evercoin.Algorithms.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -32,34 +30,36 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\Evercoin.XML</DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup>
-    <SignAssembly>true</SignAssembly>
+    <DocumentationFile>bin\Release\Evercoin.Algorithms.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="NodaTime">
-      <HintPath>..\packages\NodaTime.1.2.0\lib\net35-Client\NodaTime.dll</HintPath>
+    <Reference Include="BouncyCastle.Crypto">
+      <HintPath>..\packages\BouncyCastle.1.7.0\lib\Net40-Client\BouncyCastle.Crypto.dll</HintPath>
+    </Reference>
+    <Reference Include="CryptSharp">
+      <HintPath>..\packages\CryptSharp.1.2.0.1\lib\net35\CryptSharp.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="System.XML" />
+    <Reference Include="System.Security" />
+    <Reference Include="System.Xml.Linq" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="BlockVersion.cs" />
-    <Compile Include="IBlock.cs" />
-    <Compile Include="IBlockChainNode.cs" />
-    <Compile Include="ICoinbaseValueSource.cs" />
-    <Compile Include="INetworkParameters.cs" />
-    <Compile Include="IHashAlgorithm.cs" />
-    <Compile Include="IHashAlgorithmStore.cs" />
-    <Compile Include="ITransaction.cs" />
-    <Compile Include="ITransactionValueSource.cs" />
-    <Compile Include="IValueSource.cs" />
+    <Compile Include="BuiltinHashAlgorithmStore.cs" />
+    <Compile Include="DoubleSHA256HashAlgorithm.cs" />
+    <Compile Include="HashAlgorithmIdentifiers.cs" />
+    <Compile Include="LitecoinSCryptHashAlgorithm.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SecurityMechanism.cs" />
-    <Compile Include="TransactionVersion.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Evercoin\Evercoin.csproj">
+      <Project>{C10F2413-4E30-421A-BCFF-2DD813239323}</Project>
+      <Name>Evercoin</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
