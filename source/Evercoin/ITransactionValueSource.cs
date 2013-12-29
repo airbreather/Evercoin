@@ -13,6 +13,12 @@ namespace Evercoin
     public interface ITransactionValueSource : IValueSource
     {
         /// <summary>
+        /// Gets the <see cref="ITransaction"/> that contains this
+        /// as one of its outputs.
+        /// </summary>
+        ITransaction Transaction { get; }
+
+        /// <summary>
         /// The serialized script that dictates how the value
         /// from this source can be spent.
         /// </summary>
