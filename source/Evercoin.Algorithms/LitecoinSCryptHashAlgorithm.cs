@@ -12,7 +12,7 @@ namespace Evercoin.Algorithms
     /// An <see cref="IHashAlgorithm"/> that's implemented by running SCrypt,
     /// with the parameters used by the Litecoin network (N=1024, r=1, p=1).
     /// </summary>
-    public sealed class LitecoinSCryptHashAlgorithm : IHashAlgorithm
+    internal sealed class LitecoinSCryptHashAlgorithm : IHashAlgorithm
     {
         /// <summary>
         /// Calculates the hash of a sequence of bytes.

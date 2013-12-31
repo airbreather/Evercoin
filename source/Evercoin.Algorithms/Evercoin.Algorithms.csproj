@@ -50,8 +50,8 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BuiltinHashAlgorithmStore.cs" />
-    <Compile Include="DoubleSHA256HashAlgorithm.cs" />
-    <Compile Include="HashAlgorithmIdentifiers.cs" />
+    <Compile Include="ChainedHashAlgorithm.cs" />
+    <Compile Include="DigestBasedHashAlgorithm.cs" />
     <Compile Include="LitecoinSCryptHashAlgorithm.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

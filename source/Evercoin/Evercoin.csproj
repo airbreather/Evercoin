@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BlockVersion.cs" />
+    <Compile Include="HashAlgorithmIdentifiers.cs" />
     <Compile Include="IBlock.cs" />
     <Compile Include="IBlockChainNode.cs" />
     <Compile Include="ICoinbaseValueSource.cs" />

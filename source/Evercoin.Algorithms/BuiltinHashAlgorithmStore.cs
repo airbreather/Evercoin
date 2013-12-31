@@ -5,6 +5,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
+using Org.BouncyCastle.Crypto.Digests;
+
 namespace Evercoin.Algorithms
 {
     /// <summary>
@@ -24,9 +26,17 @@ namespace Evercoin.Algorithms
         /// </summary>
         public BuiltinHashAlgorithmStore()
         {
+            DigestBasedHashAlgorithm sha1 = new DigestBasedHashAlgorithm(new Sha1Digest());
+            DigestBasedHashAlgorithm sha256 = new DigestBasedHashAlgorithm(new Sha256Digest());
+            DigestBasedHashAlgorithm ripemd160 = new DigestBasedHashAlgorithm(new RipeMD160Digest());
+
             var mapping = new Dictionary<Guid, IHashAlgorithm>
             {
-                { HashAlgorithmIdentifiers.DoubleSHA256, new DoubleSHA256HashAlgorithm() },
+                { HashAlgorithmIdentifiers.SHA1, sha1 },
+                { HashAlgorithmIdentifiers.SHA256, sha256 },
+                { HashAlgorithmIdentifiers.RipeMd160, ripemd160 },
+                { HashAlgorithmIdentifiers.DoubleSHA256, new ChainedHashAlgorithm(sha256, sha256) },
+                { HashAlgorithmIdentifiers.SHA256ThenRipeMd160, new ChainedHashAlgorithm(sha256, ripemd160) },
                 { HashAlgorithmIdentifiers.LitecoinSCrypt, new LitecoinSCryptHashAlgorithm() }
             };
 
