@@ -47,5 +47,16 @@ namespace Evercoin.TransactionScript
         {
             return this.data.Equals(other.data);
         }
+
+        public override int GetHashCode()
+        {
+            return this.data.GetHashCode();
+        }
+
+        public override bool Equals(object obj)
+        {
+            StackItem? other = obj as StackItem?;
+            return other.HasValue && this.Equals(other.Value);
+        }
     }
 }
