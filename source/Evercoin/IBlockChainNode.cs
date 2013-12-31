@@ -10,7 +10,7 @@ namespace Evercoin
     /// <summary>
     /// A node in the block chain.
     /// </summary>
-    public interface IBlockChainNode
+    public interface IBlockChainNode : IEquatable<IBlockChainNode>
     {
         /// <summary>
         /// Gets the difficulty target being used for this node.

@@ -1,12 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 using NodaTime;
 
-namespace Evercoin
+namespace Evercoin.Network
 {
     /// <summary>
     /// Represents the parameters for a cryptocurrency network.
@@ -35,13 +32,13 @@ namespace Evercoin
         ISet<SecurityMechanism> SecurityMechanisms { get; }
 
         /// <summary>
-        /// Gets the desired <see cref="Interval"/> of time between blocks.
+        /// Gets the desired <see cref="Interval"/> of time between block.
         /// </summary>
         Interval TargetBlockInterval { get; }
 
         /// <summary>
-        /// Gets how many blocks to wait before recalculating the minimum
-        /// difficulty target for new blocks.
+        /// Gets how many block to wait before recalculating the minimum
+        /// difficulty target for new block.
         /// </summary>
         uint BlocksPerDifficultyRetarget { get; }
     }

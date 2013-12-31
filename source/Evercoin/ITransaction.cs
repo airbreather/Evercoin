@@ -9,7 +9,7 @@ namespace Evercoin
     /// <summary>
     /// Represents a transfer of value.
     /// </summary>
-    public interface ITransaction
+    public interface ITransaction : IEquatable<ITransaction>
     {
         /// <summary>
         /// Gets the inputs spent by this transaction.

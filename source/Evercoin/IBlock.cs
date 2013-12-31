@@ -10,7 +10,7 @@ namespace Evercoin
     /// <summary>
     /// A block of transactions.
     /// </summary>
-    public interface IBlock
+    public interface IBlock : IEquatable<IBlock>
     {
         /// <summary>
         /// Gets the ordered list of <see cref="ITransaction"/> objects

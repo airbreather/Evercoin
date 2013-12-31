@@ -10,7 +10,7 @@ namespace Evercoin.TransactionScript
     /// <summary>
     /// An item that can be put on the stack.
     /// </summary>
-    internal struct StackItem
+    internal struct StackItem : IEquatable<StackItem>
     {
         /// <summary>
         /// The underlying data item being stored on the stack.
@@ -41,6 +41,11 @@ namespace Evercoin.TransactionScript
         public static implicit operator byte[](StackItem item)
         {
             return item.data.ToByteArray();
+        }
+
+        public bool Equals(StackItem other)
+        {
+            return this.data.Equals(other.data);
         }
     }
 }

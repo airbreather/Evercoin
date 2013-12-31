@@ -10,7 +10,7 @@ namespace Evercoin
     /// Represents an <see cref="IValueSource"/> whose value can only be spent
     /// by running a script.
     /// </summary>
-    public interface ITransactionValueSource : IValueSource
+    public interface ITransactionValueSource : IValueSource, IEquatable<ITransactionValueSource>
     {
         /// <summary>
         /// Gets the <see cref="ITransaction"/> that contains this
