@@ -13,7 +13,8 @@ namespace Evercoin.Network
     /// TODO: Remove this remark.
     /// This is actually intended to work for both SPV and Full-Node operation,
     /// even in the filtering mode specified in BIP 37, via "dummy"
-    /// placeholder transactions that only have their 
+    /// placeholder transactions that only have just enough data to fit into
+    /// the Merkle tree.
     /// </remarks>
     public interface INetwork
     {
