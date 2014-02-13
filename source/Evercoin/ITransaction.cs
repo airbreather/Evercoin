@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Collections.Immutable;
 
 namespace Evercoin
 {
@@ -12,13 +9,18 @@ namespace Evercoin
     public interface ITransaction : IEquatable<ITransaction>
     {
         /// <summary>
+        /// Gets the version of this transaction.
+        /// </summary>
+        uint Version { get; }
+
+        /// <summary>
         /// Gets the inputs spent by this transaction.
         /// </summary>
-        IReadOnlyList<IValueSource> Inputs { get; }
+        IImmutableList<IValueSource> Inputs { get; }
 
         /// <summary>
         /// Gets the outputs of this transaction.
         /// </summary>
-        IReadOnlyList<ITransactionValueSource> Outputs { get; }
+        IImmutableList<ITransactionValueSource> Outputs { get; }
     }
 }

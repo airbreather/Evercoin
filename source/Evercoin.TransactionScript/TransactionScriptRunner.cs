@@ -9,8 +9,25 @@ namespace Evercoin.TransactionScript
 {
     public sealed class TransactionScriptRunner : ITransactionScriptRunner
     {
+        private readonly IHashAlgorithmStore hashAlgorithmStore;
+
+        public TransactionScriptRunner(IHashAlgorithmStore hashAlgorithmStore)
+        {
+            if (hashAlgorithmStore == null)
+            {
+                throw new ArgumentNullException("hashAlgorithmStore");
+            }
+
+            this.hashAlgorithmStore = hashAlgorithmStore;
+        }
+
         public bool EvaluateTransactionScript(IEnumerable<byte> serializedScript)
         {
+            if (serializedScript == null)
+            {
+                throw new ArgumentNullException("serializedScript");
+            }
+
             Stack<StackItem> stack = new Stack<StackItem>();
             Stack<StackItem> alternateStack = new Stack<StackItem>();
             Stack<bool> conditionalStack = new Stack<bool>();

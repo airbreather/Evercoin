@@ -14,6 +14,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evercoin.Algorithms", "Ever
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evercoin.TransactionScript", "Evercoin.TransactionScript\Evercoin.TransactionScript.csproj", "{9AFA0FF3-E2BC-47E2-8077-3A9DC9BF15B0}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Test Projects", "Test Projects", "{68CACBBC-E6FA-4AAD-83AE-CF5059CEC3C0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evercoin.Algorithms.Tests", "Evercoin.Algorithms.Tests\Evercoin.Algorithms.Tests.csproj", "{1D9671B4-430F-43B4-9836-F822C92C48BC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -32,8 +36,15 @@ Global
 		{9AFA0FF3-E2BC-47E2-8077-3A9DC9BF15B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{9AFA0FF3-E2BC-47E2-8077-3A9DC9BF15B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{9AFA0FF3-E2BC-47E2-8077-3A9DC9BF15B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1D9671B4-430F-43B4-9836-F822C92C48BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1D9671B4-430F-43B4-9836-F822C92C48BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1D9671B4-430F-43B4-9836-F822C92C48BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1D9671B4-430F-43B4-9836-F822C92C48BC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{1D9671B4-430F-43B4-9836-F822C92C48BC} = {68CACBBC-E6FA-4AAD-83AE-CF5059CEC3C0}
 	EndGlobalSection
 EndGlobal

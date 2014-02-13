@@ -1,25 +1,26 @@
 ﻿using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[assembly: AssemblyTitle("Evercoin")]
-[assembly: AssemblyDescription("Core library for cryptocurrency")]
+[assembly: AssemblyTitle("Evercoin.Algorithms.Tests")]
+[assembly: AssemblyDescription("")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyProduct("Evercoin")]
-[assembly: AssemblyCopyright("Copyright © 2013, Joe Amenta")]
+[assembly: AssemblyProduct("Evercoin.Algorithms.Tests")]
+[assembly: AssemblyCopyright("Copyright ©  2014")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
 // to COM components.  If you need to access a type in this assembly from 
 // COM, set the ComVisible attribute to true on that type.
-[assembly: ComVisible(true)]
+[assembly: ComVisible(false)]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[assembly: Guid("b101be90-4355-4455-b75b-1851d08fc80f")]
+[assembly: Guid("c7d9d549-7e70-4483-bcdb-19fd385fbcf1")]
 
 // Version information for an assembly consists of the following four values:
 //

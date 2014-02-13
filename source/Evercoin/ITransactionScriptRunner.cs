@@ -4,10 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace Evercoin.TransactionScript
+namespace Evercoin
 {
     public interface ITransactionScriptRunner
     {
-        bool EvaluateTransactionScript(IEnumerable<byte> serializedScript);
+        bool EvaluateTransactionScript(ITransactionScript script);
     }
 }

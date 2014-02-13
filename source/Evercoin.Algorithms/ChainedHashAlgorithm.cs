@@ -1,9 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
+using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Evercoin.Algorithms
 {
@@ -16,7 +14,7 @@ namespace Evercoin.Algorithms
         /// <summary>
         /// The <see cref="IHashAlgorithm"/>s to use, in order.
         /// </summary>
-        private readonly ReadOnlyCollection<IHashAlgorithm> algorithms;
+        private readonly IImmutableList<IHashAlgorithm> algorithms;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IHashAlgorithm"/> class.
@@ -25,7 +23,7 @@ namespace Evercoin.Algorithms
         /// The <see cref="IHashAlgorithm"/> objects to use, in sequence.
         /// </param>
         public ChainedHashAlgorithm(params IHashAlgorithm[] algorithms)
-            : this((IReadOnlyCollection<IHashAlgorithm>)algorithms)
+            : this(algorithms.ToImmutableList())
         {
         }
 
@@ -35,7 +33,7 @@ namespace Evercoin.Algorithms
         /// <param name="algorithms">
         /// The <see cref="IHashAlgorithm"/> objects to use, in sequence.
         /// </param>
-        public ChainedHashAlgorithm(IReadOnlyCollection<IHashAlgorithm> algorithms)
+        public ChainedHashAlgorithm(IImmutableList<IHashAlgorithm> algorithms)
         {
             if (algorithms == null)
             {
@@ -47,7 +45,7 @@ namespace Evercoin.Algorithms
                 throw new ArgumentException("Must provide at least one algorithm", "algorithms");
             }
 
-            this.algorithms = algorithms.ToList().AsReadOnly();
+            this.algorithms = algorithms;
         }
 
         /// <summary>

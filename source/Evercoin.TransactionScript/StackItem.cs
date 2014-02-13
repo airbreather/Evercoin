@@ -1,16 +1,12 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Evercoin.TransactionScript
 {
     /// <summary>
     /// An item that can be put on the stack.
     /// </summary>
-    internal struct StackItem : IEquatable<StackItem>
+    internal struct StackItem : IEquatable<StackItem>, IComparable<StackItem>, IComparable
     {
         /// <summary>
         /// The underlying data item being stored on the stack.
@@ -57,6 +53,52 @@ namespace Evercoin.TransactionScript
         {
             StackItem? other = obj as StackItem?;
             return other.HasValue && this.Equals(other.Value);
+        }
+
+        public int CompareTo(StackItem other)
+        {
+            return this.data.CompareTo(other.data);
+        }
+
+        public int CompareTo(object obj)
+        {
+            StackItem? other = obj as StackItem?;
+            if (!other.HasValue)
+            {
+                throw new ArgumentException("Can only compare a StackItem with another StackItem.", "obj");
+            }
+
+            return this.CompareTo(other.Value);
+        }
+
+        public static bool operator <(StackItem first, StackItem second)
+        {
+            return first.CompareTo(second) < 0;
+        }
+
+        public static bool operator >(StackItem first, StackItem second)
+        {
+            return first.CompareTo(second) > 0;
+        }
+
+        public static bool operator <=(StackItem first, StackItem second)
+        {
+            return first.CompareTo(second) <= 0;
+        }
+
+        public static bool operator >=(StackItem first, StackItem second)
+        {
+            return first.CompareTo(second) >= 0;
+        }
+
+        public static bool operator ==(StackItem first, StackItem second)
+        {
+            return first.Equals(second);
+        }
+
+        public static bool operator !=(StackItem first, StackItem second)
+        {
+            return !first.Equals(second);
         }
     }
 }

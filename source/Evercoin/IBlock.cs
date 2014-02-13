@@ -1,8 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Collections.Immutable;
+using System.Numerics;
+
 using NodaTime;
 
 namespace Evercoin
@@ -16,12 +15,12 @@ namespace Evercoin
         /// Gets the ordered list of <see cref="ITransaction"/> objects
         /// contained within this block.
         /// </summary>
-        IReadOnlyList<ITransaction> Transactions { get; }
+        IImmutableList<ITransaction> Transactions { get; }
 
         /// <summary>
-        /// Gets the <see cref="BlockVersion"/> of this block.
+        /// Gets the version of this block.
         /// </summary>
-        BlockVersion Version { get; }
+        uint Version { get; }
 
         /// <summary>
         /// Gets the <see cref="Instant"/> in time when this block was created.
@@ -38,5 +37,43 @@ namespace Evercoin
         /// for mining this block.
         /// </summary>
         ICoinbaseValueSource Coinbase { get; }
+
+        /// <summary>
+        /// Gets the difficulty target being used for this block.
+        /// </summary>
+        BigInteger DifficultyTarget { get; }
+
+        /// <summary>
+        /// Gets how high this block is in the chain.
+        /// </summary>
+        /// <remarks>
+        /// In other words, how many nodes come before this one.
+        /// So, the genesis block is at height zero.
+        /// </remarks>
+        ulong Height { get; }
+
+        /// <summary>
+        /// Gets how deep this block is in the chain.
+        /// </summary>
+        /// <remarks>
+        /// In other words, how many blocks come after this one.
+        /// </remarks>
+        ulong Depth { get; }
+
+        /// <summary>
+        /// Gets the previous block in the chain.
+        /// </summary>
+        /// <remarks>
+        /// When <see cref="Height"/> equals 0, the return value is undefined.
+        /// </remarks>
+        IBlock PreviousBlock { get; }
+
+        /// <summary>
+        /// Gets the next block in the chain.
+        /// </summary>
+        /// <remarks>
+        /// When <see cref="Depth"/> equals 0, the return value is undefined.
+        /// </remarks>
+        IBlock NextBlock { get; }
     }
 }

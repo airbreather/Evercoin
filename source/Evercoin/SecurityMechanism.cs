@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evercoin
+﻿namespace Evercoin
 {
     /// <summary>
     /// A value that indicates a mechanism used to keep the network secure in
