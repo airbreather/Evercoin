@@ -8,6 +8,5 @@ namespace Evercoin
 {
     public interface ITransactionScriptRunner
     {
-        bool EvaluateTransactionScript(ITransactionScript script);
     }
 }
