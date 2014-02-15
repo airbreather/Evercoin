@@ -1,11 +1,169 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
+using System.Numerics;
 
 namespace Evercoin.TransactionScript
 {
     public sealed class TransactionScriptRunner : ITransactionScriptRunner
     {
+        #region Various Definitions
+
+        /// <summary>
+        /// The set of opcodes that we can just completely skip on,
+        /// if we're in an unexecuted conditional branch.
+        /// </summary>
+        private static readonly HashSet<ScriptOperation> RealOpcodesWithoutData = new HashSet<ScriptOperation>
+                                                                                  {
+                                                                                      ScriptOperation.OP_VER,
+                                                                                      ScriptOperation.OP_RETURN,
+                                                                                      ScriptOperation.OP_RESERVED,
+                                                                                      ScriptOperation.OP_RESERVED1,
+                                                                                      ScriptOperation.OP_RESERVED2,
+                                                                                      ScriptOperation.OP_1NEGATE,
+                                                                                      ScriptOperation.OP_1,
+                                                                                      ScriptOperation.OP_2,
+                                                                                      ScriptOperation.OP_3,
+                                                                                      ScriptOperation.OP_4,
+                                                                                      ScriptOperation.OP_5,
+                                                                                      ScriptOperation.OP_6,
+                                                                                      ScriptOperation.OP_7,
+                                                                                      ScriptOperation.OP_8,
+                                                                                      ScriptOperation.OP_9,
+                                                                                      ScriptOperation.OP_10,
+                                                                                      ScriptOperation.OP_11,
+                                                                                      ScriptOperation.OP_12,
+                                                                                      ScriptOperation.OP_13,
+                                                                                      ScriptOperation.OP_14,
+                                                                                      ScriptOperation.OP_15,
+                                                                                      ScriptOperation.OP_16,
+                                                                                      ScriptOperation.OP_VERIFY,
+                                                                                      ScriptOperation.OP_TOALTSTACK,
+                                                                                      ScriptOperation.OP_FROMALTSTACK,
+                                                                                      ScriptOperation.OP_DROP,
+                                                                                      ScriptOperation.OP_DUP,
+                                                                                      ScriptOperation.OP_IFDUP,
+                                                                                      ScriptOperation.OP_DEPTH,
+                                                                                      ScriptOperation.OP_2DROP,
+                                                                                      ScriptOperation.OP_2DUP,
+                                                                                      ScriptOperation.OP_3DUP,
+                                                                                      ScriptOperation.OP_2OVER,
+                                                                                      ScriptOperation.OP_2ROT,
+                                                                                      ScriptOperation.OP_2SWAP,
+                                                                                      ScriptOperation.OP_NIP,
+                                                                                      ScriptOperation.OP_OVER,
+                                                                                      ScriptOperation.OP_PICK,
+                                                                                      ScriptOperation.OP_ROLL,
+                                                                                      ScriptOperation.OP_ROT,
+                                                                                      ScriptOperation.OP_SWAP,
+                                                                                      ScriptOperation.OP_TUCK,
+                                                                                      ScriptOperation.OP_NOP,
+                                                                                      ScriptOperation.OP_NOP1,
+                                                                                      ScriptOperation.OP_NOP2,
+                                                                                      ScriptOperation.OP_NOP3,
+                                                                                      ScriptOperation.OP_NOP4,
+                                                                                      ScriptOperation.OP_NOP5,
+                                                                                      ScriptOperation.OP_NOP6,
+                                                                                      ScriptOperation.OP_NOP7,
+                                                                                      ScriptOperation.OP_NOP8,
+                                                                                      ScriptOperation.OP_NOP9,
+                                                                                      ScriptOperation.OP_NOP10,
+                                                                                      ScriptOperation.OP_SIZE,
+                                                                                      ScriptOperation.OP_EQUAL,
+                                                                                      ScriptOperation.OP_EQUALVERIFY,
+                                                                                      ScriptOperation.OP_1ADD,                
+                                                                                      ScriptOperation.OP_1SUB,
+                                                                                      ScriptOperation.OP_NEGATE,
+                                                                                      ScriptOperation.OP_ABS,
+                                                                                      ScriptOperation.OP_NOT,
+                                                                                      ScriptOperation.OP_0NOTEQUAL,
+                                                                                      ScriptOperation.OP_ADD,
+                                                                                      ScriptOperation.OP_SUB,
+                                                                                      ScriptOperation.OP_BOOLAND,
+                                                                                      ScriptOperation.OP_BOOLOR,
+                                                                                      ScriptOperation.OP_NUMEQUAL,
+                                                                                      ScriptOperation.OP_NUMEQUALVERIFY,
+                                                                                      ScriptOperation.OP_NUMNOTEQUAL,
+                                                                                      ScriptOperation.OP_LESSTHAN,
+                                                                                      ScriptOperation.OP_GREATERTHAN,
+                                                                                      ScriptOperation.OP_LESSTHANOREQUAL,
+                                                                                      ScriptOperation.OP_GREATERTHANOREQUAL,
+                                                                                      ScriptOperation.OP_MIN,
+                                                                                      ScriptOperation.OP_MAX,
+                                                                                      ScriptOperation.OP_WITHIN,
+                                                                                      ScriptOperation.OP_RIPEMD160,
+                                                                                      ScriptOperation.OP_SHA1,
+                                                                                      ScriptOperation.OP_SHA256,
+                                                                                      ScriptOperation.OP_HASH160,
+                                                                                      ScriptOperation.OP_HASH256,
+                                                                                      ScriptOperation.OP_CODESEPARATOR,
+                                                                                      ScriptOperation.OP_CHECKSIG,
+                                                                                      ScriptOperation.OP_CHECKSIGVERIFY,
+                                                                                      ScriptOperation.OP_CHECKMULTISIG,
+                                                                                      ScriptOperation.OP_CHECKMULTISIGVERIFY,
+                                                                                  };
+
+        /// <summary>
+        /// The number of items on the stack required to perform an operation.
+        /// </summary>
+        private static readonly Dictionary<ScriptOperation, ulong> MinimumRequiredStackDepthForOperation = new Dictionary<ScriptOperation, ulong>
+                                                                                                           {
+                                                                                                                { ScriptOperation.OP_IF, 1 },
+                                                                                                                { ScriptOperation.OP_NOTIF, 1 },
+                                                                                                                { ScriptOperation.OP_VERIFY, 1 },
+                                                                                                                { ScriptOperation.OP_DROP, 1 },
+                                                                                                                { ScriptOperation.OP_DUP, 1 },
+                                                                                                                { ScriptOperation.OP_IFDUP, 1 },
+                                                                                                                { ScriptOperation.OP_2DROP, 2 },
+                                                                                                                { ScriptOperation.OP_2DUP, 2 },
+                                                                                                                { ScriptOperation.OP_3DUP, 3 },
+                                                                                                                { ScriptOperation.OP_2OVER, 4 },
+                                                                                                                { ScriptOperation.OP_2ROT, 6 },
+                                                                                                                { ScriptOperation.OP_2SWAP, 4 },
+                                                                                                                { ScriptOperation.OP_NIP, 2 },
+                                                                                                                { ScriptOperation.OP_OVER, 2 },
+                                                                                                                { ScriptOperation.OP_PICK, 1 },
+                                                                                                                { ScriptOperation.OP_ROLL, 1 },
+                                                                                                                { ScriptOperation.OP_ROT, 3 },
+                                                                                                                { ScriptOperation.OP_SWAP, 2 },
+                                                                                                                { ScriptOperation.OP_TUCK, 2 },
+                                                                                                                { ScriptOperation.OP_SIZE, 1 },
+                                                                                                                { ScriptOperation.OP_EQUAL, 2 },
+                                                                                                                { ScriptOperation.OP_EQUALVERIFY, 2 },
+                                                                                                                { ScriptOperation.OP_1ADD, 1 },
+                                                                                                                { ScriptOperation.OP_1SUB, 1 },
+                                                                                                                { ScriptOperation.OP_NEGATE, 1 },
+                                                                                                                { ScriptOperation.OP_ABS, 1 },
+                                                                                                                { ScriptOperation.OP_NOT, 1 },
+                                                                                                                { ScriptOperation.OP_0NOTEQUAL, 1 },
+                                                                                                                { ScriptOperation.OP_ADD, 2 },
+                                                                                                                { ScriptOperation.OP_SUB, 2 },
+                                                                                                                { ScriptOperation.OP_BOOLAND, 2 },
+                                                                                                                { ScriptOperation.OP_BOOLOR, 2 },
+                                                                                                                { ScriptOperation.OP_NUMEQUAL, 2 },
+                                                                                                                { ScriptOperation.OP_NUMEQUALVERIFY, 2 },
+                                                                                                                { ScriptOperation.OP_NUMNOTEQUAL, 2 },
+                                                                                                                { ScriptOperation.OP_LESSTHAN, 2 },
+                                                                                                                { ScriptOperation.OP_GREATERTHAN, 2 },
+                                                                                                                { ScriptOperation.OP_LESSTHANOREQUAL, 2 },
+                                                                                                                { ScriptOperation.OP_GREATERTHANOREQUAL, 2 },
+                                                                                                                { ScriptOperation.OP_MIN, 2 },
+                                                                                                                { ScriptOperation.OP_MAX, 2 },
+                                                                                                                { ScriptOperation.OP_WITHIN, 3 },
+                                                                                                                { ScriptOperation.OP_RIPEMD160, 1 },
+                                                                                                                { ScriptOperation.OP_SHA1, 1 },
+                                                                                                                { ScriptOperation.OP_SHA256, 1 },
+                                                                                                                { ScriptOperation.OP_HASH160, 1 },
+                                                                                                                { ScriptOperation.OP_HASH256, 1 },
+                                                                                                                { ScriptOperation.OP_CHECKSIG, 2 },
+                                                                                                                { ScriptOperation.OP_CHECKSIGVERIFY, 2 },
+                                                                                                                { ScriptOperation.OP_CHECKMULTISIG, 1 },
+                                                                                                                { ScriptOperation.OP_CHECKMULTISIGVERIFY, 1 },
+                                                                                                           };
+
+        #endregion Various Definitions
+
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
         public TransactionScriptRunner(IHashAlgorithmStore hashAlgorithmStore)
@@ -18,7 +176,7 @@ namespace Evercoin.TransactionScript
             this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
-        public bool EvaluateTransactionScript(IEnumerable<byte> serializedScript)
+        public bool EvaluateTransactionScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker)
         {
             if (serializedScript == null)
             {
@@ -28,11 +186,11 @@ namespace Evercoin.TransactionScript
             Stack<StackItem> mainStack = new Stack<StackItem>();
             Stack<StackItem> alternateStack = new Stack<StackItem>();
             Stack<bool> conditionalStack = new Stack<bool>();
-            using (IEnumerator<byte> bytes = serializedScript.GetEnumerator())
+            using (ScriptEnumerator bytes = new ScriptEnumerator(serializedScript.GetEnumerator()))
             {
                 while (bytes.MoveNext())
                 {
-                    if (!Eval(bytes, mainStack, alternateStack, conditionalStack))
+                    if (!this.Eval(bytes, mainStack, alternateStack, conditionalStack, signatureChecker))
                     {
                         return false;
                     }
@@ -42,11 +200,28 @@ namespace Evercoin.TransactionScript
             return mainStack.Any() && mainStack.Peek();
         }
 
-        private static bool Eval(IEnumerator<byte> bytes, Stack<StackItem> mainStack, Stack<StackItem> alternateStack, Stack<bool> conditionalStack)
+        private bool Eval(ScriptEnumerator bytes, Stack<StackItem> mainStack, Stack<StackItem> alternateStack, Stack<bool> conditionalStack, ISignatureChecker signatureChecker)
         {
             byte opcodeByte = bytes.Current;
             ScriptOperation opcode = (ScriptOperation)opcodeByte;
             bool actuallyExecute = conditionalStack.All(x => x);
+
+            if (!actuallyExecute &&
+                RealOpcodesWithoutData.Contains(opcode))
+            {
+                return true;
+            }
+
+            ulong minStackDepth;
+            if (!MinimumRequiredStackDepthForOperation.TryGetValue(opcode, out minStackDepth))
+            {
+                minStackDepth = 0;
+            }
+
+            if ((ulong)mainStack.Count < minStackDepth)
+            {
+                return false;
+            }
 
             if (opcode <= ScriptOperation.END_OP_DATA &&
                 opcode >= ScriptOperation.BEGIN_OP_DATA)
@@ -62,8 +237,7 @@ namespace Evercoin.TransactionScript
 
                 if (actuallyExecute)
                 {
-                    StackItem item = new StackItem(dataToPush);
-                    mainStack.Push(item);
+                    mainStack.Push(dataToPush);
                 }
 
                 return true;
@@ -116,15 +290,14 @@ namespace Evercoin.TransactionScript
                 case ScriptOperation.OP_RSHIFT:
                 case ScriptOperation.OP_VERIF:
                 case ScriptOperation.OP_VERNOTIF:
-                    return false;
 
-                // These are all disabled only if they're in an executed branch:
+                // These are all disabled if they're in an executed branch:
                 case ScriptOperation.OP_VER:
                 case ScriptOperation.OP_RETURN:
                 case ScriptOperation.OP_RESERVED:
                 case ScriptOperation.OP_RESERVED1:
                 case ScriptOperation.OP_RESERVED2:
-                    return !actuallyExecute;
+                    return false;
 
                 #endregion Disabled
 
@@ -163,8 +336,7 @@ namespace Evercoin.TransactionScript
 
                     if (actuallyExecute)
                     {
-                        StackItem item = new StackItem(dataToPush);
-                        mainStack.Push(item);
+                        mainStack.Push(dataToPush);
                     }
 
                     return true;
@@ -191,13 +363,11 @@ namespace Evercoin.TransactionScript
                 case ScriptOperation.OP_14:
                 case ScriptOperation.OP_15:
                 case ScriptOperation.OP_16:
-                    if (actuallyExecute)
-                    {
-                        int valueToPush = opcode - ScriptOperation.OPCODE_IMMEDIATELY_BEFORE_OP_1;
-                        mainStack.Push(new StackItem(valueToPush));
-                    }
-
+                {
+                    BigInteger valueToPush = opcode - ScriptOperation.OPCODE_IMMEDIATELY_BEFORE_OP_1;
+                    mainStack.Push(valueToPush);
                     return true;
+                }
 
                 #endregion Push Value
 
@@ -210,11 +380,6 @@ namespace Evercoin.TransactionScript
                     {
                         conditionalStack.Push(false);
                         return true;
-                    }
-
-                    if (mainStack.Count < 1)
-                    {
-                        return false;
                     }
 
                     bool conditional = mainStack.Pop() ^
@@ -242,65 +407,25 @@ namespace Evercoin.TransactionScript
                     return true;
                 }
 
-                case ScriptOperation.OP_VERIFY:
-                    if (!actuallyExecute)
-                    {
-                        return true;
-                    }
-
-                    return mainStack.Count > 0 &&
-                           mainStack.Pop();
-
                 #endregion Control Flow
 
                 #region Stack Twiddling
 
                 case ScriptOperation.OP_TOALTSTACK:
-                    return !actuallyExecute ||
-                           MoveItemFromStackToStack(mainStack, alternateStack);
+                    return MoveItemFromStackToStack(mainStack, alternateStack);
 
                 case ScriptOperation.OP_FROMALTSTACK:
-                    return !actuallyExecute ||
-                           MoveItemFromStackToStack(alternateStack, mainStack);
+                    return MoveItemFromStackToStack(alternateStack, mainStack);
 
                 case ScriptOperation.OP_DROP:
+                    mainStack.Pop();
+                    return true;
+
                 case ScriptOperation.OP_DUP:
                 case ScriptOperation.OP_IFDUP:
                 {
-                    if (!actuallyExecute)
-                    {
-                        return true;
-                    }
-
-                    if (mainStack.Count < 1)
-                    {
-                        return false;
-                    }
-
-                    StackItem item = mainStack.Pop();
-                    int timesToPushItem = 0;
-
-                    switch (opcode)
-                    {
-                        case ScriptOperation.OP_DROP:
-                            timesToPushItem = 0;
-                            break;
-
-                        case ScriptOperation.OP_DUP:
-                            timesToPushItem = 2;
-                            break;
-
-                        case ScriptOperation.OP_IFDUP:
-                            timesToPushItem++;
-                            if (item)
-                            {
-                                timesToPushItem++;
-                            }
-
-                            break;
-                    }
-
-                    for (int i = 0; i < timesToPushItem; i++)
+                    StackItem item = mainStack.Peek();
+                    if (opcode == ScriptOperation.OP_DUP || item)
                     {
                         mainStack.Push(item);
                     }
@@ -309,26 +434,24 @@ namespace Evercoin.TransactionScript
                 }
 
                 case ScriptOperation.OP_DEPTH:
-                    if (actuallyExecute)
-                    {
-                        mainStack.Push(new StackItem(mainStack.Count));
-                    }
-
+                {
+                    BigInteger depth = mainStack.Count;
+                    mainStack.Push(depth);
                     return true;
+                }
+
+                case ScriptOperation.OP_SIZE:
+                {
+                    byte[] item = mainStack.Peek();
+                    BigInteger size = item.Length;
+
+                    mainStack.Push(size);
+                    return true;
+                }
 
                 case ScriptOperation.OP_2DROP:
                 case ScriptOperation.OP_2DUP:
                 {
-                    if (!actuallyExecute)
-                    {
-                        return true;
-                    }
-
-                    if (mainStack.Count < 2)
-                    {
-                        return false;
-                    }
-
                     StackItem firstItem = mainStack.Pop();
                     StackItem secondItem = mainStack.Pop();
 
@@ -345,16 +468,6 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOperation.OP_3DUP:
                 {
-                    if (!actuallyExecute)
-                    {
-                        return true;
-                    }
-
-                    if (mainStack.Count < 3)
-                    {
-                        return false;
-                    }
-
                     StackItem firstItem = mainStack.Pop();
                     StackItem secondItem = mainStack.Pop();
                     StackItem thirdItem = mainStack.Pop();
@@ -371,16 +484,6 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOperation.OP_2OVER:
                 {
-                    if (!actuallyExecute)
-                    {
-                        return true;
-                    }
-
-                    if (mainStack.Count < 4)
-                    {
-                        return false;
-                    }
-
                     StackItem firstItem = mainStack.Pop();
                     StackItem secondItem = mainStack.Pop();
                     StackItem thirdItem = mainStack.Pop();
@@ -398,16 +501,6 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOperation.OP_2ROT:
                 {
-                    if (!actuallyExecute)
-                    {
-                        return true;
-                    }
-
-                    if (mainStack.Count < 6)
-                    {
-                        return false;
-                    }
-
                     StackItem firstItem = mainStack.Pop();
                     StackItem secondItem = mainStack.Pop();
                     StackItem thirdItem = mainStack.Pop();
@@ -427,16 +520,6 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOperation.OP_2SWAP:
                 {
-                    if (!actuallyExecute)
-                    {
-                        return true;
-                    }
-
-                    if (mainStack.Count < 4)
-                    {
-                        return false;
-                    }
-
                     StackItem firstItem = mainStack.Pop();
                     StackItem secondItem = mainStack.Pop();
                     StackItem thirdItem = mainStack.Pop();
@@ -453,16 +536,6 @@ namespace Evercoin.TransactionScript
                 case ScriptOperation.OP_NIP:
                 case ScriptOperation.OP_OVER:
                 {
-                    if (!actuallyExecute)
-                    {
-                        return true;
-                    }
-
-                    if (mainStack.Count < 2)
-                    {
-                        return false;
-                    }
-
                     StackItem innocentBystander = mainStack.Pop();
                     StackItem secondFromTop = mainStack.Pop();
                     mainStack.Push(innocentBystander);
@@ -478,18 +551,8 @@ namespace Evercoin.TransactionScript
                 case ScriptOperation.OP_PICK:
                 case ScriptOperation.OP_ROLL:
                 {
-                    if (!actuallyExecute)
-                    {
-                        return true;
-                    }
-
-                    if (mainStack.Count < 1)
-                    {
-                        return false;
-                    }
-
-                    ulong fetchDepth = mainStack.Pop();
-                    if ((ulong)mainStack.Count <= fetchDepth)
+                    BigInteger fetchDepth = mainStack.Pop();
+                    if (mainStack.Count <= fetchDepth)
                     {
                         return false;
                     }
@@ -521,16 +584,6 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOperation.OP_ROT:
                 {
-                    if (!actuallyExecute)
-                    {
-                        return true;
-                    }
-
-                    if (mainStack.Count < 3)
-                    {
-                        return false;
-                    }
-
                     StackItem firstItem = mainStack.Pop();
                     StackItem secondItem = mainStack.Pop();
                     StackItem thirdItem = mainStack.Pop();
@@ -545,16 +598,6 @@ namespace Evercoin.TransactionScript
                 case ScriptOperation.OP_SWAP:
                 case ScriptOperation.OP_TUCK:
                 {
-                    if (!actuallyExecute)
-                    {
-                        return true;
-                    }
-
-                    if (mainStack.Count < 2)
-                    {
-                        return false;
-                    }
-
                     StackItem firstItem = mainStack.Pop();
                     StackItem secondItem = mainStack.Pop();
 
@@ -570,9 +613,333 @@ namespace Evercoin.TransactionScript
                     
                 #endregion
 
+                #region Boolean
+
+                case ScriptOperation.OP_EQUAL:
+                case ScriptOperation.OP_EQUALVERIFY:
+                {
+                    byte[] firstItem = mainStack.Pop();
+                    byte[] secondItem = mainStack.Pop();
+
+                    mainStack.Push(firstItem.SequenceEqual(secondItem));
+
+                    return opcode == ScriptOperation.OP_EQUAL ||
+                           mainStack.Pop();
+                }
+
+                case ScriptOperation.OP_VERIFY:
+                    return mainStack.Pop();
+
+                #endregion Boolean
+
+                #region Arithmetic
+
+                case ScriptOperation.OP_1ADD:
+                {
+                    BigInteger item = mainStack.Pop();
+                    mainStack.Push(item + 1);
+                    return true;
+                }
+
+                case ScriptOperation.OP_1SUB:
+                {
+                    BigInteger item = mainStack.Pop();
+                    mainStack.Push(item - 1);
+                    return true;
+                }
+
+                case ScriptOperation.OP_NEGATE:
+                {
+                    BigInteger item = mainStack.Pop();
+                    mainStack.Push(-item);
+                    return true;
+                }
+
+                case ScriptOperation.OP_ABS:
+                {
+                    BigInteger item = mainStack.Pop();
+                    mainStack.Push(item.Sign < 0 ? -item : item);
+                    return true;
+                }
+
+                case ScriptOperation.OP_NOT:
+                {
+                    bool value = mainStack.Pop();
+                    mainStack.Push(!value);
+                    return true;
+                }
+
+                case ScriptOperation.OP_0NOTEQUAL:
+                {
+                    bool value = mainStack.Pop();
+                    mainStack.Push(value);
+                    return true;
+                }
+
+                case ScriptOperation.OP_ADD:
+                {
+                    BigInteger firstValue = mainStack.Pop();
+                    BigInteger secondValue = mainStack.Pop();
+                    mainStack.Push(firstValue + secondValue);
+                    return true;
+                }
+
+                case ScriptOperation.OP_SUB:
+                {
+                    BigInteger firstValue = mainStack.Pop();
+                    BigInteger secondValue = mainStack.Pop();
+                    mainStack.Push(firstValue - secondValue);
+                    return true;
+                }
+
+                case ScriptOperation.OP_BOOLAND:
+                {
+                    bool firstValue = mainStack.Pop();
+                    bool secondValue = mainStack.Pop();
+                    mainStack.Push(firstValue && secondValue);
+                    return true;
+                }
+
+                case ScriptOperation.OP_BOOLOR:
+                {
+                    bool firstValue = mainStack.Pop();
+                    bool secondValue = mainStack.Pop();
+                    mainStack.Push(firstValue || secondValue);
+                    return true;
+                }
+
+                case ScriptOperation.OP_NUMEQUAL:
+                case ScriptOperation.OP_NUMEQUALVERIFY:
+                {
+                    BigInteger firstValue = mainStack.Pop();
+                    BigInteger secondValue = mainStack.Pop();
+                    mainStack.Push(firstValue == secondValue);
+                    return true;
+                }
+
+                case ScriptOperation.OP_NUMNOTEQUAL:
+                {
+                    BigInteger firstValue = mainStack.Pop();
+                    BigInteger secondValue = mainStack.Pop();
+                    mainStack.Push(firstValue != secondValue);
+                    return true;
+                }
+
+                case ScriptOperation.OP_LESSTHAN:
+                {
+                    BigInteger firstValue = mainStack.Pop();
+                    BigInteger secondValue = mainStack.Pop();
+                    mainStack.Push(firstValue < secondValue);
+                    return true;
+                }
+
+                case ScriptOperation.OP_GREATERTHAN:
+                {
+                    BigInteger firstValue = mainStack.Pop();
+                    BigInteger secondValue = mainStack.Pop();
+                    mainStack.Push(firstValue > secondValue);
+                    return true;
+                }
+
+                case ScriptOperation.OP_LESSTHANOREQUAL:
+                {
+                    BigInteger firstValue = mainStack.Pop();
+                    BigInteger secondValue = mainStack.Pop();
+                    mainStack.Push(firstValue <= secondValue);
+                    return true;
+                }
+
+                case ScriptOperation.OP_GREATERTHANOREQUAL:
+                {
+                    BigInteger firstValue = mainStack.Pop();
+                    BigInteger secondValue = mainStack.Pop();
+                    mainStack.Push(firstValue >= secondValue);
+                    return true;
+                }
+
+                case ScriptOperation.OP_MIN:
+                {
+                    BigInteger firstValue = mainStack.Pop();
+                    BigInteger secondValue = mainStack.Pop();
+                    mainStack.Push(BigInteger.Min(firstValue, secondValue));
+                    return true;
+                }
+
+                case ScriptOperation.OP_MAX:
+                {
+                    BigInteger firstValue = mainStack.Pop();
+                    BigInteger secondValue = mainStack.Pop();
+                    mainStack.Push(BigInteger.Max(firstValue, secondValue));
+                    return true;
+                }
+
+                case ScriptOperation.OP_WITHIN:
+                {
+                    BigInteger maxValue = mainStack.Pop();
+                    BigInteger minValue = mainStack.Pop();
+                    BigInteger valueToCompare = mainStack.Pop();
+
+                    mainStack.Push(minValue <= valueToCompare &&
+                                   valueToCompare < maxValue);
+
+                    return true;
+                }
+
+                #endregion Arithmetic
+
+                #region Crypto
+
+                case ScriptOperation.OP_RIPEMD160:
+                case ScriptOperation.OP_SHA1:
+                case ScriptOperation.OP_SHA256:
+                case ScriptOperation.OP_HASH160:
+                case ScriptOperation.OP_HASH256:
+                {
+
+                    Guid hashAlgorithmIdentifier = Guid.Empty;
+                    switch (opcode)
+                    {   
+                        case ScriptOperation.OP_RIPEMD160:
+                            hashAlgorithmIdentifier = HashAlgorithmIdentifiers.RipeMd160;
+                            break;
+                        case ScriptOperation.OP_SHA1:
+                            hashAlgorithmIdentifier = HashAlgorithmIdentifiers.SHA1;
+                            break;
+                        case ScriptOperation.OP_SHA256:
+                            hashAlgorithmIdentifier = HashAlgorithmIdentifiers.SHA256;
+                            break;
+                        case ScriptOperation.OP_HASH160:
+                            hashAlgorithmIdentifier = HashAlgorithmIdentifiers.SHA256ThenRipeMd160;
+                            break;
+                        case ScriptOperation.OP_HASH256:
+                            hashAlgorithmIdentifier = HashAlgorithmIdentifiers.DoubleSHA256;
+                            break;
+                    }
+
+                    IHashAlgorithm hashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(hashAlgorithmIdentifier);
+
+                    byte[] dataToHash = mainStack.Pop();
+                    mainStack.Push(hashAlgorithm.CalculateHash(dataToHash));
+                    return true;
+                }
+
+                case ScriptOperation.OP_CODESEPARATOR:
+                {
+                    bytes.Sep();
+                    return true;
+                }
+
+                case ScriptOperation.OP_CHECKSIG:
+                case ScriptOperation.OP_CHECKSIGVERIFY:
+                {
+                    byte[] publicKey = mainStack.Pop();
+                    byte[] signature = mainStack.Pop();
+
+                    IImmutableList<byte> scriptCode = bytes.DataSinceLastSep;
+                    scriptCode = DeleteSubsequence(scriptCode, signature);
+
+                    mainStack.Push(signatureChecker.CheckSignature(signature, publicKey, scriptCode));
+                    return opcode == ScriptOperation.OP_CHECKSIG ||
+                           mainStack.Pop();
+                }
+
+                case ScriptOperation.OP_CHECKMULTISIG:
+                case ScriptOperation.OP_CHECKMULTISIGVERIFY:
+                {
+                    BigInteger keyCount = mainStack.Pop();
+                    if (mainStack.Count < keyCount)
+                    {
+                        return false;
+                    }
+
+                    LinkedList<byte[]> publicKeys = new LinkedList<byte[]>();
+                    for (int i = 0; i < keyCount; i++)
+                    {
+                        publicKeys.AddLast(mainStack.Pop());
+                    }
+
+                    BigInteger signatureCount = mainStack.Pop();
+                    if (mainStack.Count < signatureCount)
+                    {
+                        return false;
+                    }
+
+                    LinkedList<byte[]> signatures = new LinkedList<byte[]>();
+                    for (int i = 0; i < signatureCount; i++)
+                    {
+                        signatures.AddLast(mainStack.Pop());
+                    }
+
+                    // The mainline client has a known bug in OP_CHECKMULTISIG.
+                    // It pops an extra value off the stack before returning.
+                    // So we need to do the same to maintain compatibility.
+                    if (mainStack.Count < 1)
+                    {
+                        return false;
+                    }
+
+                    mainStack.Pop();
+
+                    IImmutableList<byte> scriptCode = bytes.DataSinceLastSep;
+                    scriptCode = signatures.Aggregate(scriptCode, DeleteSubsequence);
+
+                    int validSignatureCount = 0;
+
+                    LinkedListNode<byte[]> signatureToValidate = signatures.First;
+                    LinkedListNode<byte[]> publicKeyToAttempt = publicKeys.First;
+
+                    while (publicKeyToAttempt != null &&
+                           signatureToValidate != null)
+                    {
+                        byte[] signature = signatureToValidate.Value;
+                        byte[] publicKey = publicKeyToAttempt.Value;
+
+                        if (signatureChecker.CheckSignature(signature, publicKey, scriptCode))
+                        {
+                            validSignatureCount++;
+                            signatureToValidate = signatureToValidate.Next;
+                        }
+
+                        publicKeyToAttempt = publicKeyToAttempt.Next;
+                    }
+
+                    mainStack.Push(validSignatureCount == signatureCount);
+                    return opcode == ScriptOperation.OP_CHECKMULTISIG ||
+                           mainStack.Pop();
+                }
+
+                #endregion Crypto
+
                 default:
-                    throw new NotImplementedException("Still working on it!");
+                    throw new InvalidOperationException("Well that's weird... I thought I got all of them?");
             }
+        }
+
+        internal static IImmutableList<byte> DeleteSubsequence(IImmutableList<byte> scriptCode, IList<byte> signature)
+        {
+            if (scriptCode.Count <= 0 || signature.Count <= 0)
+            {
+                return scriptCode;
+            }
+
+            byte firstByte = signature[0];
+
+            for (int i = 0; i < scriptCode.Count - signature.Count + 1; i++)
+            {
+                if (scriptCode[i] != firstByte)
+                {
+                    continue;
+                }
+
+                if (scriptCode.Skip(i)
+                              .Take(signature.Count)
+                              .SequenceEqual(signature))
+                {
+                    scriptCode = scriptCode.RemoveRange(i, signature.Count);
+                }
+            }
+
+            return scriptCode;
         }
 
         private static bool MoveItemFromStackToStack<T>(Stack<T> sourceStack, Stack<T> destinationStack)

@@ -11,32 +11,58 @@ namespace Evercoin.TransactionScript
         /// <summary>
         /// The underlying data item being stored on the stack.
         /// </summary>
-        private readonly BigInteger data;
+        private byte[] data;
+
+        /// <summary>
+        /// The underlying data item being stored on the stack.
+        /// </summary>
+        private BigInteger? value;
 
         public StackItem(BigInteger value)
             : this()
         {
-            this.data = value;
+            this.value = value;
         }
 
-        public StackItem(byte[] value)
-            : this(new BigInteger(value))
+        public StackItem(byte[] data)
+            : this()
         {
+            this.data = data;
         }
 
-        public static implicit operator ulong(StackItem item)
+        public static implicit operator BigInteger(StackItem item)
         {
-            return (ulong)item.data;
+            if (!item.value.HasValue)
+            {
+                item.value = new BigInteger(item.data);
+            }
+
+            return item.value.Value;
         }
 
         public static implicit operator bool(StackItem item)
         {
-            return !item.data.IsZero;
+            return !((BigInteger)item).IsZero;
         }
 
         public static implicit operator byte[](StackItem item)
         {
-            return item.data.ToByteArray();
+            return item.data ?? (item.data = item.value.Value.ToByteArray());
+        }
+
+        public static implicit operator StackItem(BigInteger data)
+        {
+            return new StackItem(data);
+        }
+
+        public static implicit operator StackItem(byte[] data)
+        {
+            return new StackItem(data);
+        }
+
+        public static implicit operator StackItem(bool value)
+        {
+            return new StackItem(value ? 1 : 0);
         }
 
         public bool Equals(StackItem other)
@@ -46,7 +72,7 @@ namespace Evercoin.TransactionScript
 
         public override int GetHashCode()
         {
-            return this.data.GetHashCode();
+            return ((BigInteger)this).GetHashCode();
         }
 
         public override bool Equals(object obj)
@@ -57,7 +83,7 @@ namespace Evercoin.TransactionScript
 
         public int CompareTo(StackItem other)
         {
-            return this.data.CompareTo(other.data);
+            return ((BigInteger)this).CompareTo(other);
         }
 
         public int CompareTo(object obj)
