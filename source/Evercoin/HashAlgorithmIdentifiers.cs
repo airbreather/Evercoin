@@ -3,8 +3,8 @@ using System;
 namespace Evercoin
 {
     /// <summary>
-    /// Stores identifiers of well-known <see cref="IHashAlgorithm"/>
-    /// objects.  Used for <see cref="IHashAlgorithmStore"/>.
+    /// Stores identifiers of well-known <see cref="IHashAlgorithm"/> objects.
+    /// Used for <see cref="IHashAlgorithmStore"/>.
     /// </summary>
     public static class HashAlgorithmIdentifiers
     {

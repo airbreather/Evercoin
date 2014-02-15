@@ -1,6 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel.Composition;
+
+using Evercoin.BaseImplementations;
 
 using Org.BouncyCastle.Crypto.Digests;
 
@@ -11,7 +14,8 @@ namespace Evercoin.Algorithms
     /// <see cref="IHashAlgorithm"/>s that we have built-in handling for.
     /// This implementation is read-only.
     /// </summary>
-    public sealed class BuiltinHashAlgorithmStore : IHashAlgorithmStore
+    [Export(typeof(IHashAlgorithmStore))]
+    public sealed class BuiltinHashAlgorithmStore : HashAlgorithmStoreBase
     {
         /// <summary>
         /// Backing store for the algorithms we use.
@@ -53,39 +57,9 @@ namespace Evercoin.Algorithms
         /// <paramref name="identifier"/> does not map to an algorithm
         /// that we know about.
         /// </exception>
-        public IHashAlgorithm GetHashAlgorithm(Guid identifier)
+        public override IHashAlgorithm GetHashAlgorithm(Guid identifier)
         {
             return this.algorithms[identifier];
-        }
-
-        /// <summary>
-        /// Registers a new <see cref="IHashAlgorithm"/>.
-        /// </summary>
-        /// <param name="identifier">
-        /// A <see cref="Guid"/> value that can be used to retrieve the
-        /// registered <see cref="IHashAlgorithm"/> in the future.
-        /// </param>
-        /// <param name="algorithm">
-        /// The <see cref="IHashAlgorithm"/> to register.
-        /// </param>
-        /// <exception cref="NotSupportedException">
-        /// This store does not support registering new algorithms.
-        /// </exception>
-        /// <exception cref="ArgumentNullException">
-        /// <paramref name="algorithm"/> is null.
-        /// </exception>
-        /// <exception cref="ArgumentException">
-        /// <paramref name="identifier"/> already identifies another
-        /// <see cref="IHashAlgorithm"/> in this store that is not
-        /// equal to <paramref name="algorithm"/>.
-        /// </exception>
-        /// <remarks>
-        /// This is expected to be used rarely, for registering the algorithms
-        /// for cryptocurrencies that Evercoin does not know about.
-        /// </remarks>
-        void IHashAlgorithmStore.RegisterHashAlgorithm(Guid identifier, IHashAlgorithm algorithm)
-        {
-            throw new NotSupportedException("This hash algorithm store only provides a read-only list of built-in hash algorithms.");
         }
     }
 }

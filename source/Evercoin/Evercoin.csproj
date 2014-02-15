@@ -53,6 +53,7 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BaseImplementations\HashAlgorithmStoreBase.cs" />
     <Compile Include="HashAlgorithmIdentifiers.cs" />
     <Compile Include="IBlock.cs" />
     <Compile Include="IChainParameters.cs" />

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace Evercoin
+﻿namespace Evercoin
 {
     /// <summary>
     /// Represents a script that must be executed successfully in order to
