@@ -68,6 +68,11 @@
         OP_RESERVED = 0x50,
 
         /// <summary>
+        /// The opcode immediately preceding <see cref="OP_1"/>.
+        /// </summary>
+        OPCODE_IMMEDIATELY_BEFORE_OP_1 = 0x50,
+
+        /// <summary>
         /// Pushes the value 1 onto the stack.
         /// </summary>
         OP_1 = 0x51,
