@@ -77,7 +77,7 @@
     <Error Condition="!Exists('$(SolutionDir)\.nuget\NuGet.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)\.nuget\NuGet.targets'))" />
   </Target>
   <PropertyGroup>
-    <PostBuildEvent>set</PostBuildEvent>
+    <PostBuildEvent>IF DEFINED JENKINS_HOME ("$(SolutionDir)packages\xunit.runners.1.9.2\tools\xunit.console.clr4.exe" "$(TargetPath)" /noshadow /nunit nunit.xml)</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
