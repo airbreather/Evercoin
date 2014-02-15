@@ -85,7 +85,7 @@ namespace Evercoin.Algorithms
         /// </remarks>
         void IHashAlgorithmStore.RegisterHashAlgorithm(Guid identifier, IHashAlgorithm algorithm)
         {
-            throw new NotSupportedException();
+            throw new NotSupportedException("This hash algorithm store only provides a read-only list of built-in hash algorithms.");
         }
     }
 }
