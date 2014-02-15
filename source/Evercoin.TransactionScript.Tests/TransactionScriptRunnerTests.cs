@@ -19,6 +19,7 @@ namespace Evercoin.TransactionScript
         [InlineData("F0", "0A", "F0")]
         [InlineData("0FAFF0", "FAFF", "0FAFF0")]
         [InlineData("FA01000000FA0100FA01", "FA01", "00000000")]
+        [InlineData("FA01FA01000000FA0100FA01", "FA01", "00000000")]
         [InlineData("FFFFFFFFFF", "FFFFFFFF", "FF")]
         public void DeleteSubsequenceShouldDeleteSubsequence(string longString, string substring, string expected)
         {

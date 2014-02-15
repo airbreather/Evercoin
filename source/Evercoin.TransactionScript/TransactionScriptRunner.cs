@@ -935,7 +935,9 @@ namespace Evercoin.TransactionScript
                               .Take(signature.Count)
                               .SequenceEqual(signature))
                 {
-                    scriptCode = scriptCode.RemoveRange(i, signature.Count);
+                    // We want to make sure we try the sequence of bytes
+                    // at the position we just emptied out, thus the decrement
+                    scriptCode = scriptCode.RemoveRange(i--, signature.Count);
                 }
             }
 
