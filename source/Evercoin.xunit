@@ -1,0 +1,7 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<xunit>
+  <assemblies>
+    <assembly filename="Evercoin.TransactionScript.Tests\bin\Release\Evercoin.TransactionScript.Tests.dll" shadow-copy="true" />
+    <assembly filename="Evercoin.Algorithms.Tests\bin\Release\Evercoin.Algorithms.Tests.dll" shadow-copy="true" />
+  </assemblies>
+</xunit>
