@@ -55,7 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="TransactionScriptRunnerBuilder.cs" />
-    <Compile Include="Tests\TransactionScriptRunnerTests.cs" />
+    <Compile Include="TransactionScriptRunnerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -72,9 +72,6 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>IF DEFINED JENKINS_HOME ("$(SolutionDir)packages\xunit.runners.1.9.2\tools\xunit.console.clr4.exe" "$(TargetPath)" /noshadow /nunit nunit.xml)</PostBuildEvent>
-  </PropertyGroup>
   <Import Project="$(SolutionDir)\.nuget\NuGet.targets" Condition="Exists('$(SolutionDir)\.nuget\NuGet.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
