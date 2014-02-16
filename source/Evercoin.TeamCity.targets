@@ -8,8 +8,7 @@
     </ItemGroup>
 
     <Target Name="Test">
-        <xunit Assemblies="@(TestAssemblies)"
-               Html="$(MSBuildProjectDirectory)\output\TestResults.html" />
+        <xunit Assemblies="@(TestAssemblies)" />
     </Target>
 
 </Project>
