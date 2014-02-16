@@ -8,7 +8,7 @@ using Moq;
 using Xunit;
 using Xunit.Extensions;
 
-namespace Evercoin.Algorithms
+namespace Evercoin.Algorithms.Tests
 {
     public sealed class BuiltinHashAlgorithmStoreTests
     {

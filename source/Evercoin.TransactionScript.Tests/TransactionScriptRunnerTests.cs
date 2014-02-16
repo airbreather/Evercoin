@@ -9,7 +9,7 @@ using Moq;
 using Xunit;
 using Xunit.Extensions;
 
-namespace Evercoin.TransactionScript
+namespace Evercoin.TransactionScript.Tests
 {
     public sealed class TransactionScriptRunnerTests
     {

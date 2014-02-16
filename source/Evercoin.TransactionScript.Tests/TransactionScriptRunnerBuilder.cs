@@ -2,7 +2,7 @@
 
 using Moq;
 
-namespace Evercoin.TransactionScript
+namespace Evercoin.TransactionScript.Tests
 {
     internal sealed class TransactionScriptRunnerBuilder
     {
