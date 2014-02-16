@@ -176,11 +176,16 @@ namespace Evercoin.TransactionScript
             this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
-        public bool EvaluateTransactionScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker)
+        public bool EvaluateScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker)
         {
             if (serializedScript == null)
             {
                 throw new ArgumentNullException("serializedScript");
+            }
+
+            if (signatureChecker == null)
+            {
+                throw new ArgumentNullException("signatureChecker");
             }
 
             Stack<StackItem> mainStack = new Stack<StackItem>();
