@@ -4,7 +4,7 @@
                TaskName="Xunit.Runner.MSBuild.xunit" />
 
     <ItemGroup>
-        <TestAssemblies Include="**/*.Tests.dll" />
+        <TestAssemblies Include="**/bin/Release/*.Tests.dll" />
     </ItemGroup>
 
     <Target Name="Test">
