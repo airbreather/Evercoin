@@ -55,7 +55,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="TransactionScriptRunnerBuilder.cs" />
-    <Compile Include="TransactionScriptRunnerTests.cs" />
+    <Compile Include="Tests\TransactionScriptRunnerTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
