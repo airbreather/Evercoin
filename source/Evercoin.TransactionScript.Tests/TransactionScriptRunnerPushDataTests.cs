@@ -31,6 +31,23 @@ namespace Evercoin.TransactionScript
         }
 
         [Theory]
+        [InlineData(ScriptOperation.OP_PUSHDATA1, 0)]
+        [InlineData(ScriptOperation.OP_PUSHDATA2, 0)]
+        [InlineData(ScriptOperation.OP_PUSHDATA2, 1)]
+        [InlineData(ScriptOperation.OP_PUSHDATA4, 0)]
+        [InlineData(ScriptOperation.OP_PUSHDATA4, 1)]
+        [InlineData(ScriptOperation.OP_PUSHDATA4, 2)]
+        [InlineData(ScriptOperation.OP_PUSHDATA4, 3)]
+        public void PushDataWithoutProvidingEnoughDataForSizeShouldFailScript(ScriptOperation opcode, int numberOfBytesToProvide)
+        {
+            byte[] scriptBytes = new byte[numberOfBytesToProvide + 1];
+            scriptBytes[0] = (byte)opcode;
+
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
+            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
+        }
+
+        [Theory]
         [InlineData(2, 1)]
         [InlineData(5, 3)]
         [InlineData(19, 18)]
