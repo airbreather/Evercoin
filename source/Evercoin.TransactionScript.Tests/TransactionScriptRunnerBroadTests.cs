@@ -205,6 +205,5 @@ namespace Evercoin.TransactionScript
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
             Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
         }
-
     }
 }

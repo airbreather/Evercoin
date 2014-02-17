@@ -79,7 +79,7 @@ namespace Evercoin.TransactionScript
             byte[] scriptBytes = new byte[numberOfBytesToProvide + 3];
 
             byte[] dataSizeBytes = BitConverter.GetBytes((ushort)numberOfBytesToExpect)
-                                               .MakeLittleEndian();
+                                               .LittleEndianToOrFromBitConverterEndianness();
 
             scriptBytes[0] = (byte)ScriptOperation.OP_PUSHDATA2;
             scriptBytes[1] = dataSizeBytes[0];
@@ -107,7 +107,7 @@ namespace Evercoin.TransactionScript
             byte[] scriptBytes = new byte[numberOfBytesToProvide + 5];
 
             byte[] dataSizeBytes = BitConverter.GetBytes((uint)numberOfBytesToExpect)
-                                               .MakeLittleEndian();
+                                               .LittleEndianToOrFromBitConverterEndianness();
 
             scriptBytes[0] = (byte)ScriptOperation.OP_PUSHDATA4;
             scriptBytes[1] = dataSizeBytes[0];
@@ -185,7 +185,7 @@ namespace Evercoin.TransactionScript
             byte[] scriptBytes = new byte[numberOfBytesToPush + 3];
 
             byte[] dataSizeBytes = BitConverter.GetBytes((ushort)numberOfBytesToPush)
-                                               .MakeLittleEndian();
+                                               .LittleEndianToOrFromBitConverterEndianness();
 
             scriptBytes[0] = (byte)ScriptOperation.OP_PUSHDATA2;
             scriptBytes[1] = dataSizeBytes[0];
@@ -212,7 +212,7 @@ namespace Evercoin.TransactionScript
             byte[] scriptBytes = new byte[numberOfBytesToPush + 5];
 
             byte[] dataSizeBytes = BitConverter.GetBytes((uint)numberOfBytesToPush)
-                                               .MakeLittleEndian();
+                                               .LittleEndianToOrFromBitConverterEndianness();
 
             scriptBytes[0] = (byte)ScriptOperation.OP_PUSHDATA4;
             scriptBytes[1] = dataSizeBytes[0];

@@ -80,7 +80,20 @@ namespace Evercoin.Util
             return result;
         }
 
-        public static byte[] MakeLittleEndian(this byte[] bytes)
+        /// <summary>
+        /// Converts a byte array to or from the endianness used by
+        /// <see cref="BitConverter"/>, from or to little-endian.
+        /// </summary>
+        /// <param name="bytes">
+        /// The byte array to convert.
+        /// </param>
+        /// <returns>
+        /// The converted array (either itself, or reversed).
+        /// </returns>
+        /// <remarks>
+        /// Modifies the array in-place, as well as returning it.
+        /// </remarks>
+        public static byte[] LittleEndianToOrFromBitConverterEndianness(this byte[] bytes)
         {
             if (!BitConverter.IsLittleEndian)
             {

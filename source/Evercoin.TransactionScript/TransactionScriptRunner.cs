@@ -339,7 +339,8 @@ namespace Evercoin.TransactionScript
                         return false;
                     }
 
-                    dataSizeBytes.MakeLittleEndian();
+                    // Our data is little-endian, so prepare it for BitConverter usage.
+                    dataSizeBytes.LittleEndianToOrFromBitConverterEndianness();
 
                     uint dataSize = getDataSize();
                     byte[] dataToPush = new byte[dataSize];
@@ -925,7 +926,7 @@ namespace Evercoin.TransactionScript
                 #endregion Crypto
 
                 default:
-                    throw new InvalidOperationException("Well that's weird... I thought I got all of them?");
+                    throw new InvalidOperationException("You should never see this at runtime!");
             }
         }
 
