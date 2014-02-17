@@ -60,6 +60,7 @@
     <Compile Include="ICoinbaseValueSource.cs" />
     <Compile Include="IHashAlgorithm.cs" />
     <Compile Include="IHashAlgorithmStore.cs" />
+    <Compile Include="Util\ByteTwiddling.cs" />
     <Compile Include="ISignatureChecker.cs" />
     <Compile Include="ITransaction.cs" />
     <Compile Include="ITransactionScript.cs" />

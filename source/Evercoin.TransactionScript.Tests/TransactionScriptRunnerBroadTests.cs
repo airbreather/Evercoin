@@ -4,14 +4,16 @@ using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
 
+using Evercoin.Util;
+
 using Moq;
 
 using Xunit;
 using Xunit.Extensions;
 
-namespace Evercoin.TransactionScript.Tests
+namespace Evercoin.TransactionScript
 {
-    public sealed class TransactionScriptRunnerTests
+    public sealed class TransactionScriptRunnerBroadTests
     {
         public static IEnumerable<object[]> MissingOpcodes
         {
@@ -20,6 +22,29 @@ namespace Evercoin.TransactionScript.Tests
                 return Enumerable.Range((int)ScriptOperation.BEGIN_UNUSED, ScriptOperation.END_UNUSED - ScriptOperation.BEGIN_UNUSED + 1)
                                  .Select(opcode => new object[] { (ScriptOperation)opcode });
             }
+        }
+
+        [Fact]
+        public void ConstructorShouldThrowOnNullHashAlgorithmStore()
+        {
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => new TransactionScriptRunner(null));
+            Assert.Equal("hashAlgorithmStore", thrownException.ParamName);
+        }
+
+        [Fact]
+        public void EvaluateScriptShouldThrowOnNullScript()
+        {
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(null, Mock.Of<ISignatureChecker>()));
+            Assert.Equal("serializedScript", thrownException.ParamName);
+        }
+
+        [Fact]
+        public void EvaluateScriptShouldThrowOnNullSignatureChecker()
+        {
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<byte>(), null));
+            Assert.Equal("signatureChecker", thrownException.ParamName);
         }
 
         // Bit twiddling is always so fun.
@@ -34,12 +59,12 @@ namespace Evercoin.TransactionScript.Tests
         [InlineData("FFFFFFFFFF", "FFFFFFFF", "FF")]
         public void DeleteSubsequenceShouldDeleteSubsequence(string longString, string substring, string expected)
         {
-            ImmutableList<byte> bytes = ImmutableList.CreateRange(HexStringToByteArray(longString));
-            IList<byte> subsequence = HexStringToByteArray(substring).ToList();
+            ImmutableList<byte> bytes = ImmutableList.CreateRange(ByteTwiddling.HexStringToByteArray(longString));
+            byte[] subsequence = ByteTwiddling.HexStringToByteArray(substring);
+            byte[] expectedBytes = ByteTwiddling.HexStringToByteArray(expected);
 
-            IImmutableList<byte> trimmedSequence = TransactionScriptRunner.DeleteSubsequence(bytes, subsequence);
-            string actual = ByteArrayToHexString(trimmedSequence);
-            Assert.Equal(expected, actual);
+            IImmutableList<byte> actual = TransactionScriptRunner.DeleteSubsequence(bytes, subsequence);
+            Assert.Equal(expectedBytes, actual);
         }
 
         [Theory]
@@ -182,68 +207,5 @@ namespace Evercoin.TransactionScript.Tests
             Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
         }
 
-        [Fact]
-        public void ConstructorShouldThrowOnNullHashAlgorithmStore()
-        {
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => new TransactionScriptRunner(null));
-            Assert.Equal("hashAlgorithmStore", thrownException.ParamName);
-        }
-
-        [Fact]
-        public void EvaluateScriptShouldThrowOnNullScript()
-        {
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(null, Mock.Of<ISignatureChecker>()));
-            Assert.Equal("serializedScript", thrownException.ParamName);
-        }
-
-        [Fact]
-        public void EvaluateScriptShouldThrowOnNullSignatureChecker()
-        {
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<byte>(), null));
-            Assert.Equal("signatureChecker", thrownException.ParamName);
-        }
-
-        // http://stackoverflow.com/a/311179/1083771
-        private static IEnumerable<byte> HexStringToByteArray(string hexString)
-        {
-            int byteCount = hexString.Length / 2;
-            byte[] result = new byte[byteCount];
-            using (StringReader sr = new StringReader(hexString))
-            {
-                for (int i = 0; i < byteCount; i++)
-                {
-                    // Read 2 characters, each representing a nibble.
-                    char nibble1 = (char)sr.Read();
-                    char nibble2 = (char)sr.Read();
-
-                    string hexByte = String.Concat(nibble1, nibble2);
-
-                    // The new 2-char string is a number in base-16.
-                    result[i] = Convert.ToByte(hexByte, 16);
-                }
-            }
-
-            return result;
-        }
-
-        // http://stackoverflow.com/a/14333437/1083771
-        static string ByteArrayToHexString(IReadOnlyList<byte> bytes)
-        {
-            // From the author:
-            // Abandon all hope, you who enter here.
-            char[] c = new char[bytes.Count * 2];
-            int b;
-            for (int i = 0; i < bytes.Count; i++)
-            {
-                b = bytes[i] >> 4;
-                c[i * 2] = (char)(55 + b + (((b - 10) >> 31) & -7));
-                b = bytes[i] & 0xF;
-                c[i * 2 + 1] = (char)(55 + b + (((b - 10) >> 31) & -7));
-            }
-
-            return new string(c);
-        }
     }
 }

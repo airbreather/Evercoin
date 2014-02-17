@@ -4,6 +4,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
 
+using Evercoin.Util;
+
 namespace Evercoin.TransactionScript
 {
     public sealed class TransactionScriptRunner : ITransactionScriptRunner
@@ -235,7 +237,7 @@ namespace Evercoin.TransactionScript
 
                 // Next {n} bytes contain the data to push.
                 byte[] dataToPush = new byte[dataSize];
-                if (!TryReadBytes(dataSize, bytes, dataToPush))
+                if (!TryReadBytes(bytes, dataToPush))
                 {
                     return false;
                 }
@@ -312,29 +314,36 @@ namespace Evercoin.TransactionScript
                 case ScriptOperation.OP_PUSHDATA2:
                 case ScriptOperation.OP_PUSHDATA4:
                 {
-                    byte count = 1;
+                    byte[] dataSizeBytes = null;
+                    Func<uint> getDataSize = null;
                     switch (opcode)
                     {
-                        case ScriptOperation.OP_PUSHDATA2:
-                            count = 2;
+                        case ScriptOperation.OP_PUSHDATA1:
+                            dataSizeBytes = new byte[1];
+                            getDataSize = () => dataSizeBytes[0];
                             break;
+
+                        case ScriptOperation.OP_PUSHDATA2:
+                            dataSizeBytes = new byte[2];
+                            getDataSize = () => BitConverter.ToUInt16(dataSizeBytes, 0);
+                            break;
+
                         case ScriptOperation.OP_PUSHDATA4:
-                            count = 4;
+                            dataSizeBytes = new byte[4];
+                            getDataSize = () => BitConverter.ToUInt32(dataSizeBytes, 0);
                             break;
                     }
 
-                    // Next {1,2,4} bytes tell us the size of the data to push.
-                    byte[] b = new byte[count];
-                    if (!TryReadBytes(count, bytes, b))
+                    if (!TryReadBytes(bytes, dataSizeBytes))
                     {
                         return false;
                     }
 
-                    ulong dataSize = BitConverter.ToUInt64(b, 0);
+                    dataSizeBytes.MakeLittleEndian();
 
-                    // Next {n} bytes contain the data to push.
+                    uint dataSize = getDataSize();
                     byte[] dataToPush = new byte[dataSize];
-                    if (!TryReadBytes(dataSize, bytes, dataToPush))
+                    if (!TryReadBytes(bytes, dataToPush))
                     {
                         return false;
                     }
@@ -961,11 +970,11 @@ namespace Evercoin.TransactionScript
             return true;
         }
 
-        private static bool TryReadBytes(ulong count, IEnumerator<byte> bytes, byte[] value)
+        private static bool TryReadBytes(IEnumerator<byte> bytes, byte[] value)
         {
             ulong currentIndex = 0;
 
-            while (count-- > 0)
+            while (currentIndex < (ulong)value.Length)
             {
                 if (!bytes.MoveNext())
                 {

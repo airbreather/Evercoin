@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Text;
+
+using Evercoin.Util;
 
 using Moq;
 
@@ -82,7 +83,7 @@ namespace Evercoin.Algorithms.Tests
         public void GetHashAlgorithmResultShouldReturnCanonicalResults(Guid knownAlgorithmIdentifier, string utf8Input, string expectedHexResult)
         {
             byte[] input = Encoding.UTF8.GetBytes(utf8Input);
-            IEnumerable<byte> expectedResult = HexStringToByteArray(expectedHexResult);
+            IEnumerable<byte> expectedResult = ByteTwiddling.HexStringToByteArray(expectedHexResult);
 
             BuiltinHashAlgorithmStore sut = new BuiltinHashAlgorithmStore();
             IHashAlgorithm algorithm = sut.GetHashAlgorithm(knownAlgorithmIdentifier);
@@ -90,28 +91,6 @@ namespace Evercoin.Algorithms.Tests
             IEnumerable<byte> actualResult = algorithm.CalculateHash(input);
 
             Assert.Equal(expectedResult, actualResult);
-        }
-
-        private static IEnumerable<byte> HexStringToByteArray(string hexString)
-        {
-            int byteCount = hexString.Length / 2;
-            byte[] result = new byte[byteCount];
-            using (StringReader sr = new StringReader(hexString))
-            {
-                for (int i = 0; i < byteCount; i++)
-                {
-                    // Read 2 characters, each representing a nibble.
-                    char nibble1 = (char)sr.Read();
-                    char nibble2 = (char)sr.Read();
-
-                    string hexByte = String.Concat(nibble1, nibble2);
-
-                    // The new 2-char string is a number in base-16.
-                    result[i] = Convert.ToByte(hexByte, 16);
-                }
-            }
-
-            return result;
         }
     }
 }
