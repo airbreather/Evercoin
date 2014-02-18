@@ -109,7 +109,7 @@ namespace Evercoin.TransactionScript
         /// <summary>
         /// The number of items on the stack required to perform an operation.
         /// </summary>
-        private static readonly Dictionary<ScriptOperation, ulong> MinimumRequiredStackDepthForOperation = new Dictionary<ScriptOperation, ulong>
+        private static readonly Dictionary<ScriptOperation, int> MinimumRequiredStackDepthForOperation = new Dictionary<ScriptOperation, int>
                                                                                                            {
                                                                                                                 { ScriptOperation.OP_IF, 1 },
                                                                                                                 { ScriptOperation.OP_NOTIF, 1 },
@@ -219,13 +219,13 @@ namespace Evercoin.TransactionScript
                 return true;
             }
 
-            ulong minStackDepth;
+            int minStackDepth;
             if (!MinimumRequiredStackDepthForOperation.TryGetValue(opcode, out minStackDepth))
             {
                 minStackDepth = 0;
             }
 
-            if ((ulong)mainStack.Count < minStackDepth)
+            if (mainStack.Count < minStackDepth)
             {
                 return false;
             }
@@ -851,7 +851,7 @@ namespace Evercoin.TransactionScript
                     byte[] signature = mainStack.Pop();
 
                     IImmutableList<byte> scriptCode = bytes.DataSinceLastSep;
-                    scriptCode = DeleteSubsequence(scriptCode, signature);
+                    scriptCode = scriptCode.DeleteAllOccurrencesOfSubsequence(signature);
 
                     mainStack.Push(signatureChecker.CheckSignature(signature, publicKey, scriptCode));
                     return opcode == ScriptOperation.OP_CHECKSIG ||
@@ -896,7 +896,7 @@ namespace Evercoin.TransactionScript
                     mainStack.Pop();
 
                     IImmutableList<byte> scriptCode = bytes.DataSinceLastSep;
-                    scriptCode = signatures.Aggregate(scriptCode, DeleteSubsequence);
+                    scriptCode = signatures.Aggregate(scriptCode, ByteTwiddling.DeleteAllOccurrencesOfSubsequence);
 
                     int validSignatureCount = 0;
 
@@ -930,35 +930,6 @@ namespace Evercoin.TransactionScript
             }
         }
 
-        internal static IImmutableList<byte> DeleteSubsequence(IImmutableList<byte> scriptCode, IList<byte> signature)
-        {
-            if (scriptCode.Count <= 0 || signature.Count <= 0)
-            {
-                return scriptCode;
-            }
-
-            byte firstByte = signature[0];
-
-            for (int i = 0; i < scriptCode.Count - signature.Count + 1; i++)
-            {
-                if (scriptCode[i] != firstByte)
-                {
-                    continue;
-                }
-
-                if (scriptCode.Skip(i)
-                              .Take(signature.Count)
-                              .SequenceEqual(signature))
-                {
-                    // We want to make sure we try the sequence of bytes
-                    // at the position we just emptied out, thus the decrement
-                    scriptCode = scriptCode.RemoveRange(i--, signature.Count);
-                }
-            }
-
-            return scriptCode;
-        }
-
         private static bool MoveItemFromStackToStack<T>(Stack<T> sourceStack, Stack<T> destinationStack)
         {
             if (sourceStack.Count < 1)
@@ -973,9 +944,9 @@ namespace Evercoin.TransactionScript
 
         private static bool TryReadBytes(IEnumerator<byte> bytes, byte[] value)
         {
-            ulong currentIndex = 0;
+            int currentIndex = 0;
 
-            while (currentIndex < (ulong)value.Length)
+            while (currentIndex < value.Length)
             {
                 if (!bytes.MoveNext())
                 {

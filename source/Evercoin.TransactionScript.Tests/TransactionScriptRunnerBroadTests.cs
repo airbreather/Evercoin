@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
-
-using Evercoin.Util;
 
 using Moq;
 
@@ -44,26 +41,6 @@ namespace Evercoin.TransactionScript
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
             ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<byte>(), null));
             Assert.Equal("signatureChecker", thrownException.ParamName);
-        }
-
-        // Bit twiddling is always so fun.
-        // I wouldn't let myself get away with writing the SUT before this.
-        [Theory]
-        [InlineData("0AF0", "0A", "F0")]
-        [InlineData("0AF0", "F0", "0A")]
-        [InlineData("F0", "0A", "F0")]
-        [InlineData("0FAFF0", "FAFF", "0FAFF0")]
-        [InlineData("FA01000000FA0100FA01", "FA01", "00000000")]
-        [InlineData("FA01FA01000000FA0100FA01", "FA01", "00000000")]
-        [InlineData("FFFFFFFFFF", "FFFFFFFF", "FF")]
-        public void DeleteSubsequenceShouldDeleteSubsequence(string longString, string substring, string expected)
-        {
-            ImmutableList<byte> bytes = ImmutableList.CreateRange(ByteTwiddling.HexStringToByteArray(longString));
-            byte[] subsequence = ByteTwiddling.HexStringToByteArray(substring);
-            byte[] expectedBytes = ByteTwiddling.HexStringToByteArray(expected);
-
-            IImmutableList<byte> actual = TransactionScriptRunner.DeleteSubsequence(bytes, subsequence);
-            Assert.Equal(expectedBytes, actual);
         }
 
         [Theory]

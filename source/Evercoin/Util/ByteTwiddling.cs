@@ -1,6 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
+
+using NodaTime;
 
 namespace Evercoin.Util
 {
@@ -101,6 +105,83 @@ namespace Evercoin.Util
             }
 
             return bytes;
+        }
+
+        public static IImmutableList<byte> DeleteAllOccurrencesOfSubsequence(this IImmutableList<byte> scriptCode, IReadOnlyList<byte> signature)
+        {
+            if (scriptCode == null)
+            {
+                throw new ArgumentNullException("scriptCode");
+            }
+
+            if (signature == null)
+            {
+                throw new ArgumentNullException("signature");
+            }
+
+            if (scriptCode.Count == 0 || signature.Count == 0)
+            {
+                return scriptCode;
+            }
+
+            int i;
+            int[] kmpLookup = CreateKMPLookup(signature);
+            while ((i = FindIndexOfNeedleInHaystack(scriptCode, signature, kmpLookup)) < scriptCode.Count)
+            {
+                scriptCode = scriptCode.RemoveRange(i, signature.Count);
+            }
+
+            return scriptCode;
+        }
+
+        // http://en.wikipedia.org/wiki/Knuth%E2%80%93Morris%E2%80%93Pratt_algorithm
+        private static int FindIndexOfNeedleInHaystack(IReadOnlyList<byte> haystack, IReadOnlyList<byte> needle, IReadOnlyList<int> lookup)
+        {
+            int m = 0;
+            int i = 0;
+            while (m + i < haystack.Count)
+            {
+                if (needle[i] == haystack[m + i])
+                {
+                    if (i++ == needle.Count - 1)
+                    {
+                        return m;
+                    }
+                }
+                else
+                {
+                    m = m + i - lookup[i];
+                    i = lookup[i] > -1 ? lookup[i] : 0;
+                }
+            }
+
+            return haystack.Count;
+        }
+
+        // http://en.wikipedia.org/wiki/Knuth%E2%80%93Morris%E2%80%93Pratt_algorithm
+        private static int[] CreateKMPLookup(IReadOnlyList<byte> needle)
+        {
+            int[] lookup = new int[needle.Count];
+            lookup[0] = -1;
+            int pos = 2;
+            int cnd = 0;
+            while (pos < needle.Count)
+            {
+                if (needle[pos - 1] == needle[cnd])
+                {
+                    lookup[pos++] = ++cnd;
+                }
+                else if (cnd > 0)
+                {
+                    cnd = lookup[cnd];
+                }
+                else
+                {
+                    lookup[pos++] = 0;
+                }
+            }
+
+            return lookup;
         }
     }
 }
