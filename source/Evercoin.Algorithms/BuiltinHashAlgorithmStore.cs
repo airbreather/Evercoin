@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.ComponentModel.Composition;
 
 using Evercoin.BaseImplementations;
 
@@ -14,7 +13,6 @@ namespace Evercoin.Algorithms
     /// <see cref="IHashAlgorithm"/>s that we have built-in handling for.
     /// This implementation is read-only.
     /// </summary>
-    [Export(typeof(IHashAlgorithmStore))]
     public sealed class BuiltinHashAlgorithmStore : HashAlgorithmStoreBase
     {
         /// <summary>

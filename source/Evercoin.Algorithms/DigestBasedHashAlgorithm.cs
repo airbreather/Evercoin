@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 
 using Org.BouncyCastle.Crypto;
 
@@ -49,7 +50,7 @@ namespace Evercoin.Algorithms
         /// <exception cref="ArgumentNullException">
         /// <paramref name="inputData"/> is <c>null</c>.
         /// </exception>
-        public byte[] CalculateHash(IEnumerable<byte> inputData)
+        public IImmutableList<byte> CalculateHash(IEnumerable<byte> inputData)
         {
             if (inputData == null)
             {
@@ -70,7 +71,7 @@ namespace Evercoin.Algorithms
                 digest.DoFinal(result, 0);
             }
 
-            return result;
+            return result.ToImmutableList();
         }
     }
 }

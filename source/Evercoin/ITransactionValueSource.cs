@@ -3,8 +3,7 @@
 namespace Evercoin
 {
     /// <summary>
-    /// Represents an <see cref="IValueSource"/> whose value can only be spent
-    /// by running a script.
+    /// Represents an <see cref="IValueSource"/> connected to a transaction.
     /// </summary>
     public interface ITransactionValueSource : IValueSource, IEquatable<ITransactionValueSource>
     {
@@ -13,11 +12,5 @@ namespace Evercoin
         /// as one of its outputs.
         /// </summary>
         ITransaction Transaction { get; }
-
-        /// <summary>
-        /// The serialized script that dictates how the value
-        /// from this source can be spent.
-        /// </summary>
-        byte[] ScriptData { get; }
     }
 }

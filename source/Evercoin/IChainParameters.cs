@@ -33,9 +33,9 @@ namespace Evercoin
         ISet<SecurityMechanism> SecurityMechanisms { get; }
 
         /// <summary>
-        /// Gets the desired <see cref="Interval"/> of time between block.
+        /// Gets the desired <see cref="Duration"/> of time between block.
         /// </summary>
-        Interval DesiredTimeBetweenBlocks { get; }
+        Duration DesiredTimeBetweenBlocks { get; }
 
         /// <summary>
         /// Gets how many block to wait before recalculating the minimum

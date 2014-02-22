@@ -45,6 +45,7 @@
     <Reference Include="System.Collections.Immutable">
       <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.30\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
     </Reference>
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Reactive.Interfaces">
@@ -53,17 +54,18 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BaseImplementations\ChainStoreBase.cs" />
     <Compile Include="BaseImplementations\HashAlgorithmStoreBase.cs" />
     <Compile Include="HashAlgorithmIdentifiers.cs" />
     <Compile Include="IBlock.cs" />
     <Compile Include="IChainParameters.cs" />
-    <Compile Include="ICoinbaseValueSource.cs" />
+    <Compile Include="IChainStore.cs" />
     <Compile Include="IHashAlgorithm.cs" />
     <Compile Include="IHashAlgorithmStore.cs" />
+    <Compile Include="IReadOnlyChainStore.cs" />
     <Compile Include="Util\ByteTwiddling.cs" />
     <Compile Include="ISignatureChecker.cs" />
     <Compile Include="ITransaction.cs" />
-    <Compile Include="ITransactionScript.cs" />
     <Compile Include="ITransactionScriptRunner.cs" />
     <Compile Include="ITransactionValueSource.cs" />
     <Compile Include="IValueSource.cs" />
@@ -71,6 +73,7 @@
     <Compile Include="INetworkParameters.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SecurityMechanism.cs" />
+    <Compile Include="Util\HashCodeBuilder.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

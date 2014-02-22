@@ -9,8 +9,16 @@ namespace Evercoin
     /// <summary>
     /// A block of transactions.
     /// </summary>
+    /// <remarks>
+    /// Implementations should be immutable; instances are likely to be shared.
+    /// </remarks>
     public interface IBlock : IEquatable<IBlock>
     {
+        /// <summary>
+        /// Gets a string that identifies this block.
+        /// </summary>
+        string Identifier { get; }
+
         /// <summary>
         /// Gets the ordered list of <see cref="ITransaction"/> objects
         /// contained within this block.
@@ -36,7 +44,7 @@ namespace Evercoin
         /// Gets the <see cref="IValueSource"/> that represents the reward
         /// for mining this block.
         /// </summary>
-        ICoinbaseValueSource Coinbase { get; }
+        IValueSource Coinbase { get; }
 
         /// <summary>
         /// Gets the difficulty target being used for this block.
@@ -53,27 +61,11 @@ namespace Evercoin
         ulong Height { get; }
 
         /// <summary>
-        /// Gets how deep this block is in the chain.
-        /// </summary>
-        /// <remarks>
-        /// In other words, how many blocks come after this one.
-        /// </remarks>
-        ulong Depth { get; }
-
-        /// <summary>
-        /// Gets the previous block in the chain.
+        /// Gets the identifier of the previous block in the chain.
         /// </summary>
         /// <remarks>
         /// When <see cref="Height"/> equals 0, the return value is undefined.
         /// </remarks>
-        IBlock PreviousBlock { get; }
-
-        /// <summary>
-        /// Gets the next block in the chain.
-        /// </summary>
-        /// <remarks>
-        /// When <see cref="Depth"/> equals 0, the return value is undefined.
-        /// </remarks>
-        IBlock NextBlock { get; }
+        string PreviousBlockIdentifier { get; }
     }
 }

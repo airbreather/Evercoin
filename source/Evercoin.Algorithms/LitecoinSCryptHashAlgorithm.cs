@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 using CryptSharp.Utility;
@@ -24,7 +25,7 @@ namespace Evercoin.Algorithms
         /// <exception cref="ArgumentNullException">
         /// <paramref name="inputData"/> is <c>null</c>.
         /// </exception>
-        public byte[] CalculateHash(IEnumerable<byte> inputData)
+        public IImmutableList<byte> CalculateHash(IEnumerable<byte> inputData)
         {
             if (inputData == null)
             {
@@ -34,7 +35,7 @@ namespace Evercoin.Algorithms
             byte[] inArray = inputData.ToArray();
             byte[] outArray = new byte[32];
             SCrypt.ComputeKey(inArray, inArray, 1024, 1, 1, null, outArray);
-            return outArray;
+            return outArray.ToImmutableList();
         }
     }
 }

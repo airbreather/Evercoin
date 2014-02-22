@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Immutable;
 
 namespace Evercoin
 {
@@ -11,5 +12,11 @@ namespace Evercoin
         /// Gets how much value can be spent by this source.
         /// </summary>
         decimal AvailableValue { get; }
+
+        /// <summary>
+        /// The serialized script that dictates how the value
+        /// from this source can be spent.
+        /// </summary>
+        IImmutableList<byte> ScriptPubKey { get; }
     }
 }

@@ -60,14 +60,14 @@ namespace Evercoin.Algorithms
         /// <exception cref="ArgumentNullException">
         /// <paramref name="inputData"/> is <c>null</c>.
         /// </exception>
-        public byte[] CalculateHash(IEnumerable<byte> inputData)
+        public IImmutableList<byte> CalculateHash(IEnumerable<byte> inputData)
         {
             if (inputData == null)
             {
                 throw new ArgumentNullException("inputData");
             }
 
-            return (byte[])this.algorithms.Aggregate(inputData, (lastResult, algorithm) => algorithm.CalculateHash(lastResult));
+            return (IImmutableList<byte>)this.algorithms.Aggregate(inputData, (lastResult, algorithm) => algorithm.CalculateHash(lastResult));
         }
     }
 }

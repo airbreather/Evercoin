@@ -4,8 +4,6 @@ using System.Text;
 
 using Evercoin.Util;
 
-using Moq;
-
 using Xunit;
 using Xunit.Extensions;
 
@@ -66,16 +64,6 @@ namespace Evercoin.Algorithms.Tests
             Guid unknownIdentifier = Guid.NewGuid();
 
             Assert.Throws<KeyNotFoundException>(() => sut.GetHashAlgorithm(unknownIdentifier));
-        }
-
-        [Fact]
-        public void RegisterHashAlgorithmShouldFail()
-        {
-            IHashAlgorithmStore sut = new BuiltinHashAlgorithmStore();
-            Guid someGuid = Guid.NewGuid();
-            IHashAlgorithm someAlgorithm = Mock.Of<IHashAlgorithm>();
-
-            Assert.Throws<NotSupportedException>(() => sut.RegisterHashAlgorithm(someGuid, someAlgorithm));
         }
 
         [Theory]

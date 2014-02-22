@@ -24,6 +24,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evercoin.TransactionScript.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evercoin.Tests", "Evercoin.Tests\Evercoin.Tests.csproj", "{87FC1948-73BC-4905-A154-1DEA0EFE6AAB}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evercoin.Storage", "Evercoin.Storage\Evercoin.Storage.csproj", "{643D4A18-1853-47A5-AB6C-56BCDB6E234B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evercoin.App", "Evercoin.App\Evercoin.App.csproj", "{ABCC2AFE-C73C-4DEE-AEF8-A0C56038F014}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -54,6 +58,14 @@ Global
 		{87FC1948-73BC-4905-A154-1DEA0EFE6AAB}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{87FC1948-73BC-4905-A154-1DEA0EFE6AAB}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{87FC1948-73BC-4905-A154-1DEA0EFE6AAB}.Release|Any CPU.Build.0 = Release|Any CPU
+		{643D4A18-1853-47A5-AB6C-56BCDB6E234B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{643D4A18-1853-47A5-AB6C-56BCDB6E234B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{643D4A18-1853-47A5-AB6C-56BCDB6E234B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{643D4A18-1853-47A5-AB6C-56BCDB6E234B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{ABCC2AFE-C73C-4DEE-AEF8-A0C56038F014}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ABCC2AFE-C73C-4DEE-AEF8-A0C56038F014}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ABCC2AFE-C73C-4DEE-AEF8-A0C56038F014}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ABCC2AFE-C73C-4DEE-AEF8-A0C56038F014}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

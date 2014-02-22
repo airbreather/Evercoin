@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Net;
 
 namespace Evercoin
@@ -27,7 +28,7 @@ namespace Evercoin
         /// This is usually a sequence of 4 bytes that are uncommon
         /// in typical data streams.
         /// </remarks>
-        byte[] StaticMessagePrefixData { get; }
+        IImmutableList<byte> StaticMessagePrefixData { get; }
 
         /// <summary>
         /// A set of <see cref="DnsEndPoint"/> objects that may be used
