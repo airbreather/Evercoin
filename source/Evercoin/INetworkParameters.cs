@@ -10,6 +10,35 @@ namespace Evercoin
     public interface INetworkParameters
     {
         /// <summary>
+        /// Gets the version of the protocol being used here.
+        /// </summary>
+        int ProtocolVersion { get; }
+
+        /// <summary>
+        /// Gets the <see cref="IHashAlgorithm"/> used to verify that the
+        /// payload content was received successfully.
+        /// </summary>
+        IHashAlgorithm PayloadChecksumAlgorithm { get; }
+
+        /// <summary>
+        /// Gets the number of bytes from the head of
+        /// <see cref="PayloadChecksumAlgorithm"/>'s result to add to the
+        /// message header.
+        /// </summary>
+        /// <remarks>
+        /// Looks like this is going to be 4 for everything that exists today.
+        /// </remarks>
+        int PayloadChecksumLengthInBytes { get; }
+
+        /// <summary>
+        /// Gets the number of bytes to include as the command.
+        /// </summary>
+        /// <remarks>
+        /// Looks like this is going to be 12 for everything that exists today.
+        /// </remarks>
+        int CommandLengthInBytes { get; }
+
+        /// <summary>
         /// Gets the number of bytes that need to be read for each message
         /// in order to determine what business logic to apply.
         /// </summary>
@@ -18,7 +47,7 @@ namespace Evercoin
         /// 4 bytes for the <see cref="StaticMessagePrefixData"/>.
         /// Remaining 12 bytes are the ASCII-encoded command.
         /// </remarks>
-        uint MessagePrefixLengthInBytes { get; }
+        int MessagePrefixLengthInBytes { get; }
 
         /// <summary>
         /// Gets the static data that starts every message for this network.
@@ -28,7 +57,7 @@ namespace Evercoin
         /// This is usually a sequence of 4 bytes that are uncommon
         /// in typical data streams.
         /// </remarks>
-        IImmutableList<byte> StaticMessagePrefixData { get; }
+        ImmutableList<byte> StaticMessagePrefixData { get; }
 
         /// <summary>
         /// A set of <see cref="DnsEndPoint"/> objects that may be used

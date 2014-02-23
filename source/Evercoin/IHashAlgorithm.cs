@@ -22,6 +22,6 @@ namespace Evercoin
         /// <exception cref="ArgumentNullException">
         /// <paramref name="inputData"/> is <c>null</c>.
         /// </exception>
-        IImmutableList<byte> CalculateHash(IEnumerable<byte> inputData);
+        ImmutableList<byte> CalculateHash(IEnumerable<byte> inputData);
     }
 }

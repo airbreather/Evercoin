@@ -44,6 +44,11 @@ namespace Evercoin
         INetworkParameters Parameters { get; }
 
         /// <summary>
+        /// Starts the network.
+        /// </summary>
+        void Start();
+
+        /// <summary>
         /// Asynchronously broadcasts a blockchain node to the network.
         /// </summary>
         /// <param name="block">

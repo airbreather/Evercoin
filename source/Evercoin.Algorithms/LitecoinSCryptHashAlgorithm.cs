@@ -25,7 +25,7 @@ namespace Evercoin.Algorithms
         /// <exception cref="ArgumentNullException">
         /// <paramref name="inputData"/> is <c>null</c>.
         /// </exception>
-        public IImmutableList<byte> CalculateHash(IEnumerable<byte> inputData)
+        public ImmutableList<byte> CalculateHash(IEnumerable<byte> inputData)
         {
             if (inputData == null)
             {
