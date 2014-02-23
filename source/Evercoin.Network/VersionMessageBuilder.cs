@@ -1,10 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Text;
-using System.Threading.Tasks;
 
 using Evercoin.Util;
 
@@ -12,49 +10,61 @@ using NodaTime;
 
 namespace Evercoin.Network
 {
-    internal sealed class VersionMessageBuilder
+    public sealed class VersionMessageBuilder
     {
         private const string VersionText = "version";
         private static readonly Encoding CommandEncoding = Encoding.ASCII;
 
-        private readonly INetworkParameters networkParameters;
+        private readonly Network network;
 
-        public VersionMessageBuilder(INetworkParameters networkParameters)
+        public VersionMessageBuilder(INetwork network)
         {
-            if (networkParameters.CommandLengthInBytes < CommandEncoding.GetByteCount(VersionText))
+            if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(VersionText))
             {
-                throw new ArgumentException("Command length is too short for the \"version\" command.", "networkParameters");
+                throw new ArgumentException("Command length is too short for the \"version\" command.", "network");
             }
 
-            this.networkParameters = networkParameters;
+            Network realNetwork = network as Network;
+            if (realNetwork == null)
+            {
+                throw new NotSupportedException("Other things not supported yet because lol");
+            }
+
+            this.network = realNetwork;
         }
 
-        public Message BuildVersionMessage(ulong services,
-                                           Instant timestamp,
-                                           ProtocolNetworkAddress destinationAddress,
-                                           ProtocolNetworkAddress sourceAddress,
-                                           ulong nonce,
-                                           string userAgent,
-                                           int lastBlockReceived,
-                                           bool pleaseRelayTransactionsToMe)
+        public INetworkMessage BuildVersionMessage(Guid clientId,
+                                                   ulong services,
+                                                   Instant timestamp,
+                                                   ulong nonce,
+                                                   string userAgent,
+                                                   int lastBlockReceived,
+                                                   bool pleaseRelayTransactionsToMe)
         {
-            Message message = new Message(this.networkParameters);
+            Message message = new Message(this.network.Parameters, clientId);
+            TcpClient client;
+            this.network.clientLookup.TryGetValue(clientId, out client);
+            IPEndPoint localEndPoint = (IPEndPoint)client.Client.LocalEndPoint;
+            IPEndPoint remoteEndPoint = (IPEndPoint)client.Client.RemoteEndPoint;
 
-            ImmutableList<byte> payload = ImmutableList.CreateRange(BitConverter.GetBytes(this.networkParameters.ProtocolVersion).LittleEndianToOrFromBitConverterEndianness())
+            ProtocolNetworkAddress destinationAddress = new ProtocolNetworkAddress((uint)timestamp.Ticks, services, localEndPoint.Address, (ushort)localEndPoint.Port);
+            ProtocolNetworkAddress sourceAddress = new ProtocolNetworkAddress((uint)timestamp.Ticks, services, remoteEndPoint.Address, (ushort)remoteEndPoint.Port);
+
+            ImmutableList<byte> payload = ImmutableList.CreateRange(BitConverter.GetBytes(this.network.Parameters.ProtocolVersion).LittleEndianToOrFromBitConverterEndianness())
                                                        .AddRange(BitConverter.GetBytes(services).LittleEndianToOrFromBitConverterEndianness())
                                                        .AddRange(BitConverter.GetBytes(timestamp.Ticks).LittleEndianToOrFromBitConverterEndianness())
-                                                       .AddRange(destinationAddress.Data)
-                                                       .AddRange(sourceAddress.Data)
+                                                       .AddRange(destinationAddress.GetData(this.network.Parameters.ProtocolVersionBeforeNegotiation))
+                                                       .AddRange(sourceAddress.GetData(this.network.Parameters.ProtocolVersionBeforeNegotiation))
                                                        .AddRange(BitConverter.GetBytes(nonce).LittleEndianToOrFromBitConverterEndianness())
-                                                       .AddRange(Encoding.ASCII.GetBytes(userAgent))
+                                                       .AddRange(new ProtocolString(userAgent, Encoding.ASCII).Data)
                                                        .AddRange(BitConverter.GetBytes(lastBlockReceived).LittleEndianToOrFromBitConverterEndianness())
                                                        .Add(pleaseRelayTransactionsToMe ? (byte)1 : (byte)0);
 
-            byte[] commandBytes = new byte[this.networkParameters.CommandLengthInBytes];
+            byte[] commandBytes = new byte[this.network.Parameters.CommandLengthInBytes];
             byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(VersionText);
             Array.Copy(unpaddedCommandBytes, commandBytes, unpaddedCommandBytes.Length);
 
-            message.CreateFrom(this.networkParameters.StaticMessagePrefixData, commandBytes, payload);
+            message.CreateFrom(commandBytes, payload);
 
             return message;
         }

@@ -1,73 +1,19 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Net;
 
-namespace Evercoin
+using Evercoin.Algorithms;
+
+namespace Evercoin.App
 {
-    /// <summary>
-    /// Represents the parameters for the messages on a cryptocurrency network.
-    /// </summary>
-    public interface INetworkParameters
+    internal sealed class SomeNetworkParams : INetworkParameters
     {
+        private readonly HashSet<DnsEndPoint> seeds = new HashSet<DnsEndPoint>();
+
         /// <summary>
         /// Gets the version of the protocol being used here.
         /// </summary>
-        int ProtocolVersion { get; }
-
-        /// <summary>
-        /// Gets the <see cref="IHashAlgorithm"/> used to verify that the
-        /// payload content was received successfully.
-        /// </summary>
-        IHashAlgorithm PayloadChecksumAlgorithm { get; }
-
-        /// <summary>
-        /// Gets the number of bytes from the head of
-        /// <see cref="PayloadChecksumAlgorithm"/>'s result to add to the
-        /// message header.
-        /// </summary>
-        /// <remarks>
-        /// Looks like this is going to be 4 for everything that exists today.
-        /// </remarks>
-        int PayloadChecksumLengthInBytes { get; }
-
-        /// <summary>
-        /// Gets the number of bytes to include as the command.
-        /// </summary>
-        /// <remarks>
-        /// Looks like this is going to be 12 for everything that exists today.
-        /// </remarks>
-        int CommandLengthInBytes { get; }
-
-        /// <summary>
-        /// Gets the number of bytes that need to be read for each message
-        /// in order to determine what business logic to apply.
-        /// </summary>
-        /// <remarks>
-        /// Looks like this is going to be 16 for everything that exists today:
-        /// 4 bytes for the <see cref="StaticMessagePrefixData"/>.
-        /// Remaining 12 bytes are the ASCII-encoded command.
-        /// </remarks>
-        int MessagePrefixLengthInBytes { get; }
-
-        /// <summary>
-        /// Gets the static data that starts every message for this network.
-        /// Must be shorter than <see cref="MessagePrefixLengthInBytes"/>.
-        /// </summary>
-        /// <remarks>
-        /// This is usually a sequence of 4 bytes that are uncommon
-        /// in typical data streams.
-        /// </remarks>
-        ImmutableList<byte> StaticMessagePrefixData { get; }
-
-        /// <summary>
-        /// Gets a set of <see cref="DnsEndPoint"/> objects that may be used
-        /// to seed the network.
-        /// </summary>
-        /// <remarks>
-        /// It is expected that the network's protocol provides messages
-        /// that allow a node to request which other 
-        /// </remarks>
-        ISet<DnsEndPoint> Seeds { get; }
+        public int ProtocolVersion { get { return 70001; } }
 
         /// <summary>
         /// Gets the protocol version before it is negotiated.
@@ -76,6 +22,61 @@ namespace Evercoin
         /// For Bitcoin, this is 209 except for really old clients.
         /// This affects the version message.
         /// </remarks>
-        int ProtocolVersionBeforeNegotiation { get; }
+        public int ProtocolVersionBeforeNegotiation { get { return 209; } }
+
+        /// <summary>
+        /// Gets the <see cref="IHashAlgorithm"/> used to verify that the
+        /// payload content was received successfully.
+        /// </summary>
+        public IHashAlgorithm PayloadChecksumAlgorithm { get { return new BuiltinHashAlgorithmStore().GetHashAlgorithm(HashAlgorithmIdentifiers.DoubleSHA256); } }
+
+        /// <summary>
+        /// Gets the number of bytes from the head of
+        /// <see cref="INetworkParameters.PayloadChecksumAlgorithm"/>'s result to add to the
+        /// message header.
+        /// </summary>
+        /// <remarks>
+        /// Looks like this is going to be 4 for everything that exists today.
+        /// </remarks>
+        public int PayloadChecksumLengthInBytes { get { return 4; } }
+
+        /// <summary>
+        /// Gets the number of bytes to include as the command.
+        /// </summary>
+        /// <remarks>
+        /// Looks like this is going to be 12 for everything that exists today.
+        /// </remarks>
+        public int CommandLengthInBytes { get { return 12; } }
+
+        /// <summary>
+        /// Gets the number of bytes that need to be read for each message
+        /// in order to determine what business logic to apply.
+        /// </summary>
+        /// <remarks>
+        /// Looks like this is going to be 16 for everything that exists today:
+        /// 4 bytes for the <see cref="INetworkParameters.StaticMessagePrefixData"/>.
+        /// Remaining 12 bytes are the ASCII-encoded command.
+        /// </remarks>
+        public int MessagePrefixLengthInBytes { get { return 16; } }
+
+        /// <summary>
+        /// Gets the static data that starts every message for this network.
+        /// Must be shorter than <see cref="INetworkParameters.MessagePrefixLengthInBytes"/>.
+        /// </summary>
+        /// <remarks>
+        /// This is usually a sequence of 4 bytes that are uncommon
+        /// in typical data streams.
+        /// </remarks>
+        public ImmutableList<byte> StaticMessagePrefixData { get { return ImmutableList.Create<byte>(0xF9, 0xBE, 0xB4, 0xD9); } }
+
+        /// <summary>
+        /// A set of <see cref="DnsEndPoint"/> objects that may be used
+        /// to seed the network.
+        /// </summary>
+        /// <remarks>
+        /// It is expected that the network's protocol provides messages
+        /// that allow a node to request which other 
+        /// </remarks>
+        public ISet<DnsEndPoint> Seeds { get { return this.seeds; } }
     }
 }

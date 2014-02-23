@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net;
 using System.Threading.Tasks;
 
 namespace Evercoin
@@ -16,26 +17,9 @@ namespace Evercoin
     public interface INetwork
     {
         /// <summary>
-        /// Gets an observable sequence of <see cref="IBlock"/> objects
-        /// received on this network.
+        /// Gets an observable sequence of messages received on this network.
         /// </summary>
-        /// <remarks>
-        /// The <see cref="IBlock"/> objects are guaranteed to be
-        /// populated, but may not actually be valid according to the best
-        /// blockchain.
-        /// </remarks>
-        IObservable<IBlock> ReceivedBlocks { get; }
-
-        /// <summary>
-        /// Gets an observable sequence of <see cref="ITransaction"/> objects
-        /// received on this network.
-        /// </summary>
-        /// <remarks>
-        /// The <see cref="ITransaction"/> objects are guaranteed to be
-        /// populated, but may not actually be valid according to the best
-        /// blockchain.
-        /// </remarks>
-        IObservable<ITransaction> ReceivedTransactions { get; }
+        IObservable<INetworkMessage> ReceivedMessages { get; }
 
         /// <summary>
         /// Gets the <see cref="INetworkParameters"/> object that defines the
@@ -44,30 +28,56 @@ namespace Evercoin
         INetworkParameters Parameters { get; }
 
         /// <summary>
-        /// Starts the network.
+        /// Asynchronously connects to a client.
         /// </summary>
-        void Start();
+        /// <param name="endPoint">
+        /// The end point of the client to connect to.
+        /// </param>
+        /// <returns>
+        /// An awaitable task that yields the ID of the connected client.
+        /// </returns>
+        Task<Guid> ConnectToClientAsync(IPEndPoint endPoint);
 
         /// <summary>
-        /// Asynchronously broadcasts a blockchain node to the network.
+        /// Asynchronously connects to a client.
         /// </summary>
-        /// <param name="block">
-        /// The <see cref="IBlock"/> to broadcast.
+        /// <param name="endPoint">
+        /// The end point of the client to connect to.
+        /// </param>
+        /// <returns>
+        /// An awaitable task that yields the ID of the connected client.
+        /// </returns>
+        Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint);
+
+        /// <summary>
+        /// Asynchronously broadcasts a message to all clients on the network.
+        /// </summary>
+        /// <param name="message">
+        /// The <see cref="INetworkMessage"/> to broadcast.
         /// </param>
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task BroadcastBlockAsync(IBlock block);
+        /// <remarks>
+        /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
+        /// </remarks>
+        Task BroadcastMessageAsync(INetworkMessage message);
 
         /// <summary>
-        /// Asynchronously broadcasts a transaction to the network.
+        /// Asynchronously sends a message to a single client on the network.
         /// </summary>
-        /// <param name="transaction">
-        /// The <see cref="ITransaction"/> to broadcast.
+        /// <param name="clientId">
+        /// The ID of the client to send the message to.
+        /// </param>
+        /// <param name="message">
+        /// The <see cref="INetworkMessage"/> to send.
         /// </param>
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task BroadcastTransactionAsync(ITransaction transaction);
+        /// <remarks>
+        /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
+        /// </remarks>
+        Task SendMessageToClientAsync(Guid clientId, INetworkMessage message);
     }
 }

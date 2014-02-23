@@ -1,45 +1,65 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Configuration;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Evercoin.Util;
 
 namespace Evercoin.Network
 {
-    internal sealed class ProtocolNetworkAddress
+    public sealed class ProtocolNetworkAddress
     {
-        private readonly uint time;
-
-        private readonly ulong services;
-
-        private readonly IPAddress address;
-
-        private readonly ushort port;
+        public ProtocolNetworkAddress()
+        {
+        }
 
         public ProtocolNetworkAddress(uint time, ulong services, IPAddress address, ushort port)
         {
-            this.time = time;
-            this.services = services;
-            this.address = address;
-            this.port = port;
+            this.Time = time;
+            this.Services = services;
+            this.Address = address;
+            this.Port = port;
         }
 
-        public ImmutableList<byte> Data
+        public uint Time { get; private set; }
+
+        public ulong Services { get; private set; }
+
+        public IPAddress Address { get; private set; }
+
+        public ushort Port { get; private set; }
+
+        public ImmutableList<byte> GetData(int protocolVersion)
         {
-            get
+            byte[] timeBytes = protocolVersion >= 31402 ?
+                               BitConverter.GetBytes(this.Time).LittleEndianToOrFromBitConverterEndianness() :
+                               new byte[0];
+
+            return ImmutableList.CreateRange(timeBytes)
+                                .AddRange(BitConverter.GetBytes(this.Services).LittleEndianToOrFromBitConverterEndianness())
+                                .AddRange(this.Address.MapToIPv6().GetAddressBytes())
+                                .AddRange(BitConverter.GetBytes(this.Port).LittleEndianToOrFromBitConverterEndianness().Reverse());
+        }
+
+        public async Task LoadFromStreamAsync(Stream stream, int protocolVersion, CancellationToken ct)
+        {
+            if (protocolVersion >= 31402)
             {
-                // Warning: the address and port will be big-endian,
-                // unlike everything else in the protocol.
-                return ImmutableList.CreateRange(BitConverter.GetBytes(this.time).LittleEndianToOrFromBitConverterEndianness())
-                                    .AddRange(BitConverter.GetBytes(this.services).LittleEndianToOrFromBitConverterEndianness())
-                                    .AddRange(this.address.MapToIPv6().GetAddressBytes())
-                                    .AddRange(BitConverter.GetBytes(this.port).LittleEndianToOrFromBitConverterEndianness().Reverse());
+                var timeBytes = (await stream.ReadBytesAsyncWithIntParam(4, ct)).ToArray().LittleEndianToOrFromBitConverterEndianness();
+                this.Time = BitConverter.ToUInt32(timeBytes, 0);
             }
+            
+            var servicesBytes = (await stream.ReadBytesAsyncWithIntParam(8, ct)).ToArray().LittleEndianToOrFromBitConverterEndianness();
+            this.Services = BitConverter.ToUInt64(servicesBytes, 0);
+            
+            var addressBytes = (await stream.ReadBytesAsyncWithIntParam(16, ct)).ToArray();
+            this.Address = new IPAddress(addressBytes);
+            
+            var portBytes = (await stream.ReadBytesAsyncWithIntParam(2, ct)).ToArray().LittleEndianToOrFromBitConverterEndianness().Reverse().ToArray();
+            this.Port = BitConverter.ToUInt16(portBytes, 0);
         }
     }
 }
