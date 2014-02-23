@@ -43,7 +43,7 @@ namespace Evercoin.Network
         {
             Message message = new Message(this.network.Parameters, clientId);
             TcpClient client;
-            this.network.clientLookup.TryGetValue(clientId, out client);
+            this.network.ClientLookup.TryGetValue(clientId, out client);
             IPEndPoint localEndPoint = (IPEndPoint)client.Client.LocalEndPoint;
             IPEndPoint remoteEndPoint = (IPEndPoint)client.Client.RemoteEndPoint;
 
