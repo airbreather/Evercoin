@@ -54,9 +54,15 @@ namespace Evercoin.Network
             
             var servicesBytes = (await stream.ReadBytesAsyncWithIntParam(8, ct)).ToArray().LittleEndianToOrFromBitConverterEndianness();
             this.Services = BitConverter.ToUInt64(servicesBytes, 0);
-            
-            var addressBytes = (await stream.ReadBytesAsyncWithIntParam(16, ct)).ToArray();
-            this.Address = new IPAddress(addressBytes);
+
+            var addressBytes = (await stream.ReadBytesAsyncWithIntParam(16, ct));
+            var v6Bytes = addressBytes.ToArray();
+            var v4Bytes = addressBytes.GetRange(12, 4).ToArray();
+
+            var v6Address = new IPAddress(v6Bytes);
+            var v4Address = new IPAddress(v4Bytes);
+
+            this.Address = v6Address;
             
             var portBytes = (await stream.ReadBytesAsyncWithIntParam(2, ct)).ToArray().LittleEndianToOrFromBitConverterEndianness().Reverse().ToArray();
             this.Port = BitConverter.ToUInt16(portBytes, 0);

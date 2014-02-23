@@ -28,7 +28,14 @@ namespace Evercoin.Network
 
             this.networkParameters = networkParameters;
             this.token = token;
-            token.Register(this.messageObservables.OnCompleted);
+            token.Register(() =>
+            {
+                this.messageObservables.OnCompleted();
+                foreach (TcpClient cl in this.clientLookup.Values)
+                {
+                    cl.Close();
+                }
+            });
         }
 
         /// <summary>
@@ -42,6 +49,8 @@ namespace Evercoin.Network
         /// </summary>
         public INetworkParameters Parameters { get { return this.networkParameters; } }
 
+        internal IDictionary<Guid, TcpClient> ClientLookup { get { return this.clientLookup; } } 
+
         /// <summary>
         /// Asynchronously connects to a client.
         /// </summary>
@@ -53,7 +62,13 @@ namespace Evercoin.Network
         /// </returns>
         public async Task<Guid> ConnectToClientAsync(IPEndPoint endPoint)
         {
-            return await this.ConnectToClientCoreAsync(client => client.ConnectAsync(endPoint.Address, endPoint.Port));
+            TcpClient existingClient = this.clientLookup.Values.FirstOrDefault(x => x.Client.RemoteEndPoint.Equals(endPoint));
+            if (existingClient != null)
+            {
+                return Guid.Empty;
+            }
+
+            return await this.ConnectToClientCoreAsync(async client => await client.ConnectAsync(endPoint.Address, endPoint.Port));
         }
 
         /// <summary>
@@ -67,7 +82,7 @@ namespace Evercoin.Network
         /// </returns>
         public async Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint)
         {
-            return await this.ConnectToClientCoreAsync(client => client.ConnectAsync(endPoint.Host, endPoint.Port));
+            return await this.ConnectToClientCoreAsync(async client => await client.ConnectAsync(endPoint.Host, endPoint.Port));
         }
 
         private async Task<Guid> ConnectToClientCoreAsync(Func<TcpClient, Task> connectionCallback)

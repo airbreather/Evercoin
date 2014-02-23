@@ -64,6 +64,7 @@
     <Compile Include="ProtocolCompactSize.cs" />
     <Compile Include="ProtocolNetworkAddress.cs" />
     <Compile Include="ProtocolString.cs" />
+    <Compile Include="GetAddressesMessageBuilder.cs" />
     <Compile Include="VersionMessageBuilder.cs" />
   </ItemGroup>
   <ItemGroup>

@@ -62,8 +62,8 @@ namespace Evercoin.App
 
             Type haiType = typeof(HashAlgorithmIdentifiers);
             List<FieldInfo> algorithmFields = haiType.GetFields(BindingFlags.Public | BindingFlags.Static)
-                                                     .Where(x => x.FieldType == typeof(Guid))
-                                                     .ToList();
+                .Where(x => x.FieldType == typeof(Guid))
+                .ToList();
             int outputColumnWidth = algorithmFields.Max(x => x.Name.Length);
             foreach (FieldInfo hashAlgorithmIdentifier in algorithmFields)
             {
@@ -91,15 +91,15 @@ namespace Evercoin.App
         private static void DoNetwork(CancellationToken ct)
         {
             SomeNetworkParams parameters = new SomeNetworkParams();
-                                           ////{
-                                           ////    Seeds =
-                                           ////    {
-                                           ////        new DnsEndPoint("seed.bitcoin.sipa.be", 8333, AddressFamily.InterNetwork),
-                                           ////        new DnsEndPoint("dnsseed.bluematt.me", 8333, AddressFamily.InterNetwork),
-                                           ////        new DnsEndPoint("dnsseed.bitcoin.dashjr.org", 8333, AddressFamily.InterNetwork),
-                                           ////        new DnsEndPoint("bitseed.xf2.org", 8333, AddressFamily.InterNetwork),
-                                           ////    }
-                                           ////};
+            ////{
+            ////    Seeds =
+            ////    {
+            ////        new DnsEndPoint("seed.bitcoin.sipa.be", 8333, AddressFamily.InterNetwork),
+            ////        new DnsEndPoint("dnsseed.bluematt.me", 8333, AddressFamily.InterNetwork),
+            ////        new DnsEndPoint("dnss    eed.bitcoin.dashjr.org", 8333, AddressFamily.InterNetwork),
+            ////        new DnsEndPoint("bitseed.xf2.org", 8333, AddressFamily.InterNetwork),
+            ////    }
+            ////};
 
             List<IPEndPoint> ipEndPoints = new List<IPEndPoint>
                                            {
@@ -119,8 +119,10 @@ namespace Evercoin.App
                     Guid clientId = t.Result;
                     INetworkMessage versionMessage = new VersionMessageBuilder(net).BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 50, "/Evercoin:0.0.0/VS:0.0.0/", 0, true);
                     net.SendMessageToClientAsync(clientId, versionMessage);
+                    INetworkMessage getAddrMessage = new GetAddressesMessageBuilder(net).BuildGetAddressesMessage(clientId);
+                    net.SendMessageToClientAsync(clientId, getAddrMessage);
                 },
-                ct);
+                    ct);
             }
 
             object consoleLock = new object();
@@ -132,17 +134,32 @@ namespace Evercoin.App
                 }
 
                 HandleMessage(msg, net, ct);
-            });
+            },
+                ct);
         }
 
         private static async void HandleMessage(INetworkMessage message, INetwork net, CancellationToken ct)
         {
-            if (!message.CommandBytes.GetRange(0, 4).SequenceEqual(Encoding.ASCII.GetBytes("addr")))
+            try
             {
-                return;
+                if (message.CommandBytes.GetRange(0, 4).SequenceEqual(Encoding.ASCII.GetBytes("addr")))
+                {
+                    await HandleAddrMessage(message, net, ct);
+                }
+                else if (message.CommandBytes.GetRange(0, 6).SequenceEqual(Encoding.ASCII.GetBytes("verack")))
+                {
+                    INetworkMessage getAddrMessage = new GetAddressesMessageBuilder(net).BuildGetAddressesMessage(message.RemoteClient);
+                    await net.SendMessageToClientAsync(message.RemoteClient, getAddrMessage);
+                }
             }
+            catch (OperationCanceledException)
+            {
+            }
+        }
 
-            List<IPEndPoint> endPointsToConnectTo = new List<IPEndPoint>();
+        private static async Task HandleAddrMessage(INetworkMessage message, INetwork net, CancellationToken ct)
+        {
+            List<Task> handleTasks = new List<Task>();
             using (var payloadStream = new MemoryStream(message.Payload.ToArray()))
             {
                 ProtocolCompactSize size = new ProtocolCompactSize();
@@ -152,31 +169,32 @@ namespace Evercoin.App
                     ProtocolNetworkAddress address = new ProtocolNetworkAddress();
                     await address.LoadFromStreamAsync(payloadStream, net.Parameters.ProtocolVersion, ct);
                     IPEndPoint endPoint = new IPEndPoint(address.Address, address.Port);
-                    endPointsToConnectTo.Add(endPoint);
+                    handleTasks.Add(HandleOneAddr(net, endPoint));
                 }
             }
 
-            IEnumerable<Task> taskList = endPointsToConnectTo.Select(endPoint => Task.Run(async () =>
-                                                                                          {
-                                                                                              if (endPoint.AddressFamily == AddressFamily.InterNetworkV6)
-                                                                                              {
-                                                                                                  try
-                                                                                                  {
-                                                                                                      endPoint.Address = endPoint.Address.MapToIPv4();
-                                                                                                  }
-                                                                                                  catch
-                                                                                                  {
-                                                                                                      return;
-                                                                                                  }
-                                                                                              }
-                                                                                          
-                                                                                              Guid clientId = await net.ConnectToClientAsync(endPoint);
-                                                                                              INetworkMessage versionMessage = new VersionMessageBuilder(net).BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 50, "/Evercoin:0.0.0/VS:0.0.0/", 0, true);
-                                                                                              await net.SendMessageToClientAsync(clientId, versionMessage);
-                                                                                          }, 
-                                                                                          ct));
+            await Task.WhenAll(handleTasks);
+        }
 
-            await Task.WhenAll(taskList);
+        private static async Task HandleOneAddr(INetwork net, IPEndPoint endPoint)
+        {
+            try
+            {
+                if (endPoint.AddressFamily == AddressFamily.InterNetworkV6)
+                {
+                    endPoint.Address = endPoint.Address.MapToIPv4();
+                }
+
+                Guid clientId = await net.ConnectToClientAsync(endPoint);
+                if (clientId != Guid.Empty)
+                {
+                    INetworkMessage versionMessage = new VersionMessageBuilder(net).BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 50, "/Evercoin:0.0.0/VS:0.0.0/", 0, true);
+                    await net.SendMessageToClientAsync(clientId, versionMessage);
+                }
+            }
+            catch
+            {
+            }
         }
     }
 }
