@@ -7,7 +7,7 @@ using ProtoBuf;
 
 namespace Evercoin.Storage
 {
-    [Export(typeof(IChainStore))]
+    [PartNotDiscoverable]
     public sealed class DiskChainStorage : ChainStoreBase
     {
         private readonly string blockStoragePath;
@@ -16,9 +16,7 @@ namespace Evercoin.Storage
         private readonly object blockStorageLock = new object();
         private readonly object transactionStorageLock = new object();
 
-        [ImportingConstructor]
-        public DiskChainStorage([Import("Disk.BlockStorageFolderPath")] string blockStoragePath,
-                                [Import("Disk.TransactionStorageFolderPath")] string transactionStoragePath)
+        public DiskChainStorage(string blockStoragePath, string transactionStoragePath)
         {
             this.blockStoragePath = blockStoragePath;
             this.transactionStoragePath = transactionStoragePath;

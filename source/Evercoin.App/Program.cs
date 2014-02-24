@@ -3,19 +3,11 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel.Composition;
 using System.ComponentModel.Composition.Hosting;
-using System.IO;
 using System.Linq;
-using System.Net;
-using System.Net.Sockets;
 using System.Reflection;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 
-using Evercoin.Network;
 using Evercoin.Util;
-
-using NodaTime;
 
 namespace Evercoin.App
 {
@@ -24,9 +16,11 @@ namespace Evercoin.App
         private static void Main(string[] args)
         {
             // Don't read too far into this part... it's mainly just a sanity check for the protobuf and MEF stuff.
+            AssemblyCatalog catalog1 = new AssemblyCatalog(Assembly.Load(new AssemblyName("Evercoin.Network")));
             AssemblyCatalog catalog2 = new AssemblyCatalog(Assembly.Load(new AssemblyName("Evercoin.Algorithms")));
             AssemblyCatalog catalog3 = new AssemblyCatalog(Assembly.Load(new AssemblyName("Evercoin.Storage")));
-            AggregateCatalog catalog = new AggregateCatalog(catalog2, catalog3);
+            AssemblyCatalog catalog4 = new AssemblyCatalog(Assembly.GetExecutingAssembly());
+            AggregateCatalog catalog = new AggregateCatalog(catalog1, catalog2, catalog3, catalog4);
             CompositionContainer container = new CompositionContainer(catalog);
 
             FileSettings settings = new FileSettings
@@ -36,15 +30,16 @@ namespace Evercoin.App
                                     };
 
             Catalog c = new Catalog();
+            NetworkRunner runner = new NetworkRunner();
 
-            container.ComposeParts(c, settings);
+            container.ComposeParts(c, settings, runner);
 
             Console.WriteLine("=== Block Saving / Loading ===");
             string id = Guid.NewGuid().ToString();
             IBlock blockToSave = new SomeBlockClass { Identifier = id, Transactions = ImmutableList<ITransaction>.Empty, Coinbase = new SomeValueSourceClass { AvailableValue = 50, ScriptPubKey = ImmutableList.Create<byte>(25, 42, 254) } };
             c.ChainStores.First().PutBlock(blockToSave);
             Console.WriteLine("Saved a block with Identifier {0}.", id);
-            IBlock loadedBlock = c.ReadOnlyChainStores.First().GetBlock(id);
+            IBlock loadedBlock = c.ReadOnlyChainStores.Last().GetBlock(id);
             Console.WriteLine("Loaded a block with Identifier {0}.", loadedBlock.Identifier);
             Console.WriteLine("The two are {0}equal.", loadedBlock.Equals(blockToSave) ? String.Empty : "not ");
 
@@ -62,8 +57,8 @@ namespace Evercoin.App
 
             Type haiType = typeof(HashAlgorithmIdentifiers);
             List<FieldInfo> algorithmFields = haiType.GetFields(BindingFlags.Public | BindingFlags.Static)
-                .Where(x => x.FieldType == typeof(Guid))
-                .ToList();
+                                                     .Where(x => x.FieldType == typeof(Guid))
+                                                     .ToList();
             int outputColumnWidth = algorithmFields.Max(x => x.Name.Length);
             foreach (FieldInfo hashAlgorithmIdentifier in algorithmFields)
             {
@@ -74,127 +69,12 @@ namespace Evercoin.App
 
             Console.WriteLine();
             Console.WriteLine("=== Network ===");
+            Console.WriteLine("Press Enter to quit...");
 
-            using (CancellationTokenSource cts = new CancellationTokenSource())
-            {
-                Console.WriteLine("Press Enter to quit...");
-                DoNetwork(cts.Token);
+            runner.Run();
 
-                Console.ReadLine();
-
-                cts.Cancel();
-            }
-
+            Console.ReadLine();
             Thread.Sleep(2000);
-        }
-
-        private static void DoNetwork(CancellationToken ct)
-        {
-            SomeNetworkParams parameters = new SomeNetworkParams();
-            ////{
-            ////    Seeds =
-            ////    {
-            ////        new DnsEndPoint("seed.bitcoin.sipa.be", 8333, AddressFamily.InterNetwork),
-            ////        new DnsEndPoint("dnsseed.bluematt.me", 8333, AddressFamily.InterNetwork),
-            ////        new DnsEndPoint("dnss    eed.bitcoin.dashjr.org", 8333, AddressFamily.InterNetwork),
-            ////        new DnsEndPoint("bitseed.xf2.org", 8333, AddressFamily.InterNetwork),
-            ////    }
-            ////};
-
-            List<IPEndPoint> ipEndPoints = new List<IPEndPoint>
-                                           {
-                                               new IPEndPoint(IPAddress.Loopback, 8333),
-                                               ////new IPEndPoint(IPAddress.Parse("83.165.101.118"), 8333),
-                                               ////new IPEndPoint(IPAddress.Parse("176.103.112.7"), 8333),
-                                               ////new IPEndPoint(IPAddress.Parse("192.3.11.20"), 8333),
-                                               ////new IPEndPoint(IPAddress.Parse("199.98.20.213"), 8333),
-                                           };
-
-            INetwork net = new Network.Network(parameters, ct);
-            foreach (IPEndPoint endPoint in ipEndPoints)
-            {
-                Task<Guid> clientIdTask = net.ConnectToClientAsync(endPoint);
-                Task cont = clientIdTask.ContinueWith(t =>
-                {
-                    Guid clientId = t.Result;
-                    INetworkMessage versionMessage = new VersionMessageBuilder(net).BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 50, "/Evercoin:0.0.0/VS:0.0.0/", 0, true);
-                    net.SendMessageToClientAsync(clientId, versionMessage);
-                    INetworkMessage getAddrMessage = new GetAddressesMessageBuilder(net).BuildGetAddressesMessage(clientId);
-                    net.SendMessageToClientAsync(clientId, getAddrMessage);
-                },
-                    ct);
-            }
-
-            object consoleLock = new object();
-            net.ReceivedMessages.Subscribe(msg =>
-            {
-                lock (consoleLock)
-                {
-                    Console.WriteLine("Received: Command={0}, Payload={1}, Sender={2}", Encoding.ASCII.GetString(msg.CommandBytes.ToArray()), ByteTwiddling.ByteArrayToHexString(msg.Payload), msg.RemoteClient);
-                }
-
-                HandleMessage(msg, net, ct);
-            },
-                ct);
-        }
-
-        private static async void HandleMessage(INetworkMessage message, INetwork net, CancellationToken ct)
-        {
-            try
-            {
-                if (message.CommandBytes.GetRange(0, 4).SequenceEqual(Encoding.ASCII.GetBytes("addr")))
-                {
-                    await HandleAddrMessage(message, net, ct);
-                }
-                else if (message.CommandBytes.GetRange(0, 6).SequenceEqual(Encoding.ASCII.GetBytes("verack")))
-                {
-                    INetworkMessage getAddrMessage = new GetAddressesMessageBuilder(net).BuildGetAddressesMessage(message.RemoteClient);
-                    await net.SendMessageToClientAsync(message.RemoteClient, getAddrMessage);
-                }
-            }
-            catch (OperationCanceledException)
-            {
-            }
-        }
-
-        private static async Task HandleAddrMessage(INetworkMessage message, INetwork net, CancellationToken ct)
-        {
-            List<Task> handleTasks = new List<Task>();
-            using (var payloadStream = new MemoryStream(message.Payload.ToArray()))
-            {
-                ProtocolCompactSize size = new ProtocolCompactSize();
-                await size.LoadFromStreamAsync(payloadStream, ct);
-                for (ulong i = 0; i < size.Value; i++)
-                {
-                    ProtocolNetworkAddress address = new ProtocolNetworkAddress();
-                    await address.LoadFromStreamAsync(payloadStream, net.Parameters.ProtocolVersion, ct);
-                    IPEndPoint endPoint = new IPEndPoint(address.Address, address.Port);
-                    handleTasks.Add(HandleOneAddr(net, endPoint));
-                }
-            }
-
-            await Task.WhenAll(handleTasks);
-        }
-
-        private static async Task HandleOneAddr(INetwork net, IPEndPoint endPoint)
-        {
-            try
-            {
-                if (endPoint.AddressFamily == AddressFamily.InterNetworkV6)
-                {
-                    endPoint.Address = endPoint.Address.MapToIPv4();
-                }
-
-                Guid clientId = await net.ConnectToClientAsync(endPoint);
-                if (clientId != Guid.Empty)
-                {
-                    INetworkMessage versionMessage = new VersionMessageBuilder(net).BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 50, "/Evercoin:0.0.0/VS:0.0.0/", 0, true);
-                    await net.SendMessageToClientAsync(clientId, versionMessage);
-                }
-            }
-            catch
-            {
-            }
         }
     }
 }

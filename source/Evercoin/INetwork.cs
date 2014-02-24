@@ -14,7 +14,7 @@ namespace Evercoin
     /// placeholder transactions that only have just enough data to fit into
     /// the Merkle tree.
     /// </remarks>
-    public interface INetwork
+    public interface INetwork : IDisposable
     {
         /// <summary>
         /// Gets an observable sequence of messages received on this network.

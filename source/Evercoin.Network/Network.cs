@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -10,16 +11,21 @@ using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Evercoin.Network.MessageHandlers;
+
+using NodaTime;
+
 namespace Evercoin.Network
 {
+    [Export(typeof(INetwork))]
     public sealed class Network : INetwork
     {
         private readonly INetworkParameters networkParameters;
         private readonly ConcurrentDictionary<Guid, TcpClient> clientLookup = new ConcurrentDictionary<Guid, TcpClient>();
         private readonly ReplaySubject<IObservable<INetworkMessage>> messageObservables = new ReplaySubject<IObservable<INetworkMessage>>();
-        private readonly CancellationToken token;
 
-        public Network(INetworkParameters networkParameters, CancellationToken token)
+        [ImportingConstructor]
+        public Network(INetworkParameters networkParameters)
         {
             if (networkParameters == null)
             {
@@ -27,15 +33,6 @@ namespace Evercoin.Network
             }
 
             this.networkParameters = networkParameters;
-            this.token = token;
-            token.Register(() =>
-            {
-                this.messageObservables.OnCompleted();
-                foreach (TcpClient cl in this.clientLookup.Values)
-                {
-                    cl.Close();
-                }
-            });
         }
 
         /// <summary>
@@ -85,6 +82,15 @@ namespace Evercoin.Network
             return await this.ConnectToClientCoreAsync(async client => await client.ConnectAsync(endPoint.Host, endPoint.Port));
         }
 
+        public void Dispose()
+        {
+            this.messageObservables.OnCompleted();
+            foreach (var client in this.ClientLookup.Values)
+            {
+                client.Close();
+            }
+        }
+
         private async Task<Guid> ConnectToClientCoreAsync(Func<TcpClient, Task> connectionCallback)
         {
             Guid clientId = Guid.NewGuid();
@@ -96,7 +102,12 @@ namespace Evercoin.Network
             IObservable<Message> messageStream = Observable.FromAsync(() => this.ReadMessage(stream, clientId))
                                                            .DoWhile(() => client.Connected)
                                                            .TakeWhile(msg => msg != null);
-            await Task.Run(() => this.messageObservables.OnNext(messageStream), this.token);
+            await Task.Run(() => this.messageObservables.OnNext(messageStream));
+
+            VersionMessageBuilder builder = new VersionMessageBuilder(this);
+
+            INetworkMessage mm = builder.BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 500, "/Evercoin:0.0.0/VS:0.0.0/", 0, true);
+            await this.SendMessageToClientAsync(clientId, mm);
 
             return clientId;
         }
@@ -150,7 +161,7 @@ namespace Evercoin.Network
             Message inc = new Message(this.networkParameters, clientId);
             try
             {
-                await inc.ReadFrom(stream, token);
+                await inc.ReadFrom(stream, CancellationToken.None);
             }
             catch (AggregateException ex)
             {
@@ -173,7 +184,7 @@ namespace Evercoin.Network
             }
 
             byte[] messageBytes = messageToSend.FullData.ToArray();
-            await client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length, this.token);
+            await client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length);
         }
     }
 }

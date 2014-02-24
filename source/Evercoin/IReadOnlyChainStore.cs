@@ -12,6 +12,10 @@ namespace Evercoin
 
         bool ContainsTransaction(string transactionIdentifier);
 
+        Task<bool> ContainsBlockAsync(string blockIdentifier);
+
+        Task<bool> ContainsTransactionAsync(string transactionIdentifier);
+
         bool TryGetBlock(string blockIdentifier, out IBlock block);
 
         bool TryGetTransaction(string transactionIdentifier, out ITransaction transaction);

@@ -46,6 +46,11 @@ namespace Evercoin.BaseImplementations
             return this.TryGetTransaction(transactionIdentifier, out _);
         }
 
+        public virtual async Task<bool> ContainsBlockAsync(string blockIdentifier)
+        {
+            return await Task.Run(() => this.ContainsBlock(blockIdentifier));
+        }
+
         public virtual async Task<IBlock> GetBlockAsync(string blockIdentifier)
         {
             return await Task.Run(() => this.GetBlock(blockIdentifier));
@@ -54,6 +59,11 @@ namespace Evercoin.BaseImplementations
         public virtual async Task PutBlockAsync(IBlock block)
         {
             await Task.Run(() => this.PutBlock(block));
+        }
+
+        public virtual async Task<bool> ContainsTransactionAsync(string transactionIdentifier)
+        {
+            return await Task.Run(() => this.ContainsTransaction(transactionIdentifier));
         }
 
         public virtual async Task<ITransaction> GetTransactionAsync(string transactionIdentifier)

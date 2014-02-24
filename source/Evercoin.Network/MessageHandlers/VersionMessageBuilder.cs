@@ -8,9 +8,9 @@ using Evercoin.Util;
 
 using NodaTime;
 
-namespace Evercoin.Network
+namespace Evercoin.Network.MessageHandlers
 {
-    public sealed class VersionMessageBuilder
+    internal sealed class VersionMessageBuilder
     {
         private const string VersionText = "version";
         private static readonly Encoding CommandEncoding = Encoding.ASCII;

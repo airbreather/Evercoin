@@ -38,7 +38,9 @@
     <Reference Include="System.Collections.Immutable">
       <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.30\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
     </Reference>
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Reactive.Core">
       <HintPath>..\packages\Rx-Core.2.2.2\lib\net45\System.Reactive.Core.dll</HintPath>
     </Reference>
@@ -59,13 +61,29 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Message.cs" />
+    <Compile Include="MessageHandlers\BlockMessageHandler.cs" />
+    <Compile Include="MessageHandlers\GetDataMessageBuilder.cs" />
+    <Compile Include="MessageHandlers\InventoryMessageHandler.cs" />
+    <Compile Include="MessageHandlers\MessageHandlerBase.cs" />
+    <Compile Include="MessageHandlers\TransactionMessageHandler.cs" />
+    <Compile Include="MessageHandlers\VerAckMessageBuilder.cs" />
+    <Compile Include="MessageHandlers\VerAckMessageHandler.cs" />
+    <Compile Include="MessageHandlers\VersionMessageHandler.cs" />
     <Compile Include="Network.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ProtocolCompactSize.cs" />
+    <Compile Include="ProtocolInventoryVector.cs" />
     <Compile Include="ProtocolNetworkAddress.cs" />
     <Compile Include="ProtocolString.cs" />
-    <Compile Include="GetAddressesMessageBuilder.cs" />
-    <Compile Include="VersionMessageBuilder.cs" />
+    <Compile Include="MessageHandlers\GetAddressesMessageBuilder.cs" />
+    <Compile Include="MessageHandlers\VersionMessageBuilder.cs" />
+    <Compile Include="NetworkBlock.cs" />
+    <Compile Include="NetworkTransaction.cs" />
+    <Compile Include="NetworkTransactionValueSource.cs" />
+    <Compile Include="NetworkValueSource.cs" />
+    <Compile Include="ProtocolTransaction.cs" />
+    <Compile Include="ProtocolTxIn.cs" />
+    <Compile Include="ProtocolTxOut.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

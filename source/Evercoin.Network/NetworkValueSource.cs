@@ -4,21 +4,17 @@ using System.Linq;
 
 using Evercoin.Util;
 
-using ProtoBuf;
-
-namespace Evercoin.Storage
+namespace Evercoin.Network
 {
-    [ProtoContract]
-    [ProtoInclude(3, typeof(SerializableTransactionValueSource))]
-    internal class SerializableValueSource : IValueSource
+    internal class NetworkValueSource : IValueSource
     {
         private readonly List<byte> scriptPubKey = new List<byte>();
 
-        public SerializableValueSource()
+        public NetworkValueSource()
         {
         }
 
-        public SerializableValueSource(IValueSource valueSource)
+        public NetworkValueSource(IValueSource valueSource)
         {
             this.InitFrom(valueSource);
         }
@@ -26,23 +22,13 @@ namespace Evercoin.Storage
             /// <summary>
         /// Gets or sets how much value can be spent by this source.
         /// </summary>
-        [ProtoMember(1)]
         public decimal AvailableValue { get; set; }
 
         /// <summary>
         /// The serialized script that dictates how the value
         /// from this source can be spent.
         /// </summary>
-        [ProtoMember(2)]
-        public IList<byte> ScriptPubKey
-        {
-            get { return this.scriptPubKey; }
-            set
-            {
-                this.scriptPubKey.Clear();
-                this.scriptPubKey.AddRange(value);
-            }
-        }
+        public IList<byte> ScriptPubKey { get { return this.scriptPubKey; } }
 
         IImmutableList<byte> IValueSource.ScriptPubKey { get { return ImmutableList.CreateRange(this.scriptPubKey); } } 
 

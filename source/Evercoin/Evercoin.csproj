@@ -56,7 +56,9 @@
   <ItemGroup>
     <Compile Include="BaseImplementations\ChainStoreBase.cs" />
     <Compile Include="BaseImplementations\HashAlgorithmStoreBase.cs" />
+    <Compile Include="HandledNetworkMessageResult.cs" />
     <Compile Include="INetworkMessage.cs" />
+    <Compile Include="INetworkMessageHandler.cs" />
     <Compile Include="StreamExtensions.cs" />
     <Compile Include="HashAlgorithmIdentifiers.cs" />
     <Compile Include="IBlock.cs" />

@@ -1,25 +1,19 @@
 ﻿using System;
 using System.Collections.Immutable;
-using System.Net;
-using System.Net.Sockets;
 using System.Text;
 
-using Evercoin.Util;
-
-using NodaTime;
-
-namespace Evercoin.Network
+namespace Evercoin.Network.MessageHandlers
 {
-    public sealed class GetAddressesMessageBuilder
+    internal sealed class VerAckMessageBuilder
     {
-        private const string GetAddressesText = "getaddr";
+        private const string VerAckText = "verack";
         private static readonly Encoding CommandEncoding = Encoding.ASCII;
 
         private readonly Network network;
 
-        public GetAddressesMessageBuilder(INetwork network)
+        public VerAckMessageBuilder(INetwork network)
         {
-            if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(GetAddressesText))
+            if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(VerAckText))
             {
                 throw new ArgumentException("Command length is too short for the \"version\" command.", "network");
             }
@@ -33,15 +27,15 @@ namespace Evercoin.Network
             this.network = realNetwork;
         }
 
-        public INetworkMessage BuildGetAddressesMessage(Guid clientId)
+        public INetworkMessage BuildVerAckMessage(Guid clientId)
         {
             Message message = new Message(this.network.Parameters, clientId);
+
             byte[] commandBytes = new byte[this.network.Parameters.CommandLengthInBytes];
-            byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(GetAddressesText);
+            byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(VerAckText);
             Array.Copy(unpaddedCommandBytes, commandBytes, unpaddedCommandBytes.Length);
 
             message.CreateFrom(commandBytes, ImmutableList<byte>.Empty);
-
             return message;
         }
     }

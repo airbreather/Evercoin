@@ -67,6 +67,7 @@
   <ItemGroup>
     <Compile Include="Catalog.cs" />
     <Compile Include="FileSettings.cs" />
+    <Compile Include="NetworkRunner.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SomeBlockClass.cs" />

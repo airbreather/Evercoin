@@ -1,11 +1,13 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel.Composition;
 using System.Net;
 
 using Evercoin.Algorithms;
 
 namespace Evercoin.App
 {
+    [Export(typeof(INetworkParameters))]
     internal sealed class SomeNetworkParams : INetworkParameters
     {
         private readonly HashSet<DnsEndPoint> seeds = new HashSet<DnsEndPoint>();
@@ -78,5 +80,21 @@ namespace Evercoin.App
         /// that allow a node to request which other 
         /// </remarks>
         public ISet<DnsEndPoint> Seeds { get { return this.seeds; } }
+
+        /// <summary>
+        /// Determines whether or not a handler for our parameters can handle
+        /// messages for another <see cref="INetworkParameters"/> object.
+        /// </summary>
+        /// <param name="other">
+        /// The other <see cref="INetworkParameters"/>.
+        /// </param>
+        /// <returns>
+        /// A value indicating whether this is compatible
+        /// with <paramref name="other"/>.
+        /// </returns>
+        public bool IsCompatibleWith(INetworkParameters other)
+        {
+            return true;
+        }
     }
 }

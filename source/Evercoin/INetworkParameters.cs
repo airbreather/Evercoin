@@ -77,5 +77,18 @@ namespace Evercoin
         /// This affects the version message.
         /// </remarks>
         int ProtocolVersionBeforeNegotiation { get; }
+
+        /// <summary>
+        /// Determines whether or not a handler for our parameters can handle
+        /// messages for another <see cref="INetworkParameters"/> object.
+        /// </summary>
+        /// <param name="other">
+        /// The other <see cref="INetworkParameters"/>.
+        /// </param>
+        /// <returns>
+        /// A value indicating whether this is compatible
+        /// with <paramref name="other"/>.
+        /// </returns>
+        bool IsCompatibleWith(INetworkParameters other);
     }
 }

@@ -1,57 +1,26 @@
-﻿using System;
-using System.Linq;
+﻿using Evercoin.Util;
 
-using Evercoin.Util;
-
-using ProtoBuf;
-
-namespace Evercoin.Storage
+namespace Evercoin.Network
 {
-    [ProtoContract]
-    internal class SerializableTransactionValueSource : SerializableValueSource, ITransactionValueSource
+    internal class NetworkTransactionValueSource : NetworkValueSource, ITransactionValueSource
     {
-        private Lazy<SerializableTransaction> lazyTransaction;
-
-        public SerializableTransactionValueSource()
+        public NetworkTransactionValueSource()
         {
-            this.lazyTransaction = new Lazy<SerializableTransaction>(() =>
-            {
-                SerializableTransaction hydratedTransaction = (SerializableTransaction)this.ChainStore.GetTransaction(this.TransactionIdentifier);
-                foreach (SerializableTransactionValueSource vs in hydratedTransaction.Inputs.OfType<SerializableTransactionValueSource>())
-                {
-                    vs.ChainStore = this.ChainStore;
-                }
-
-                return hydratedTransaction;
-            });
         }
 
-        public SerializableTransactionValueSource(ITransactionValueSource valueSource)
+        public NetworkTransactionValueSource(ITransactionValueSource valueSource)
             : base(valueSource)
         {
             this.InitFrom(valueSource);
         }
 
-        public IReadOnlyChainStore ChainStore { get; set; }
-
         /// <summary>
         /// Gets the <see cref="ITransaction"/> that contains this
         /// as one of its outputs.
         /// </summary>
-        [ProtoMember(1)]
-        public string TransactionIdentifier { get; set; }
+        public NetworkTransaction Transaction { get; set; }
 
-        public SerializableTransaction Transaction
-        {
-            get { return this.lazyTransaction.Value; }
-            set
-            {
-                this.lazyTransaction = new Lazy<SerializableTransaction>(() => value);
-                this.TransactionIdentifier = value.Identifier;
-            }
-        }
-
-        ITransaction ITransactionValueSource.Transaction { get { return this.lazyTransaction.Value; } }
+        ITransaction ITransactionValueSource.Transaction { get { return this.Transaction; } }
 
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
@@ -63,7 +32,7 @@ namespace Evercoin.Storage
         public bool Equals(ITransactionValueSource other)
         {
             return base.Equals(other) &&
-                   Equals(((ITransactionValueSource)this).Transaction, other.Transaction);
+                   Equals(this.Transaction, other.Transaction);
         }
 
         /// <summary>
@@ -99,13 +68,13 @@ namespace Evercoin.Storage
         public override int GetHashCode()
         {
             return new HashCodeBuilder(base.GetHashCode())
-                .HashWith(((ITransactionValueSource)this).Transaction);
+                .HashWith(this.Transaction);
         }
 
         private void InitFrom(ITransactionValueSource transactionValueSource)
         {
-            SerializableTransaction serializableTransaction = transactionValueSource.Transaction as SerializableTransaction;
-            this.Transaction = serializableTransaction ?? new SerializableTransaction(transactionValueSource.Transaction);
+            NetworkTransaction serializableTransaction = transactionValueSource.Transaction as NetworkTransaction;
+            this.Transaction = serializableTransaction ?? new NetworkTransaction(transactionValueSource.Transaction);
         }
     }
 }
