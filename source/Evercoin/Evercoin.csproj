@@ -55,7 +55,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BaseImplementations\ChainStoreBase.cs" />
+    <Compile Include="BaseImplementations\ReadOnlyChainStoreBase.cs" />
     <Compile Include="BaseImplementations\HashAlgorithmStoreBase.cs" />
+    <Compile Include="BaseImplementations\ReadWriteChainStoreBase.cs" />
+    <Compile Include="DisposableObject.cs" />
     <Compile Include="HandledNetworkMessageResult.cs" />
     <Compile Include="INetworkMessage.cs" />
     <Compile Include="INetworkMessageHandler.cs" />

@@ -35,7 +35,12 @@ namespace Evercoin.App
             container.ComposeParts(c, settings, runner);
 
             Console.WriteLine("=== Block Saving / Loading ===");
-            string id = Guid.NewGuid().ToString();
+            int randomSeed = Guid.NewGuid().GetHashCode();
+            Random random = new Random(randomSeed);
+            byte[] idBytes = new byte[32];
+            random.NextBytes(idBytes);
+            string id = ByteTwiddling.ByteArrayToHexString(idBytes);
+
             IBlock blockToSave = new SomeBlockClass { Identifier = id, Transactions = ImmutableList<ITransaction>.Empty, Coinbase = new SomeValueSourceClass { AvailableValue = 50, ScriptPubKey = ImmutableList.Create<byte>(25, 42, 254) } };
             c.ChainStores.First().PutBlock(blockToSave);
             Console.WriteLine("Saved a block with Identifier {0}.", id);
@@ -46,8 +51,6 @@ namespace Evercoin.App
             Console.WriteLine();
 
             Console.WriteLine("=== Hash Algorithms ===");
-            int randomSeed = Guid.NewGuid().GetHashCode();
-            Random random = new Random(randomSeed);
             byte[] randomBytes = new byte[42];
             random.NextBytes(randomBytes);
             Console.WriteLine("Data to hash:");

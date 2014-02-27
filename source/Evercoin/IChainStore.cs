@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace Evercoin
 {
@@ -13,6 +14,10 @@ namespace Evercoin
 
         Task PutBlockAsync(IBlock block);
 
+        Task PutBlockAsync(IBlock block, CancellationToken token);
+
         Task PutTransactionAsync(ITransaction transaction);
+
+        Task PutTransactionAsync(ITransaction transaction, CancellationToken token);
     }
 }

@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System.Threading;
+using System.Threading.Tasks;
 
 namespace Evercoin
 {
@@ -12,16 +13,24 @@ namespace Evercoin
 
         bool ContainsTransaction(string transactionIdentifier);
 
-        Task<bool> ContainsBlockAsync(string blockIdentifier);
-
-        Task<bool> ContainsTransactionAsync(string transactionIdentifier);
-
         bool TryGetBlock(string blockIdentifier, out IBlock block);
 
         bool TryGetTransaction(string transactionIdentifier, out ITransaction transaction);
 
         Task<IBlock> GetBlockAsync(string blockIdentifier);
 
+        Task<IBlock> GetBlockAsync(string blockIdentifier, CancellationToken token);
+
         Task<ITransaction> GetTransactionAsync(string transactionIdentifier);
+
+        Task<ITransaction> GetTransactionAsync(string transactionIdentifier, CancellationToken token);
+
+        Task<bool> ContainsBlockAsync(string blockIdentifier);
+
+        Task<bool> ContainsBlockAsync(string blockIdentifier, CancellationToken token);
+
+        Task<bool> ContainsTransactionAsync(string transactionIdentifier);
+
+        Task<bool> ContainsTransactionAsync(string transactionIdentifier, CancellationToken token);
     }
 }
