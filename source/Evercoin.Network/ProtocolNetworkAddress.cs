@@ -12,19 +12,17 @@ namespace Evercoin.Network
 {
     public sealed class ProtocolNetworkAddress
     {
-        public ProtocolNetworkAddress()
-        {
-        }
+        private readonly uint? time;
 
-        public ProtocolNetworkAddress(uint time, ulong services, IPAddress address, ushort port)
+        public ProtocolNetworkAddress(uint? time, ulong services, IPAddress address, ushort port)
         {
-            this.Time = time;
+            this.time = time;
             this.Services = services;
             this.Address = address;
             this.Port = port;
         }
 
-        public uint Time { get; private set; }
+        public uint Time { get { return this.time.GetValueOrDefault(); }}
 
         public ulong Services { get; private set; }
 
@@ -32,40 +30,19 @@ namespace Evercoin.Network
 
         public ushort Port { get; private set; }
 
-        public ImmutableList<byte> GetData(int protocolVersion)
+        public ImmutableList<byte> Data
         {
-            byte[] timeBytes = protocolVersion >= 31402 ?
-                               BitConverter.GetBytes(this.Time).LittleEndianToOrFromBitConverterEndianness() :
-                               new byte[0];
-
-            return ImmutableList.CreateRange(timeBytes)
-                                .AddRange(BitConverter.GetBytes(this.Services).LittleEndianToOrFromBitConverterEndianness())
-                                .AddRange(this.Address.MapToIPv6().GetAddressBytes())
-                                .AddRange(BitConverter.GetBytes(this.Port).LittleEndianToOrFromBitConverterEndianness().Reverse());
-        }
-
-        public async Task LoadFromStreamAsync(Stream stream, int protocolVersion, CancellationToken ct)
-        {
-            if (protocolVersion >= 31402)
+            get
             {
-                var timeBytes = (await stream.ReadBytesAsyncWithIntParam(4, ct)).ToArray().LittleEndianToOrFromBitConverterEndianness();
-                this.Time = BitConverter.ToUInt32(timeBytes, 0);
+                byte[] timeBytes = this.time.HasValue ?
+                                   BitConverter.GetBytes(this.Time).LittleEndianToOrFromBitConverterEndianness() :
+                                   new byte[0];
+
+                return ImmutableList.CreateRange(timeBytes)
+                                    .AddRange(BitConverter.GetBytes(this.Services).LittleEndianToOrFromBitConverterEndianness())
+                                    .AddRange(this.Address.MapToIPv6().GetAddressBytes())
+                                    .AddRange(BitConverter.GetBytes(this.Port).LittleEndianToOrFromBitConverterEndianness().Reverse());
             }
-            
-            var servicesBytes = (await stream.ReadBytesAsyncWithIntParam(8, ct)).ToArray().LittleEndianToOrFromBitConverterEndianness();
-            this.Services = BitConverter.ToUInt64(servicesBytes, 0);
-
-            var addressBytes = (await stream.ReadBytesAsyncWithIntParam(16, ct));
-            var v6Bytes = addressBytes.ToArray();
-            var v4Bytes = addressBytes.GetRange(12, 4).ToArray();
-
-            var v6Address = new IPAddress(v6Bytes);
-            var v4Address = new IPAddress(v4Bytes);
-
-            this.Address = v6Address;
-            
-            var portBytes = (await stream.ReadBytesAsyncWithIntParam(2, ct)).ToArray().LittleEndianToOrFromBitConverterEndianness().Reverse().ToArray();
-            this.Port = BitConverter.ToUInt16(portBytes, 0);
         }
     }
 }

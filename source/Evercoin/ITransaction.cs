@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Numerics;
 
 namespace Evercoin
 {
@@ -14,7 +15,14 @@ namespace Evercoin
         /// <summary>
         /// Gets a string that identifies this transaction.
         /// </summary>
-        string Identifier { get; }
+        BigInteger Identifier { get; }
+
+        /// <summary>
+        /// Gets the identifier of the <see cref="IBlock"/> that contains
+        /// this transaction, if any.
+        /// <see cref="String.Empty"/> if it is not yet included in a block.
+        /// </summary>
+        BigInteger ContainingBlockIdentifier { get; }
 
         /// <summary>
         /// Gets the version of this transaction.
@@ -24,11 +32,11 @@ namespace Evercoin
         /// <summary>
         /// Gets the inputs spent by this transaction.
         /// </summary>
-        IImmutableList<IValueSource> Inputs { get; }
+        ImmutableList<IValueSpender> Inputs { get; }
 
         /// <summary>
         /// Gets the outputs of this transaction.
         /// </summary>
-        IImmutableList<ITransactionValueSource> Outputs { get; }
+        ImmutableList<ITransactionValueSource> Outputs { get; }
     }
 }

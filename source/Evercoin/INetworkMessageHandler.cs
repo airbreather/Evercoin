@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.Composition;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Evercoin
@@ -39,5 +40,16 @@ namespace Evercoin
         /// A task encapsulating the asynchronous operation.
         /// </returns>
         Task<HandledNetworkMessageResult> HandleMessageAsync(INetworkMessage message);
+
+        /// <summary>
+        /// Asynchronously handles an <see cref="INetworkMessage"/> received.
+        /// </summary>
+        /// <param name="message">
+        /// The message that was received.
+        /// </param>
+        /// <returns>
+        /// A task encapsulating the asynchronous operation.
+        /// </returns>
+        Task<HandledNetworkMessageResult> HandleMessageAsync(INetworkMessage message, CancellationToken token);
     }
 }

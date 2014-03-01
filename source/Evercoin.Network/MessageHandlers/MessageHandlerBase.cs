@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Evercoin.Network.MessageHandlers
@@ -72,9 +73,19 @@ namespace Evercoin.Network.MessageHandlers
                 return HandledNetworkMessageResult.UnrecognizedCommand;
             }
 
-            return await this.HandleMessageAsyncCore(message);
+            return await this.HandleMessageAsyncCore(message, CancellationToken.None);
         }
 
-        protected abstract Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message);
+        public async Task<HandledNetworkMessageResult> HandleMessageAsync(INetworkMessage message, CancellationToken token)
+        {
+            if (!this.RecognizesMessage(message))
+            {
+                return HandledNetworkMessageResult.UnrecognizedCommand;
+            }
+
+            return await this.HandleMessageAsyncCore(message, token);
+        }
+
+        protected abstract Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message, CancellationToken token);
     }
 }

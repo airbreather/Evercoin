@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,36 +12,35 @@ using Evercoin.Util;
 
 namespace Evercoin.Network
 {
-    internal sealed class ProtocolInventoryVector
+    public sealed class ProtocolInventoryVector
     {
-        public const int HashSize = 32;
-
-        public ProtocolInventoryVector()
-        {
-        }
-
-        public ProtocolInventoryVector(InventoryType type, IEnumerable<byte> hash)
+        public ProtocolInventoryVector(InventoryType type, BigInteger hash)
         {
             this.Type = type;
-            this.Hash = hash.ToImmutableList();
+            this.Hash = hash;
         }
 
         public InventoryType Type { get; private set; }
 
-        public ImmutableList<byte> Hash { get; private set; }
+        public BigInteger Hash { get; private set; }
 
-        public ImmutableList<byte> GetData()
+        public byte[] HashBytes
         {
-            return ImmutableList.CreateRange(BitConverter.GetBytes((uint)this.Type).LittleEndianToOrFromBitConverterEndianness())
-                                .AddRange(this.Hash.Reverse());
+            get
+            {
+                byte[] hash = this.Hash.ToByteArray();
+                Array.Resize(ref hash, 32);
+                return hash;
+            }
         }
 
-        public async Task LoadFromStreamAsync(Stream stream, CancellationToken ct)
+        public ImmutableList<byte> Data
         {
-            byte[] typeBytes = (await stream.ReadBytesAsyncWithIntParam(4, ct)).ToArray().LittleEndianToOrFromBitConverterEndianness();
-            this.Type = (InventoryType)BitConverter.ToUInt32(typeBytes, 0);
-
-            this.Hash = (await stream.ReadBytesAsyncWithIntParam(HashSize, ct)).Reverse();
+            get
+            {
+                return ImmutableList.CreateRange(BitConverter.GetBytes((uint)this.Type).LittleEndianToOrFromBitConverterEndianness())
+                                    .AddRange(this.HashBytes);
+            }
         }
 
         public enum InventoryType : uint

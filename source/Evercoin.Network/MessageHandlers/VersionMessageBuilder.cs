@@ -47,14 +47,14 @@ namespace Evercoin.Network.MessageHandlers
             IPEndPoint localEndPoint = (IPEndPoint)client.Client.LocalEndPoint;
             IPEndPoint remoteEndPoint = (IPEndPoint)client.Client.RemoteEndPoint;
 
-            ProtocolNetworkAddress destinationAddress = new ProtocolNetworkAddress((uint)timestamp.Ticks, services, localEndPoint.Address, (ushort)localEndPoint.Port);
-            ProtocolNetworkAddress sourceAddress = new ProtocolNetworkAddress((uint)timestamp.Ticks, services, remoteEndPoint.Address, (ushort)remoteEndPoint.Port);
+            ProtocolNetworkAddress destinationAddress = new ProtocolNetworkAddress(null, services, localEndPoint.Address, (ushort)localEndPoint.Port);
+            ProtocolNetworkAddress sourceAddress = new ProtocolNetworkAddress(null, services, remoteEndPoint.Address, (ushort)remoteEndPoint.Port);
 
             ImmutableList<byte> payload = ImmutableList.CreateRange(BitConverter.GetBytes(this.network.Parameters.ProtocolVersion).LittleEndianToOrFromBitConverterEndianness())
                                                        .AddRange(BitConverter.GetBytes(services).LittleEndianToOrFromBitConverterEndianness())
                                                        .AddRange(BitConverter.GetBytes(timestamp.Ticks).LittleEndianToOrFromBitConverterEndianness())
-                                                       .AddRange(destinationAddress.GetData(this.network.Parameters.ProtocolVersionBeforeNegotiation))
-                                                       .AddRange(sourceAddress.GetData(this.network.Parameters.ProtocolVersionBeforeNegotiation))
+                                                       .AddRange(destinationAddress.Data)
+                                                       .AddRange(sourceAddress.Data)
                                                        .AddRange(BitConverter.GetBytes(nonce).LittleEndianToOrFromBitConverterEndianness())
                                                        .AddRange(new ProtocolString(userAgent, Encoding.ASCII).Data)
                                                        .AddRange(BitConverter.GetBytes(lastBlockReceived).LittleEndianToOrFromBitConverterEndianness())

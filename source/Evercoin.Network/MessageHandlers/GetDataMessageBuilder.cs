@@ -30,7 +30,7 @@ namespace Evercoin.Network.MessageHandlers
         }
 
         public INetworkMessage BuildGetDataMessage(Guid clientId,
-                                                   IEnumerable<ImmutableList<byte>> dataToRequest)
+                                                   IEnumerable<ProtocolInventoryVector> dataToRequest)
         {
             Message message = new Message(this.network.Parameters, clientId);
 
@@ -38,11 +38,11 @@ namespace Evercoin.Network.MessageHandlers
             byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(GetDataText);
             Array.Copy(unpaddedCommandBytes, commandBytes, unpaddedCommandBytes.Length);
 
-            ImmutableList<ImmutableList<byte>> dataToRequestList = dataToRequest.ToImmutableList();
-            ProtocolCompactSize size = new ProtocolCompactSize((ulong)dataToRequestList.Count);
+            ImmutableList<ProtocolInventoryVector> dataToRequestList = dataToRequest.ToImmutableList();
+            ProtocolCompactSize size = (ulong)dataToRequestList.Count;
 
             message.CreateFrom(commandBytes, ImmutableList.CreateRange(size.Data)
-                                                          .AddRange(dataToRequestList.SelectMany(x => x)));
+                                                          .AddRange(dataToRequestList.SelectMany(x => x.Data)));
             return message;
         }
     }

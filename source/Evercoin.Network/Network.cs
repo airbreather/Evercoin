@@ -2,12 +2,14 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Diagnostics.Tracing;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -46,26 +48,26 @@ namespace Evercoin.Network
         /// </summary>
         public INetworkParameters Parameters { get { return this.networkParameters; } }
 
-        internal IDictionary<Guid, TcpClient> ClientLookup { get { return this.clientLookup; } } 
+        internal IDictionary<Guid, TcpClient> ClientLookup { get { return this.clientLookup; } }
 
-        /// <summary>
-        /// Asynchronously connects to a client.
-        /// </summary>
-        /// <param name="endPoint">
-        /// The end point of the client to connect to.
-        /// </param>
-        /// <returns>
-        /// An awaitable task that yields the ID of the connected client.
-        /// </returns>
+        public async Task BroadcastMessageAsync(INetworkMessage message)
+        {
+            await this.BroadcastMessageAsync(message, CancellationToken.None);
+        }
+
+        public async Task SendMessageToClientAsync(Guid clientId, INetworkMessage message)
+        {
+            await this.SendMessageToClientAsync(clientId, message, CancellationToken.None);
+        }
+
         public async Task<Guid> ConnectToClientAsync(IPEndPoint endPoint)
         {
-            TcpClient existingClient = this.clientLookup.Values.FirstOrDefault(x => x.Client.RemoteEndPoint.Equals(endPoint));
-            if (existingClient != null)
-            {
-                return Guid.Empty;
-            }
+            return await this.ConnectToClientAsync(endPoint, CancellationToken.None);
+        }
 
-            return await this.ConnectToClientCoreAsync(async client => await client.ConnectAsync(endPoint.Address, endPoint.Port));
+        public async Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint)
+        {
+            return await this.ConnectToClientAsync(endPoint, CancellationToken.None);
         }
 
         /// <summary>
@@ -77,9 +79,29 @@ namespace Evercoin.Network
         /// <returns>
         /// An awaitable task that yields the ID of the connected client.
         /// </returns>
-        public async Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint)
+        public async Task<Guid> ConnectToClientAsync(IPEndPoint endPoint, CancellationToken token)
         {
-            return await this.ConnectToClientCoreAsync(async client => await client.ConnectAsync(endPoint.Host, endPoint.Port));
+            TcpClient existingClient = this.clientLookup.Values.FirstOrDefault(x => x.Client.RemoteEndPoint.Equals(endPoint));
+            if (existingClient != null)
+            {
+                return Guid.Empty;
+            }
+
+            return await this.ConnectToClientCoreAsync(async client => await client.ConnectAsync(endPoint.Address, endPoint.Port), token);
+        }
+
+        /// <summary>
+        /// Asynchronously connects to a client.
+        /// </summary>
+        /// <param name="endPoint">
+        /// The end point of the client to connect to.
+        /// </param>
+        /// <returns>
+        /// An awaitable task that yields the ID of the connected client.
+        /// </returns>
+        public async Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint, CancellationToken token)
+        {
+            return await this.ConnectToClientCoreAsync(async client => await client.ConnectAsync(endPoint.Host, endPoint.Port), token);
         }
 
         public void Dispose()
@@ -89,27 +111,6 @@ namespace Evercoin.Network
             {
                 client.Close();
             }
-        }
-
-        private async Task<Guid> ConnectToClientCoreAsync(Func<TcpClient, Task> connectionCallback)
-        {
-            Guid clientId = Guid.NewGuid();
-            TcpClient client = new TcpClient(AddressFamily.InterNetwork);
-            this.clientLookup.TryAdd(clientId, client);
-
-            await connectionCallback(client);
-            Stream stream = client.GetStream();
-            IObservable<Message> messageStream = Observable.FromAsync(() => this.ReadMessage(stream, clientId))
-                                                           .DoWhile(() => client.Connected)
-                                                           .TakeWhile(msg => msg != null);
-            await Task.Run(() => this.messageObservables.OnNext(messageStream));
-
-            VersionMessageBuilder builder = new VersionMessageBuilder(this);
-
-            INetworkMessage mm = builder.BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 500, "/Evercoin:0.0.0/VS:0.0.0/", 0, true);
-            await this.SendMessageToClientAsync(clientId, mm);
-
-            return clientId;
         }
 
         /// <summary>
@@ -124,9 +125,9 @@ namespace Evercoin.Network
         /// <remarks>
         /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
         /// </remarks>
-        public async Task BroadcastMessageAsync(INetworkMessage message)
+        public async Task BroadcastMessageAsync(INetworkMessage message, CancellationToken token)
         {
-            IEnumerable<Task> broadcastTasks = this.clientLookup.Values.Select(tcpClient => this.SendMessageCoreAsync(tcpClient, message));
+            IEnumerable<Task> broadcastTasks = this.clientLookup.Values.Select(tcpClient => this.SendMessageCoreAsync(tcpClient, message, token));
             await Task.WhenAll(broadcastTasks);
         }
 
@@ -145,7 +146,7 @@ namespace Evercoin.Network
         /// <remarks>
         /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
         /// </remarks>
-        public async Task SendMessageToClientAsync(Guid clientId, INetworkMessage message)
+        public async Task SendMessageToClientAsync(Guid clientId, INetworkMessage message, CancellationToken token)
         {
             TcpClient client;
             if (!this.clientLookup.TryGetValue(clientId, out client))
@@ -153,30 +154,33 @@ namespace Evercoin.Network
                 throw new ArgumentException("Client " + clientId + " not found.", "clientId");
             }
 
-            await this.SendMessageCoreAsync(client, message);
+            await this.SendMessageCoreAsync(client, message, token);
         }
 
-        private async Task<Message> ReadMessage(Stream stream, Guid clientId)
+        private async Task<Guid> ConnectToClientCoreAsync(Func<TcpClient, Task> connectionCallback, CancellationToken token)
         {
-            Message inc = new Message(this.networkParameters, clientId);
-            try
-            {
-                await inc.ReadFrom(stream, CancellationToken.None);
-            }
-            catch (AggregateException ex)
-            {
-                ex.Flatten().Handle(ch => ch is EndOfStreamException);
-                return null;
-            }
-            catch (OperationCanceledException)
-            {
-                return null;
-            }
+            Guid clientId = Guid.NewGuid();
+            TcpClient client = new TcpClient(AddressFamily.InterNetwork);
+            this.clientLookup.TryAdd(clientId, client);
 
-            return inc;
+            await connectionCallback(client);
+            ProtocolStreamReader streamReader = new ProtocolStreamReader(client.GetStream(), leaveOpen: true);
+            IObservable<INetworkMessage> messageStream = Observable.FromAsync(ct => streamReader.ReadNetworkMessageAsync(this.networkParameters, clientId, ct))
+                                                                   .DoWhile(() => client.Connected)
+                                                                   .TakeWhile(msg => msg != null)
+                                                                   .Finally(streamReader.Dispose);
+
+            await Task.Run(() => this.messageObservables.OnNext(messageStream), token);
+
+            VersionMessageBuilder builder = new VersionMessageBuilder(this);
+
+            INetworkMessage mm = builder.BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 500, "/Evercoin:0.0.0/VS:0.0.0/", 0, false);
+            await this.SendMessageToClientAsync(clientId, mm, token);
+
+            return clientId;
         }
 
-        private async Task SendMessageCoreAsync(TcpClient client, INetworkMessage messageToSend)
+        private async Task SendMessageCoreAsync(TcpClient client, INetworkMessage messageToSend, CancellationToken token)
         {
             if (!client.Connected)
             {
@@ -184,7 +188,7 @@ namespace Evercoin.Network
             }
 
             byte[] messageBytes = messageToSend.FullData.ToArray();
-            await client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length);
+            await client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length, token);
         }
     }
 }

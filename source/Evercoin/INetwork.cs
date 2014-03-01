@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Evercoin
@@ -47,7 +48,29 @@ namespace Evercoin
         /// <returns>
         /// An awaitable task that yields the ID of the connected client.
         /// </returns>
+        Task<Guid> ConnectToClientAsync(IPEndPoint endPoint, CancellationToken token);
+
+        /// <summary>
+        /// Asynchronously connects to a client.
+        /// </summary>
+        /// <param name="endPoint">
+        /// The end point of the client to connect to.
+        /// </param>
+        /// <returns>
+        /// An awaitable task that yields the ID of the connected client.
+        /// </returns>
         Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint);
+
+        /// <summary>
+        /// Asynchronously connects to a client.
+        /// </summary>
+        /// <param name="endPoint">
+        /// The end point of the client to connect to.
+        /// </param>
+        /// <returns>
+        /// An awaitable task that yields the ID of the connected client.
+        /// </returns>
+        Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint, CancellationToken token);
 
         /// <summary>
         /// Asynchronously broadcasts a message to all clients on the network.
@@ -62,6 +85,20 @@ namespace Evercoin
         /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
         /// </remarks>
         Task BroadcastMessageAsync(INetworkMessage message);
+
+        /// <summary>
+        /// Asynchronously broadcasts a message to all clients on the network.
+        /// </summary>
+        /// <param name="message">
+        /// The <see cref="INetworkMessage"/> to broadcast.
+        /// </param>
+        /// <returns>
+        /// A <see cref="Task"/> encapsulating the asynchronous operation.
+        /// </returns>
+        /// <remarks>
+        /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
+        /// </remarks>
+        Task BroadcastMessageAsync(INetworkMessage message, CancellationToken token);
 
         /// <summary>
         /// Asynchronously sends a message to a single client on the network.
@@ -79,5 +116,22 @@ namespace Evercoin
         /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
         /// </remarks>
         Task SendMessageToClientAsync(Guid clientId, INetworkMessage message);
+
+        /// <summary>
+        /// Asynchronously sends a message to a single client on the network.
+        /// </summary>
+        /// <param name="clientId">
+        /// The ID of the client to send the message to.
+        /// </param>
+        /// <param name="message">
+        /// The <see cref="INetworkMessage"/> to send.
+        /// </param>
+        /// <returns>
+        /// A <see cref="Task"/> encapsulating the asynchronous operation.
+        /// </returns>
+        /// <remarks>
+        /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
+        /// </remarks>
+        Task SendMessageToClientAsync(Guid clientId, INetworkMessage message, CancellationToken token);
     }
 }

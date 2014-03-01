@@ -4,6 +4,8 @@ using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Evercoin.Util;
 
@@ -19,7 +21,7 @@ namespace Evercoin.App
 
         public INetwork Network { get { return this.network; } }
 
-        public async void Run()
+        public async Task Run(CancellationToken token)
         {
             List<IPEndPoint> endPoints = new List<IPEndPoint>
                                          {
@@ -32,18 +34,18 @@ namespace Evercoin.App
 
             foreach (IPEndPoint endPoint in endPoints)
             {
-                await this.network.ConnectToClientAsync(endPoint);
+                await this.network.ConnectToClientAsync(endPoint, token);
             }
 
             object consoleLock = new object();
             this.network.ReceivedMessages.Subscribe(
-                msg =>
+                async msg =>
                 {
                     INetworkMessageHandler correctHandler = this.messageHandlers.FirstOrDefault(handler => handler.RecognizesMessage(msg));
                     HandledNetworkMessageResult result = HandledNetworkMessageResult.UnrecognizedCommand;
                     if (correctHandler != null)
                     {
-                        result = correctHandler.HandleMessageAsync(msg).Result;
+                        result = await correctHandler.HandleMessageAsync(msg, token);
                     }
 
                     lock (consoleLock)

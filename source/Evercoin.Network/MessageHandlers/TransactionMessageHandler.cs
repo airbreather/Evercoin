@@ -25,7 +25,7 @@ namespace Evercoin.Network.MessageHandlers
             this.builder = new GetDataMessageBuilder(network);
         }
 
-        protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message)
+        protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message, CancellationToken token)
         {
             /*
             NetworkTransaction transaction = new NetworkTransaction();

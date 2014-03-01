@@ -5,6 +5,7 @@ using System.ComponentModel.Composition.Hosting;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 
 using Evercoin.Util;
 
@@ -38,8 +39,8 @@ namespace Evercoin.App
 
                 Type haiType = typeof(HashAlgorithmIdentifiers);
                 List<FieldInfo> algorithmFields = haiType.GetFields(BindingFlags.Public | BindingFlags.Static)
-                    .Where(x => x.FieldType == typeof(Guid))
-                    .ToList();
+                                                         .Where(x => x.FieldType == typeof(Guid))
+                                                         .ToList();
                 int outputColumnWidth = algorithmFields.Max(x => x.Name.Length);
                 foreach (FieldInfo hashAlgorithmIdentifier in algorithmFields)
                 {
@@ -52,12 +53,14 @@ namespace Evercoin.App
                 Console.WriteLine("=== Network ===");
                 Console.WriteLine("Press Enter to quit...");
 
-                runner.Run();
-
-                Console.ReadLine();
+                using (CancellationTokenSource cts = new CancellationTokenSource())
+                {
+                    Task task = runner.Run(cts.Token);
+                    Console.ReadLine();
+                    cts.Cancel();
+                    task.Wait();
+                }
             }
-
-            Thread.Sleep(2000);
         }
     }
 }

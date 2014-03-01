@@ -7,8 +7,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Evercoin.Util;
-
 namespace Evercoin.Network.MessageHandlers
 {
     public sealed class InventoryMessageHandler : MessageHandlerBase
@@ -24,16 +22,15 @@ namespace Evercoin.Network.MessageHandlers
             this.messageBuilder = new GetDataMessageBuilder(network);
         }
 
-        protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message)
+        protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message, CancellationToken token)
         {
             Guid clientId = message.RemoteClient;
 
             ImmutableList<ProtocolInventoryVector> dataNeeded = ImmutableList<ProtocolInventoryVector>.Empty;
             using (MemoryStream payloadStream = new MemoryStream(message.Payload.ToArray()))
+            using (ProtocolStreamReader streamReader = new ProtocolStreamReader(payloadStream, leaveOpen: true))
             {
-                ProtocolCompactSize inventorySize = new ProtocolCompactSize();
-                await inventorySize.LoadFromStreamAsync(payloadStream, CancellationToken.None);
-                ulong neededItemCount = inventorySize.Value;
+                ulong neededItemCount = await streamReader.ReadCompactSizeAsync(token);
                 if (neededItemCount > 50000)
                 {
                     return HandledNetworkMessageResult.MessageInvalid;
@@ -41,18 +38,17 @@ namespace Evercoin.Network.MessageHandlers
 
                 while (neededItemCount-- > 0)
                 {
-                    ProtocolInventoryVector vector = new ProtocolInventoryVector();
-                    await vector.LoadFromStreamAsync(payloadStream, CancellationToken.None);
+                    ProtocolInventoryVector vector = await streamReader.ReadInventoryVectorAsync(token);
 
                     bool skip = true;
                     switch (vector.Type)
                     {
                         case ProtocolInventoryVector.InventoryType.Block:
-                            skip = await this.ReadOnlyChainStore.ContainsBlockAsync(ByteTwiddling.ByteArrayToHexString(vector.Hash));
+                            skip = await this.ReadOnlyChainStore.ContainsBlockAsync(vector.Hash, token);
                             break;
 
                         case ProtocolInventoryVector.InventoryType.Transaction:
-                            skip = await this.ReadOnlyChainStore.ContainsTransactionAsync(ByteTwiddling.ByteArrayToHexString(vector.Hash));
+                            skip = await this.ReadOnlyChainStore.ContainsTransactionAsync(vector.Hash, token);
                             break;
                     }
 
@@ -64,8 +60,8 @@ namespace Evercoin.Network.MessageHandlers
             }
 
             // Respond to an "inv" with a "getdata".
-            INetworkMessage response = this.messageBuilder.BuildGetDataMessage(clientId, dataNeeded.Select(x => x.GetData()));
-            await this.Network.SendMessageToClientAsync(clientId, response);
+            INetworkMessage response = this.messageBuilder.BuildGetDataMessage(clientId, dataNeeded);
+            await this.Network.SendMessageToClientAsync(clientId, response, token);
             return HandledNetworkMessageResult.Okay;
         }
     }

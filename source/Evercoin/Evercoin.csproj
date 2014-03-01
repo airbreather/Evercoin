@@ -60,8 +60,10 @@
     <Compile Include="BaseImplementations\ReadWriteChainStoreBase.cs" />
     <Compile Include="DisposableObject.cs" />
     <Compile Include="HandledNetworkMessageResult.cs" />
+    <Compile Include="ICoinbaseValueSource.cs" />
     <Compile Include="INetworkMessage.cs" />
     <Compile Include="INetworkMessageHandler.cs" />
+    <Compile Include="IValueSpender.cs" />
     <Compile Include="StreamExtensions.cs" />
     <Compile Include="HashAlgorithmIdentifiers.cs" />
     <Compile Include="IBlock.cs" />

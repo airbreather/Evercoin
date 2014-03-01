@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -6,32 +7,32 @@ namespace Evercoin
 {
     public interface IReadOnlyChainStore : IDisposable
     {
-        IBlock GetBlock(string blockIdentifier);
+        IBlock GetBlock(BigInteger blockIdentifier);
 
-        ITransaction GetTransaction(string transactionIdentifier);
+        ITransaction GetTransaction(BigInteger transactionIdentifier);
 
-        bool ContainsBlock(string blockIdentifier);
+        bool ContainsBlock(BigInteger blockIdentifier);
 
-        bool ContainsTransaction(string transactionIdentifier);
+        bool ContainsTransaction(BigInteger transactionIdentifier);
 
-        bool TryGetBlock(string blockIdentifier, out IBlock block);
+        bool TryGetBlock(BigInteger blockIdentifier, out IBlock block);
 
-        bool TryGetTransaction(string transactionIdentifier, out ITransaction transaction);
+        bool TryGetTransaction(BigInteger transactionIdentifier, out ITransaction transaction);
 
-        Task<IBlock> GetBlockAsync(string blockIdentifier);
+        Task<IBlock> GetBlockAsync(BigInteger blockIdentifier);
 
-        Task<IBlock> GetBlockAsync(string blockIdentifier, CancellationToken token);
+        Task<IBlock> GetBlockAsync(BigInteger blockIdentifier, CancellationToken token);
 
-        Task<ITransaction> GetTransactionAsync(string transactionIdentifier);
+        Task<ITransaction> GetTransactionAsync(BigInteger transactionIdentifier);
 
-        Task<ITransaction> GetTransactionAsync(string transactionIdentifier, CancellationToken token);
+        Task<ITransaction> GetTransactionAsync(BigInteger transactionIdentifier, CancellationToken token);
 
-        Task<bool> ContainsBlockAsync(string blockIdentifier);
+        Task<bool> ContainsBlockAsync(BigInteger blockIdentifier);
 
-        Task<bool> ContainsBlockAsync(string blockIdentifier, CancellationToken token);
+        Task<bool> ContainsBlockAsync(BigInteger blockIdentifier, CancellationToken token);
 
-        Task<bool> ContainsTransactionAsync(string transactionIdentifier);
+        Task<bool> ContainsTransactionAsync(BigInteger transactionIdentifier);
 
-        Task<bool> ContainsTransactionAsync(string transactionIdentifier, CancellationToken token);
+        Task<bool> ContainsTransactionAsync(BigInteger transactionIdentifier, CancellationToken token);
     }
 }

@@ -15,15 +15,15 @@ namespace Evercoin
     public interface IBlock : IEquatable<IBlock>
     {
         /// <summary>
-        /// Gets a string that identifies this block.
+        /// Gets an integer that identifies this block.
         /// </summary>
-        string Identifier { get; }
+        BigInteger Identifier { get; }
 
         /// <summary>
-        /// Gets the ordered list of <see cref="ITransaction"/> objects
-        /// contained within this block.
+        /// Gets the ordered list of the identifiers of
+        /// <see cref="ITransaction"/> objects contained within this block.
         /// </summary>
-        IImmutableList<ITransaction> Transactions { get; }
+        ImmutableList<BigInteger> TransactionIdentifiers { get; }
 
         /// <summary>
         /// Gets the version of this block.
@@ -41,10 +41,10 @@ namespace Evercoin
         uint Nonce { get; }
 
         /// <summary>
-        /// Gets the <see cref="IValueSource"/> that represents the reward
-        /// for mining this block.
+        /// Gets the <see cref="ICoinbaseValueSource"/> that represents the
+        /// reward for mining this block.
         /// </summary>
-        IValueSource Coinbase { get; }
+        ICoinbaseValueSource Coinbase { get; }
 
         /// <summary>
         /// Gets the difficulty target being used for this block.
@@ -66,6 +66,6 @@ namespace Evercoin
         /// <remarks>
         /// When <see cref="Height"/> equals 0, the return value is undefined.
         /// </remarks>
-        string PreviousBlockIdentifier { get; }
+        BigInteger PreviousBlockIdentifier { get; }
     }
 }

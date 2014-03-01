@@ -104,7 +104,7 @@ namespace Evercoin.Util
             return bytes;
         }
 
-        public static IImmutableList<byte> DeleteAllOccurrencesOfSubsequence(this IImmutableList<byte> scriptCode, IReadOnlyList<byte> signature)
+        public static ImmutableList<byte> DeleteAllOccurrencesOfSubsequence(this IImmutableList<byte> scriptCode, IReadOnlyList<byte> signature)
         {
             if (scriptCode == null)
             {
@@ -118,7 +118,7 @@ namespace Evercoin.Util
 
             if (scriptCode.Count == 0 || signature.Count == 0)
             {
-                return scriptCode;
+                return scriptCode.ToImmutableList();
             }
 
             int i;
@@ -128,7 +128,7 @@ namespace Evercoin.Util
                 scriptCode = scriptCode.RemoveRange(i, signature.Count);
             }
 
-            return scriptCode;
+            return scriptCode.ToImmutableList();
         }
 
         // http://en.wikipedia.org/wiki/Knuth%E2%80%93Morris%E2%80%93Pratt_algorithm
