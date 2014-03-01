@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 
 namespace Evercoin.BaseImplementations
 {
-    [InheritedExport(typeof(IReadOnlyChainStore))]
     public abstract class ReadOnlyChainStoreBase : ChainStoreBase
     {
         protected sealed override void PutBlockCore(IBlock block)

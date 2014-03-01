@@ -1,9 +1,10 @@
-﻿using System.Threading;
+﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Evercoin
 {
-    public interface IReadOnlyChainStore
+    public interface IReadOnlyChainStore : IDisposable
     {
         IBlock GetBlock(string blockIdentifier);
 

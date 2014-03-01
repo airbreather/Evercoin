@@ -1,10 +1,12 @@
-﻿using System.Threading;
+﻿using System.ComponentModel.Composition;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Evercoin.BaseImplementations;
 
 namespace Evercoin.Storage
 {
+    [Export("UncachedChainStore", typeof(IChainStore))]
     public sealed class EfChainStorage : ReadWriteChainStoreBase
     {
         private readonly Bitcoin dbContext = new Bitcoin();

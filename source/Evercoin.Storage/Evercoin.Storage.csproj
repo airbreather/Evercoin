@@ -51,9 +51,11 @@
     <Reference Include="System.Collections.Immutable">
       <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.30\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
     </Reference>
+    <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
+    <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Runtime.Serialization" />
     <Reference Include="System.Security" />
     <Reference Include="System.Xml.Linq" />
@@ -65,9 +67,12 @@
   <ItemGroup>
     <Compile Include="Bitcoin.cs" />
     <Compile Include="Block.cs" />
+    <Compile Include="BlockCache.cs" />
+    <Compile Include="CachingChainStorage.cs" />
     <Compile Include="EfChainStorage.cs" />
     <Compile Include="EfValueConverters.cs" />
     <Compile Include="Transaction.cs" />
+    <Compile Include="TransactionCache.cs" />
     <Compile Include="ValueSource.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
