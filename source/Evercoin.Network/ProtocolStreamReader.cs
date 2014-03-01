@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
 using System.Numerics;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -29,6 +27,22 @@ namespace Evercoin.Network
         }
 
         public int ProtocolVersion { get; set; }
+
+        public async Task<uint> ReadUInt32Async(CancellationToken token)
+        {
+            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
+            {
+                return await this.ReadUInt32AsyncCore(linkedCancellationTokenSource.Token);
+            }
+        }
+        
+        public async Task<BigInteger> ReadUInt256Async(CancellationToken token)
+        {
+            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
+            {
+                return await this.ReadUInt256AsyncCore(linkedCancellationTokenSource.Token);
+            }
+        }
 
         public async Task<ProtocolCompactSize> ReadCompactSizeAsync(CancellationToken token)
         {
@@ -103,7 +117,7 @@ namespace Evercoin.Network
                     break;
 
                 case 0xfe:
-                    value = await this.ReadUInt32Async(token);
+                    value = await this.ReadUInt32AsyncCore(token);
                     break;
 
                 case 0xff:
@@ -120,8 +134,8 @@ namespace Evercoin.Network
 
         private async Task<ProtocolInventoryVector> ReadInventoryVectorAsyncCore(CancellationToken token)
         {
-            ProtocolInventoryVector.InventoryType inventoryType = (ProtocolInventoryVector.InventoryType)await this.ReadUInt32Async(token);
-            BigInteger hash = await this.ReadUInt256Async(token);
+            ProtocolInventoryVector.InventoryType inventoryType = (ProtocolInventoryVector.InventoryType)await this.ReadUInt32AsyncCore(token);
+            BigInteger hash = await this.ReadUInt256AsyncCore(token);
             return new ProtocolInventoryVector(inventoryType, hash);
         }
 
@@ -130,10 +144,10 @@ namespace Evercoin.Network
             uint? time = null;
             if (this.ProtocolVersion >= 31402)
             {
-                time = await this.ReadUInt32Async(token);
+                time = await this.ReadUInt32AsyncCore(token);
             }
 
-            uint services = await this.ReadUInt32Async(token);
+            uint services = await this.ReadUInt32AsyncCore(token);
 
             ImmutableList<byte> addressBytes = await this.ReadBytesAsyncWithIntParam(16, token);
             var v6Address = new IPAddress(addressBytes.ToArray());
@@ -197,7 +211,7 @@ namespace Evercoin.Network
             return BitConverter.ToUInt16(bytes, 0);
         }
 
-        public async Task<uint> ReadUInt32Async(CancellationToken token)
+        private async Task<uint> ReadUInt32AsyncCore(CancellationToken token)
         {
             byte[] bytes = (await this.ReadBytesAsyncWithIntParam(4, token)).ToArray();
             return BitConverter.ToUInt32(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
@@ -215,7 +229,7 @@ namespace Evercoin.Network
             return BitConverter.ToInt64(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
         }
 
-        private async Task<BigInteger> ReadUInt256Async(CancellationToken token)
+        private async Task<BigInteger> ReadUInt256AsyncCore(CancellationToken token)
         {
             byte[] bytes = (await this.ReadBytesAsyncWithIntParam(32, token)).ToArray();
             return new BigInteger(bytes.LittleEndianToOrFromBitConverterEndianness());
@@ -255,21 +269,21 @@ namespace Evercoin.Network
             return data.ToImmutableList();
         }
 
-        public async Task<ProtocolTxIn> ReadTxInAsyncCore(CancellationToken token)
+        private async Task<ProtocolTxIn> ReadTxInAsyncCore(CancellationToken token)
         {
-            BigInteger prevOutTxId = await this.ReadUInt256Async(token);
+            BigInteger prevOutTxId = await this.ReadUInt256AsyncCore(token);
 
-            uint prevOutIndex = await this.ReadUInt32Async(token);
+            uint prevOutIndex = await this.ReadUInt32AsyncCore(token);
 
             ulong scriptSigLength = await this.ReadCompactSizeAsyncCore(token);
             ImmutableList<byte> scriptSig = await this.ReadBytesAsync(scriptSigLength, token);
 
-            uint seq = await this.ReadUInt32Async(token);
+            uint seq = await this.ReadUInt32AsyncCore(token);
 
             return new ProtocolTxIn(prevOutTxId, prevOutIndex, scriptSig, seq);
         }
 
-        public async Task<ProtocolTxOut> ReadTxOutAsyncCore(CancellationToken token)
+        private async Task<ProtocolTxOut> ReadTxOutAsyncCore(CancellationToken token)
         {
             long valueInSatoshis = await this.ReadInt64Async(token);
             
@@ -279,9 +293,9 @@ namespace Evercoin.Network
             return new ProtocolTxOut(valueInSatoshis, scriptPubKey);
         }
 
-        public async Task<ProtocolTransaction> ReadTransactionAsyncCore(CancellationToken token)
+        private async Task<ProtocolTransaction> ReadTransactionAsyncCore(CancellationToken token)
         {
-            uint version = await this.ReadUInt32Async(token);
+            uint version = await this.ReadUInt32AsyncCore(token);
             
             ulong inputCount = await this.ReadCompactSizeAsyncCore(token);
             ImmutableList<ProtocolTxIn> inputs = ImmutableList<ProtocolTxIn>.Empty;
@@ -301,7 +315,7 @@ namespace Evercoin.Network
                 outputs = outputs.Add(nextOutput);
             }
 
-            uint lockTime = await this.ReadUInt32Async(token);
+            uint lockTime = await this.ReadUInt32AsyncCore(token);
 
             return new ProtocolTransaction(version, inputs, outputs, lockTime);
         }

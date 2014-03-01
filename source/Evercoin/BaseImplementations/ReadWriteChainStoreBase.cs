@@ -1,6 +1,4 @@
-﻿using System.ComponentModel.Composition;
-
-namespace Evercoin.BaseImplementations
+﻿namespace Evercoin.BaseImplementations
 {
     public abstract class ReadWriteChainStoreBase : ChainStoreBase
     {

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Numerics;
 
 namespace Evercoin.Util
 {
@@ -102,6 +103,19 @@ namespace Evercoin.Util
             }
 
             return bytes;
+        }
+
+        public static byte[] ToLittleEndianUInt256Array(this BigInteger bigInteger)
+        {
+            byte[] result = new byte[32];
+            byte[] unpaddedResult = bigInteger.ToByteArray();
+            if (unpaddedResult.Length > 32)
+            {
+                throw new InvalidOperationException("Number cannot fit into a 256-bit integer.");
+            }
+
+            Buffer.BlockCopy(unpaddedResult, 0, result, 0, unpaddedResult.Length);
+            return result;
         }
 
         public static ImmutableList<byte> DeleteAllOccurrencesOfSubsequence(this IImmutableList<byte> scriptCode, IReadOnlyList<byte> signature)

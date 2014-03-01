@@ -1,13 +1,7 @@
-﻿using System.Collections.Immutable;
-using System.ComponentModel.Composition;
-using System.IO;
-using System.Linq;
-using System.Security.Cryptography;
+﻿using System.ComponentModel.Composition;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
-using Evercoin.Util;
 
 namespace Evercoin.Network.MessageHandlers
 {

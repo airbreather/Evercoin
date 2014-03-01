@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
 using System.Text;
-using System.Threading.Tasks;
 
 using Evercoin.Util;
 
@@ -49,20 +48,12 @@ namespace Evercoin.Network.MessageHandlers
 
             ImmutableList<byte> payload = ImmutableList.CreateRange(BitConverter.GetBytes(protocolVersion).LittleEndianToOrFromBitConverterEndianness())
                                                        .AddRange(knownHashCount.Data);
-            payload = knownHashList.Aggregate(payload, (prevPayload, nextHash) => prevPayload.AddRange(GetPaddedHash(nextHash)));
+            payload = knownHashList.Aggregate(payload, (prevPayload, nextHash) => prevPayload.AddRange(nextHash.ToLittleEndianUInt256Array()));
 
-            payload = payload.AddRange(GetPaddedHash(lastKnownHash));
+            payload = payload.AddRange(lastKnownHash.ToLittleEndianUInt256Array());
 
             message.CreateFrom(commandBytes, payload);
             return message;
-        }
-
-        private static byte[] GetPaddedHash(BigInteger hash)
-        {
-            byte[] nh = hash.ToByteArray();
-            byte[] nhPadded = new byte[32];
-            Array.Copy(nh, nhPadded, nh.Length);
-            return nhPadded;
         }
     }
 }

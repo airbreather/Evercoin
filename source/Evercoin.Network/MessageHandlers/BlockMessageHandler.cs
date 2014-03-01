@@ -1,33 +1,71 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
-using System.Security.Cryptography;
+using System.Numerics;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Evercoin.Util;
 
-using NodaTime;
-
 namespace Evercoin.Network.MessageHandlers
 {
     public sealed class BlockMessageHandler : MessageHandlerBase
     {
+        private readonly IHashAlgorithmStore hashAlgorithmStore;
         private const string CoinbasePrevIn = "0000000000000000000000000000000000000000000000000000000000000000";
         private static readonly byte[] RecognizedCommand = Encoding.ASCII.GetBytes("block");
 
         [ImportingConstructor]
-        public BlockMessageHandler(INetwork network, IChainStore chainStore)
+        public BlockMessageHandler(INetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore)
             : base(RecognizedCommand, network, chainStore)
         {
+            this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
         protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message, CancellationToken token)
         {
+            using (MemoryStream payloadStream = new MemoryStream(message.Payload.ToArray()))
+            using (ProtocolStreamReader streamReader = new ProtocolStreamReader(payloadStream, leaveOpen: true))
+            {
+                uint version = await streamReader.ReadUInt32Async(token);
+                BigInteger prevBlockId = await streamReader.ReadUInt256Async(token);
+                BigInteger merkleRoot = await streamReader.ReadUInt256Async(token);
+                uint timestamp = await streamReader.ReadUInt32Async(token);
+                uint bits = await streamReader.ReadUInt32Async(token);
+                uint nonce = await streamReader.ReadUInt32Async(token);
+                ulong transactionCount = await streamReader.ReadCompactSizeAsync(token);
+                ImmutableList<ProtocolTransaction> includedTransactions = ImmutableList<ProtocolTransaction>.Empty;
+
+                while (transactionCount-- > 0)
+                {
+                    ProtocolTransaction nextTransaction = await streamReader.ReadTransactionAsync(token);
+                    includedTransactions = includedTransactions.Add(nextTransaction);
+                }
+
+                ImmutableList<byte> dataToHash = ImmutableList.CreateRange(BitConverter.GetBytes(version).LittleEndianToOrFromBitConverterEndianness())
+                                                              .AddRange(prevBlockId.ToLittleEndianUInt256Array())
+                                                              .AddRange(merkleRoot.ToLittleEndianUInt256Array())
+                                                              .AddRange(BitConverter.GetBytes(timestamp).LittleEndianToOrFromBitConverterEndianness())
+                                                              .AddRange(BitConverter.GetBytes(bits).LittleEndianToOrFromBitConverterEndianness())
+                                                              .AddRange(BitConverter.GetBytes(nonce).LittleEndianToOrFromBitConverterEndianness());
+
+                // TODO: This should definitely be done somewhere else, because the POW algorithm is chain-specific,
+                // TODO: which is part of why I'm so hesitant to have the ID on IBlock.
+                IHashAlgorithm hashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(HashAlgorithmIdentifiers.DoubleSHA256);
+                ImmutableList<byte> blockHash = hashAlgorithm.CalculateHash(dataToHash);
+                BigInteger blockIdentifier = new BigInteger(blockHash.Reverse().ToArray());
+
+                // For now, this will only ever be called for block #2 on the main chain.
+                byte[] expectedBytes = ByteTwiddling.HexStringToByteArray("000000006A625F06636B8BB6AC7B960A8D03705D1ACE08B1A19DA3FDCC99DDBD");
+                if (!expectedBytes.SequenceEqual(blockIdentifier.ToLittleEndianUInt256Array()))
+                {
+                    throw new InvalidOperationException("Got something other than block #2 on the main Bitcoin block chain!");
+                }
+            }
+
             /*
             NetworkBlock block = new NetworkBlock();
             List<Task> putThingsTasks = new List<Task>();
