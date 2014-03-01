@@ -27,6 +27,7 @@ namespace Evercoin.Network.MessageHandlers
 
         protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message)
         {
+            /*
             NetworkTransaction transaction = new NetworkTransaction();
             SHA256 theWrongWayToHash = SHA256.Create();
             using (MemoryStream payloadStream = new MemoryStream(message.Payload.ToArray()))
@@ -87,7 +88,7 @@ namespace Evercoin.Network.MessageHandlers
                 }
 
                 await this.ChainStore.PutTransactionAsync(transaction);
-            }
+            } */
 
             return HandledNetworkMessageResult.Okay;
         }

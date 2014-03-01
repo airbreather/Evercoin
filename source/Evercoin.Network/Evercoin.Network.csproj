@@ -77,10 +77,6 @@
     <Compile Include="ProtocolString.cs" />
     <Compile Include="MessageHandlers\GetAddressesMessageBuilder.cs" />
     <Compile Include="MessageHandlers\VersionMessageBuilder.cs" />
-    <Compile Include="NetworkBlock.cs" />
-    <Compile Include="NetworkTransaction.cs" />
-    <Compile Include="NetworkTransactionValueSource.cs" />
-    <Compile Include="NetworkValueSource.cs" />
     <Compile Include="ProtocolTransaction.cs" />
     <Compile Include="ProtocolTxIn.cs" />
     <Compile Include="ProtocolTxOut.cs" />

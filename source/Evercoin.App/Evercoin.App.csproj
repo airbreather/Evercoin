@@ -75,13 +75,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Catalog.cs" />
-    <Compile Include="FileSettings.cs" />
     <Compile Include="NetworkRunner.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SomeBlockClass.cs" />
     <Compile Include="SomeNetworkParams.cs" />
-    <Compile Include="SomeValueSourceClass.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

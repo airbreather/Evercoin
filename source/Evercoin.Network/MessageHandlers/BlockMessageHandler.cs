@@ -28,6 +28,7 @@ namespace Evercoin.Network.MessageHandlers
 
         protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message)
         {
+            /*
             NetworkBlock block = new NetworkBlock();
             List<Task> putThingsTasks = new List<Task>();
             using (MemoryStream payloadStream = new MemoryStream(message.Payload.ToArray()))
@@ -142,7 +143,7 @@ namespace Evercoin.Network.MessageHandlers
                 putThingsTasks.Add(this.ChainStore.PutBlockAsync(block));
             }
 
-            await Task.WhenAll(putThingsTasks);
+            await Task.WhenAll(putThingsTasks);*/
             return HandledNetworkMessageResult.Okay;
         }
     }

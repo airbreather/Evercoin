@@ -56,7 +56,7 @@ namespace Evercoin.Network.MessageHandlers
                             break;
                     }
 
-                    ////if (!skip)
+                    if (!skip)
                     {
                         dataNeeded = dataNeeded.Add(vector);
                     }
