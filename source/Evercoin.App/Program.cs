@@ -51,12 +51,19 @@ namespace Evercoin.App
 
                 Console.WriteLine();
                 Console.WriteLine("=== Network ===");
-                Console.WriteLine("Press Enter to quit...");
-
+                Console.WriteLine("Legend:");
+                Console.WriteLine("(.) = OK");
+                Console.WriteLine("(?) = Command is not handled");
+                Console.WriteLine("(@) = Data is invalid");
+                Console.WriteLine("(*) = Message is invalid");
+                Console.WriteLine("(!) = Unknown error");
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine("Press any key to quit...");
                 using (CancellationTokenSource cts = new CancellationTokenSource())
                 {
                     Task task = runner.Run(cts.Token);
-                    Console.ReadLine();
+                    Console.ReadKey(intercept: true);
                     cts.Cancel();
                     task.Wait();
                 }

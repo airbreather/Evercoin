@@ -171,7 +171,7 @@ namespace Evercoin.Network
 
             VersionMessageBuilder builder = new VersionMessageBuilder(this);
 
-            INetworkMessage mm = builder.BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 500, "/Evercoin:0.0.0/VS:0.0.0/", 0, false);
+            INetworkMessage mm = builder.BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 500, "/Evercoin:0.0.0/VS:0.0.0/", 0, pleaseRelayTransactionsToMe: false);
             await this.SendMessageToClientAsync(clientId, mm, token);
 
             return clientId;

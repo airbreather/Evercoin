@@ -58,11 +58,17 @@ namespace Evercoin.Network.MessageHandlers
                 ImmutableList<byte> blockHash = hashAlgorithm.CalculateHash(dataToHash);
                 BigInteger blockIdentifier = new BigInteger(blockHash.Reverse().ToArray());
 
-                // For now, this will only ever be called for block #2 on the main chain.
+                if (blockIdentifier >= bits)
+                {
+                    return HandledNetworkMessageResult.ContextuallyInvalid;
+                }
+
+                // For now, this is only going to be called for block #2 on the main chain,
+                // so we might as well add this additional check.
                 byte[] expectedBytes = ByteTwiddling.HexStringToByteArray("000000006A625F06636B8BB6AC7B960A8D03705D1ACE08B1A19DA3FDCC99DDBD");
                 if (!expectedBytes.SequenceEqual(blockIdentifier.ToLittleEndianUInt256Array()))
                 {
-                    throw new InvalidOperationException("Got something other than block #2 on the main Bitcoin block chain!");
+                    throw new InvalidOperationException("CRITICAL FAIL: WRONG HASH!  Expected block #2!");
                 }
             }
 

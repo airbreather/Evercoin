@@ -19,8 +19,6 @@ namespace Evercoin.App
         [ImportMany]
         private readonly List<INetworkMessageHandler> messageHandlers = new List<INetworkMessageHandler>();
 
-        public INetwork Network { get { return this.network; } }
-
         public async Task Run(CancellationToken token)
         {
             List<IPEndPoint> endPoints = new List<IPEndPoint>
@@ -32,12 +30,41 @@ namespace Evercoin.App
                                              ////new IPEndPoint(IPAddress.Parse("199.98.20.213"), 8333),
                                          };
 
-            foreach (IPEndPoint endPoint in endPoints)
+            Dictionary<IPEndPoint, Task<Guid>> connectionTasks = endPoints.ToDictionary(endPoint => endPoint, endPoint => this.network.ConnectToClientAsync(endPoint, token));
+            Dictionary<HandledNetworkMessageResult, char> quickGlanceMapping = new Dictionary<HandledNetworkMessageResult, char>
+                                                                               {
+                                                                                   { HandledNetworkMessageResult.MessageInvalid, '*' },
+                                                                                   { HandledNetworkMessageResult.ContextuallyInvalid, '@' },
+                                                                                   { HandledNetworkMessageResult.UnrecognizedCommand, '?' },
+                                                                                   { HandledNetworkMessageResult.Okay, '.' }
+                                                                               };
+
+            Dictionary<Guid, int> readableIdMapping = new Dictionary<Guid, int>();
+            int i = 0;
+
+            foreach (KeyValuePair<IPEndPoint, Task<Guid>> kvp in connectionTasks)
             {
-                await this.network.ConnectToClientAsync(endPoint, token);
+                IPEndPoint endPoint = kvp.Key;
+                Task<Guid> connectionTask = kvp.Value;
+
+                try
+                {
+                    Guid clientId = await connectionTask;
+                    readableIdMapping.Add(clientId, i);
+                    Console.WriteLine("(.) {1} >> Connected to {0}",
+                                      endPoint,
+                                      i);
+                    i++;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("(*) {2} >> Failed to connect to {0}.  Error message: {1}",
+                                      endPoint,
+                                      ex.Message,
+                                      i++);
+                }
             }
 
-            object consoleLock = new object();
             this.network.ReceivedMessages.Subscribe(
                 async msg =>
                 {
@@ -48,16 +75,18 @@ namespace Evercoin.App
                         result = await correctHandler.HandleMessageAsync(msg, token);
                     }
 
-                    lock (consoleLock)
+                    char quickGlanceChar;
+                    if (!quickGlanceMapping.TryGetValue(result, out quickGlanceChar))
                     {
-                        Console.WriteLine("Received message: Command={0}, Payload={1}, HandlingResult={2}",
-                                          Encoding.ASCII.GetString(msg.CommandBytes.ToArray()),
-                                          ByteTwiddling.ByteArrayToHexString(msg.Payload),
-                                          result);
+                        quickGlanceChar = '!';
                     }
-                },
-                ex => this.Network.Dispose(),
-                () => this.Network.Dispose());
+
+                    Console.WriteLine("({2}) {3} >> {0} {{{1}}}",
+                                      Encoding.ASCII.GetString(msg.CommandBytes.ToArray()),
+                                      ByteTwiddling.ByteArrayToHexString(msg.Payload),
+                                      quickGlanceChar,
+                                      readableIdMapping[msg.RemoteClient]);
+                });
         }
     }
 }
