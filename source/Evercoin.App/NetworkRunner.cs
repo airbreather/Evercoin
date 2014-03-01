@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
@@ -13,13 +14,11 @@ namespace Evercoin.App
 {
     public sealed class NetworkRunner
     {
-        [Import(typeof(INetwork))]
-        private INetwork network;
+        [Import(typeof(INetwork))] private INetwork network;
 
-        [ImportMany]
-        private readonly List<INetworkMessageHandler> messageHandlers = new List<INetworkMessageHandler>();
+        [ImportMany] private readonly List<INetworkMessageHandler> messageHandlers = new List<INetworkMessageHandler>();
 
-        public async Task Run(CancellationToken token)
+        public void Run(CancellationToken token)
         {
             List<IPEndPoint> endPoints = new List<IPEndPoint>
                                          {
@@ -30,7 +29,6 @@ namespace Evercoin.App
                                              ////new IPEndPoint(IPAddress.Parse("199.98.20.213"), 8333),
                                          };
 
-            Dictionary<IPEndPoint, Task<Guid>> connectionTasks = endPoints.ToDictionary(endPoint => endPoint, endPoint => this.network.ConnectToClientAsync(endPoint, token));
             Dictionary<HandledNetworkMessageResult, char> quickGlanceMapping = new Dictionary<HandledNetworkMessageResult, char>
                                                                                {
                                                                                    { HandledNetworkMessageResult.MessageInvalid, '*' },
@@ -39,31 +37,7 @@ namespace Evercoin.App
                                                                                    { HandledNetworkMessageResult.Okay, '.' }
                                                                                };
 
-            Dictionary<Guid, int> readableIdMapping = new Dictionary<Guid, int>();
-            int i = 0;
-
-            foreach (KeyValuePair<IPEndPoint, Task<Guid>> kvp in connectionTasks)
-            {
-                IPEndPoint endPoint = kvp.Key;
-                Task<Guid> connectionTask = kvp.Value;
-
-                try
-                {
-                    Guid clientId = await connectionTask;
-                    readableIdMapping.Add(clientId, i);
-                    Console.WriteLine("(.) {1} >> Connected to {0}",
-                                      endPoint,
-                                      i);
-                    i++;
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("(*) {2} >> Failed to connect to {0}.  Error message: {1}",
-                                      endPoint,
-                                      ex.Message,
-                                      i++);
-                }
-            }
+            ConcurrentDictionary<Guid, int> readableIdMapping = new ConcurrentDictionary<Guid, int>();
 
             this.network.ReceivedMessages.Subscribe(
                 async msg =>
@@ -81,12 +55,53 @@ namespace Evercoin.App
                         quickGlanceChar = '!';
                     }
 
+                    int readableId;
+                    if (!readableIdMapping.TryGetValue(msg.RemoteClient, out readableId))
+                    {
+                        readableId = -1;
+                    }
+
                     Console.WriteLine("({2}) {3} >> {0} {{{1}}}",
-                                      Encoding.ASCII.GetString(msg.CommandBytes.ToArray()),
-                                      ByteTwiddling.ByteArrayToHexString(msg.Payload),
-                                      quickGlanceChar,
-                                      readableIdMapping[msg.RemoteClient]);
+                        Encoding.ASCII.GetString(msg.CommandBytes.ToArray()),
+                        ByteTwiddling.ByteArrayToHexString(msg.Payload),
+                        quickGlanceChar,
+                        readableId);
                 });
+
+            Dictionary<IPEndPoint, Task<Guid>> connectionTasks = endPoints.ToDictionary(endPoint => endPoint, endPoint => this.network.ConnectToClientAsync(endPoint, token));
+
+            int i = 0;
+            foreach (KeyValuePair<IPEndPoint, Task<Guid>> kvp in connectionTasks)
+            {
+                IPEndPoint endPoint = kvp.Key;
+                Task<Guid> connectionTask = kvp.Value;
+
+                connectionTask.ContinueWith(
+                    t =>
+                    {
+                        int j = Interlocked.Increment(ref i);
+                        readableIdMapping.TryAdd(t.Result, i);
+                        Console.WriteLine("(.) {1} << Connected to {0}",
+                            endPoint,
+                            j);
+                    },
+                    token,
+                    TaskContinuationOptions.OnlyOnRanToCompletion,
+                    TaskScheduler.Current);
+
+                connectionTask.ContinueWith(
+                    t =>
+                    {
+                        int j = Interlocked.Increment(ref i);
+                        Console.WriteLine("(*) {2} << Failed to connect to {0}.  Error message: {1}",
+                            endPoint,
+                            t.Exception.Flatten().InnerExceptions.First().Message,
+                            j);
+                    },
+                    token,
+                    TaskContinuationOptions.NotOnRanToCompletion,
+                    TaskScheduler.Current);
+            }
         }
     }
 }
