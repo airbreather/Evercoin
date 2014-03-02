@@ -133,5 +133,7 @@ namespace Evercoin
         /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
         /// </remarks>
         Task SendMessageToClientAsync(Guid clientId, INetworkMessage message, CancellationToken token);
+
+        Task AskForMoreBlocks();
     }
 }

@@ -81,6 +81,7 @@
     <Compile Include="INetworkParameters.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SecurityMechanism.cs" />
+    <Compile Include="Util\Cheating.cs" />
     <Compile Include="Util\HashCodeBuilder.cs" />
   </ItemGroup>
   <ItemGroup>

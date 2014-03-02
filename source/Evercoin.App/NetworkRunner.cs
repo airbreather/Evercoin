@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
+using System.Reactive.Concurrency;
+using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -18,7 +20,7 @@ namespace Evercoin.App
 
         [ImportMany] private readonly List<INetworkMessageHandler> messageHandlers = new List<INetworkMessageHandler>();
 
-        public void Run(CancellationToken token)
+        public async Task Run(CancellationToken token)
         {
             List<IPEndPoint> endPoints = new List<IPEndPoint>
                                          {
@@ -39,14 +41,20 @@ namespace Evercoin.App
 
             ConcurrentDictionary<Guid, int> readableIdMapping = new ConcurrentDictionary<Guid, int>();
 
-            this.network.ReceivedMessages.Subscribe(
+            this.network.ReceivedMessages.ObserveOn(TaskPoolScheduler.Default).Subscribe(
                 async msg =>
                 {
                     INetworkMessageHandler correctHandler = this.messageHandlers.FirstOrDefault(handler => handler.RecognizesMessage(msg));
                     HandledNetworkMessageResult result = HandledNetworkMessageResult.UnrecognizedCommand;
                     if (correctHandler != null)
                     {
-                        result = await correctHandler.HandleMessageAsync(msg, token);
+                        try
+                        {
+                            result = await correctHandler.HandleMessageAsync(msg, token);
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
                     }
 
                     char quickGlanceChar;
@@ -61,11 +69,11 @@ namespace Evercoin.App
                         readableId = -1;
                     }
 
-                    Console.WriteLine("({2}) {3} >> {0} {{{1}}}",
+                    Console.Write("\r({3}) ({1}) {2} >> {0}",
                         Encoding.ASCII.GetString(msg.CommandBytes.ToArray()),
-                        ByteTwiddling.ByteArrayToHexString(msg.Payload),
                         quickGlanceChar,
-                        readableId);
+                        readableId,
+                        Cheating.BlockIdentifiers.Count);
                 });
 
             Dictionary<IPEndPoint, Task<Guid>> connectionTasks = endPoints.ToDictionary(endPoint => endPoint, endPoint => this.network.ConnectToClientAsync(endPoint, token));
@@ -101,6 +109,24 @@ namespace Evercoin.App
                     token,
                     TaskContinuationOptions.NotOnRanToCompletion,
                     TaskScheduler.Current);
+            }
+
+            // The remainder of this method is 100% cheating, but it's enough
+            // to exercise the "start fetching blocks on the network" code.
+            try
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    if (Cheating.BlockIdentifiers.Count % 500 == 1)
+                    {
+                        await this.network.AskForMoreBlocks();
+                    }
+
+                    await Task.Delay(100, token);
+                }
+            }
+            catch (OperationCanceledException)
+            {
             }
         }
     }

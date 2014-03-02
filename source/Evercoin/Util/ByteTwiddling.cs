@@ -107,12 +107,25 @@ namespace Evercoin.Util
 
         public static byte[] ToLittleEndianUInt256Array(this BigInteger bigInteger)
         {
-            byte[] result = new byte[32];
             byte[] unpaddedResult = bigInteger.ToByteArray();
+
             if (unpaddedResult.Length > 32)
             {
                 throw new InvalidOperationException("Number cannot fit into a 256-bit integer.");
             }
+
+            // Initialize the array with ones if it's negative, zeroes if it's positive.
+            byte b = bigInteger.Sign < 0 ?
+                     (byte)0xff :
+                     (byte)0x00;
+
+            byte[] result =
+            {
+                b, b, b, b, b, b, b, b,
+                b, b, b, b, b, b, b, b,
+                b, b, b, b, b, b, b, b,
+                b, b, b, b, b, b, b, b
+            };
 
             Buffer.BlockCopy(unpaddedResult, 0, result, 0, unpaddedResult.Length);
             return result;

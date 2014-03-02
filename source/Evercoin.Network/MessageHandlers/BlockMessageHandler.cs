@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.ComponentModel.Composition;
 using System.IO;
@@ -9,6 +10,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Evercoin.Util;
+
+using NodaTime;
 
 namespace Evercoin.Network.MessageHandlers
 {
@@ -56,20 +59,27 @@ namespace Evercoin.Network.MessageHandlers
                 // TODO: which is part of why I'm so hesitant to have the ID on IBlock.
                 IHashAlgorithm hashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(HashAlgorithmIdentifiers.DoubleSHA256);
                 ImmutableList<byte> blockHash = hashAlgorithm.CalculateHash(dataToHash);
-                BigInteger blockIdentifier = new BigInteger(blockHash.Reverse().ToArray());
+                BigInteger blockIdentifier = new BigInteger(blockHash.ToArray());
 
-                if (blockIdentifier >= bits)
+                BigInteger target = TargetFromBits(bits);
+                if (blockIdentifier >= target)
                 {
                     return HandledNetworkMessageResult.ContextuallyInvalid;
                 }
 
-                // For now, this is only going to be called for block #2 on the main chain,
-                // so we might as well add this additional check.
-                byte[] expectedBytes = ByteTwiddling.HexStringToByteArray("000000006A625F06636B8BB6AC7B960A8D03705D1ACE08B1A19DA3FDCC99DDBD");
-                if (!expectedBytes.SequenceEqual(blockIdentifier.ToLittleEndianUInt256Array()))
+                Instant waitingStarted = Instant.FromDateTimeUtc(DateTime.UtcNow);
+                while (!Cheating.BlockIdentifiers.Contains(prevBlockId))
                 {
-                    throw new InvalidOperationException("CRITICAL FAIL: WRONG HASH!  Expected block #2!");
+                    Instant now = Instant.FromDateTimeUtc(DateTime.UtcNow);
+                    if (now - waitingStarted > Duration.FromSeconds(2))
+                    {
+                        return HandledNetworkMessageResult.ContextuallyInvalid;
+                    }
+
+                    await Task.Delay(100, token);
                 }
+
+                Cheating.BlockIdentifiers.Add(blockIdentifier);
             }
 
             /*
@@ -189,6 +199,32 @@ namespace Evercoin.Network.MessageHandlers
 
             await Task.WhenAll(putThingsTasks);*/
             return HandledNetworkMessageResult.Okay;
+        }
+
+        private static BigInteger TargetFromBits(uint bits)
+        {
+            uint mantissa = bits & 0x007fffff;
+            bool negative = (bits & 0x00800000) != 0;
+            byte exponent = (byte)(bits >> 24);
+            BigInteger result;
+
+            if (exponent <= 3)
+            {
+                mantissa >>= 8 * (3 - exponent);
+                result = mantissa;
+            }
+            else
+            {
+                result = mantissa;
+                result <<= 8 * (exponent - 3);
+            }
+
+            if ((result.Sign < 0) != negative)
+            {
+                result = -result;
+            }
+
+            return result;
         }
     }
 }

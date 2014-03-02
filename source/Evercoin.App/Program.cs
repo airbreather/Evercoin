@@ -62,9 +62,10 @@ namespace Evercoin.App
                 Console.WriteLine("Press any key to quit...");
                 using (CancellationTokenSource cts = new CancellationTokenSource())
                 {
-                    runner.Run(cts.Token);
+                    Task t = runner.Run(cts.Token);
                     Console.ReadKey(intercept: true);
                     cts.Cancel();
+                    t.Wait();
                 }
             }
         }

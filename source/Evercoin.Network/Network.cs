@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
+using System.Numerics;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Evercoin.Network.MessageHandlers;
+using Evercoin.Util;
 
 using NodaTime;
 
@@ -21,7 +24,7 @@ namespace Evercoin.Network
     {
         private readonly INetworkParameters networkParameters;
         private readonly ConcurrentDictionary<Guid, TcpClient> clientLookup = new ConcurrentDictionary<Guid, TcpClient>();
-        private readonly ReplaySubject<IObservable<INetworkMessage>> messageObservables = new ReplaySubject<IObservable<INetworkMessage>>();
+        private readonly Subject<IObservable<INetworkMessage>> messageObservables = new Subject<IObservable<INetworkMessage>>();
 
         [ImportingConstructor]
         public Network(INetworkParameters networkParameters)
@@ -164,7 +167,7 @@ namespace Evercoin.Network
             ProtocolStreamReader streamReader = new ProtocolStreamReader(client.GetStream(), leaveOpen: true);
             IObservable<INetworkMessage> messageStream = Observable.FromAsync(ct => streamReader.ReadNetworkMessageAsync(this.networkParameters, clientId, ct))
                                                                    .DoWhile(() => client.Connected)
-                                                                   .TakeWhile(msg => msg != null)
+                                                                   .TakeWhile(msg => msg != null && !token.IsCancellationRequested)
                                                                    .Finally(streamReader.Dispose);
 
             await Task.Run(() => this.messageObservables.OnNext(messageStream), token);
@@ -186,6 +189,32 @@ namespace Evercoin.Network
 
             byte[] messageBytes = messageToSend.FullData.ToArray();
             await client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length, token);
+        }
+
+        public async Task AskForMoreBlocks()
+        {
+            GetBlocksMessageBuilder b = new GetBlocksMessageBuilder(this);
+            var message = b.BuildGetDataMessage(Guid.NewGuid(), FetchBlockLocator(Cheating.BlockIdentifiers.Count - 1), BigInteger.Zero);
+            await this.BroadcastMessageAsync(message);
+        }
+
+        internal static IEnumerable<BigInteger> FetchBlockLocator(int fr)
+        {
+            Collection<BigInteger> blockIdentifierCollection = Cheating.BlockIdentifiers;
+
+            int step = 1;
+            int start = 0;
+            for (int i = fr; i > 0; start++, i -= step)
+            {
+                if (start >= 10)
+                {
+                    step *= 2;
+                }
+
+                yield return blockIdentifierCollection[i];
+            }
+
+            yield return blockIdentifierCollection[0];
         }
     }
 }

@@ -834,7 +834,7 @@ namespace Evercoin.TransactionScript
                     IHashAlgorithm hashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(hashAlgorithmIdentifier);
 
                     byte[] dataToHash = mainStack.Pop();
-                    IImmutableList<byte> hash = hashAlgorithm.CalculateHash(dataToHash);
+                    ImmutableList<byte> hash = hashAlgorithm.CalculateHash(dataToHash);
                     mainStack.Push(hash.ToArray());
                     return true;
                 }
