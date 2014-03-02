@@ -7,7 +7,7 @@ using Evercoin.Util;
 
 namespace Evercoin.Network
 {
-    [DebuggerDisplay("{Evercoin.Util.ByteTwiddling.ByteArrayToHexString(FullData)}")]
+    [DebuggerDisplay("{System.Text.Encoding.ASCII.GetString(System.Linq.Enumerable.ToArray(CommandBytes))}, {Evercoin.Util.ByteTwiddling.ByteArrayToHexString(Payload)}")]
     internal sealed class Message : INetworkMessage
     {
         private readonly INetworkParameters networkParameters;

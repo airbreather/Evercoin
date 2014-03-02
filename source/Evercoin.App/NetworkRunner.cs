@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
-using System.Reactive.Concurrency;
-using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -41,8 +39,8 @@ namespace Evercoin.App
 
             ConcurrentDictionary<Guid, int> readableIdMapping = new ConcurrentDictionary<Guid, int>();
 
-            this.network.ReceivedMessages.ObserveOn(TaskPoolScheduler.Default).Subscribe(
-                async msg =>
+            this.network.ReceivedMessages.Subscribe(
+                msg =>
                 {
                     INetworkMessageHandler correctHandler = this.messageHandlers.FirstOrDefault(handler => handler.RecognizesMessage(msg));
                     HandledNetworkMessageResult result = HandledNetworkMessageResult.UnrecognizedCommand;
@@ -50,7 +48,7 @@ namespace Evercoin.App
                     {
                         try
                         {
-                            result = await correctHandler.HandleMessageAsync(msg, token);
+                            result = correctHandler.HandleMessageAsync(msg, token).Result;
                         }
                         catch (OperationCanceledException)
                         {
@@ -73,7 +71,7 @@ namespace Evercoin.App
                         Encoding.ASCII.GetString(msg.CommandBytes.ToArray()),
                         quickGlanceChar,
                         readableId,
-                        Cheating.BlockIdentifiers.Count);
+                        Cheating.GetBlockIdentifiers().Count);
                 });
 
             Dictionary<IPEndPoint, Task<Guid>> connectionTasks = endPoints.ToDictionary(endPoint => endPoint, endPoint => this.network.ConnectToClientAsync(endPoint, token));
@@ -115,14 +113,20 @@ namespace Evercoin.App
             // to exercise the "start fetching blocks on the network" code.
             try
             {
+                await Task.Delay(1000, token);
+                int startingCount = Cheating.GetBlockIdentifiers().Count;
+                int prev = -1;
                 while (!token.IsCancellationRequested)
                 {
-                    if (Cheating.BlockIdentifiers.Count % 500 == 1)
+                    var blid = Cheating.GetBlockIdentifiers();
+                    if ((blid.Count - startingCount) % 500 == 0 &&
+                        blid.Count != prev)
                     {
+                        prev = blid.Count;
                         await this.network.AskForMoreBlocks();
                     }
 
-                    await Task.Delay(100, token);
+                    await Task.Delay(50, token);
                 }
             }
             catch (OperationCanceledException)

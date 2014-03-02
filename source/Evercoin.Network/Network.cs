@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
@@ -174,7 +173,7 @@ namespace Evercoin.Network
 
             VersionMessageBuilder builder = new VersionMessageBuilder(this);
 
-            INetworkMessage mm = builder.BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 500, "/Evercoin:0.0.0/VS:0.0.0/", 0, pleaseRelayTransactionsToMe: false);
+            INetworkMessage mm = builder.BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 500, "/Evercoin:0.0.0/VS:0.0.0/", 1, pleaseRelayTransactionsToMe: false);
             await this.SendMessageToClientAsync(clientId, mm, token);
 
             return clientId;
@@ -193,18 +192,19 @@ namespace Evercoin.Network
 
         public async Task AskForMoreBlocks()
         {
+            await Task.Delay(500);
             GetBlocksMessageBuilder b = new GetBlocksMessageBuilder(this);
-            var message = b.BuildGetDataMessage(Guid.NewGuid(), FetchBlockLocator(Cheating.BlockIdentifiers.Count - 1), BigInteger.Zero);
+            var message = b.BuildGetDataMessage(Guid.NewGuid(), FetchBlockLocator().ToList(), BigInteger.Zero);
             await this.BroadcastMessageAsync(message);
         }
 
-        internal static IEnumerable<BigInteger> FetchBlockLocator(int fr)
+        internal static IEnumerable<BigInteger> FetchBlockLocator()
         {
-            Collection<BigInteger> blockIdentifierCollection = Cheating.BlockIdentifiers;
+            IReadOnlyList<BigInteger> blockIdentifierCollection = Cheating.GetBlockIdentifiers();
 
             int step = 1;
             int start = 0;
-            for (int i = fr; i > 0; start++, i -= step)
+            for (int i = blockIdentifierCollection.Count - 1; i > 0; start++, i -= step)
             {
                 if (start >= 10)
                 {

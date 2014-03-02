@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Numerics;
 
 namespace Evercoin
 {
@@ -10,6 +11,6 @@ namespace Evercoin
         /// <summary>
         /// Gets the <see cref="IBlock"/> that created this value source.
         /// </summary>
-        IBlock OriginatingBlock { get; }
+        BigInteger OriginatingBlockIdentifier { get; }
     }
 }

@@ -72,6 +72,12 @@
     <Compile Include="MessageHandlers\VersionMessageBuilder.cs" />
     <Compile Include="MessageHandlers\VersionMessageHandler.cs" />
     <Compile Include="Network.cs" />
+    <Compile Include="NetworkBlock.cs" />
+    <Compile Include="NetworkCoinbaseValueSource.cs" />
+    <Compile Include="NetworkTransaction.cs" />
+    <Compile Include="NetworkTransactionValueSource.cs" />
+    <Compile Include="NetworkValueSource.cs" />
+    <Compile Include="NetworkValueSpender.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ProtocolCompactSize.cs" />
     <Compile Include="ProtocolInventoryVector.cs" />

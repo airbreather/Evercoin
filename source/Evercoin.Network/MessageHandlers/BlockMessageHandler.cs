@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.ComponentModel.Composition;
 using System.IO;
@@ -18,14 +18,16 @@ namespace Evercoin.Network.MessageHandlers
     public sealed class BlockMessageHandler : MessageHandlerBase
     {
         private readonly IHashAlgorithmStore hashAlgorithmStore;
-        private const string CoinbasePrevIn = "0000000000000000000000000000000000000000000000000000000000000000";
+
+        private readonly ITransactionScriptRunner scriptRunner;
         private static readonly byte[] RecognizedCommand = Encoding.ASCII.GetBytes("block");
 
         [ImportingConstructor]
-        public BlockMessageHandler(INetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore)
+        public BlockMessageHandler(INetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore, ITransactionScriptRunner scriptRunner)
             : base(RecognizedCommand, network, chainStore)
         {
             this.hashAlgorithmStore = hashAlgorithmStore;
+            this.scriptRunner = scriptRunner;
         }
 
         protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message, CancellationToken token)
@@ -35,17 +37,40 @@ namespace Evercoin.Network.MessageHandlers
             {
                 uint version = await streamReader.ReadUInt32Async(token);
                 BigInteger prevBlockId = await streamReader.ReadUInt256Async(token);
+                Task<IBlock> prevBlockGetter = this.ReadOnlyChainStore.GetBlockAsync(prevBlockId, token);
                 BigInteger merkleRoot = await streamReader.ReadUInt256Async(token);
                 uint timestamp = await streamReader.ReadUInt32Async(token);
                 uint bits = await streamReader.ReadUInt32Async(token);
                 uint nonce = await streamReader.ReadUInt32Async(token);
                 ulong transactionCount = await streamReader.ReadCompactSizeAsync(token);
                 ImmutableList<ProtocolTransaction> includedTransactions = ImmutableList<ProtocolTransaction>.Empty;
+                HashSet<BigInteger> neededTransactions = new HashSet<BigInteger>();
 
                 while (transactionCount-- > 0)
                 {
                     ProtocolTransaction nextTransaction = await streamReader.ReadTransactionAsync(token);
                     includedTransactions = includedTransactions.Add(nextTransaction);
+                    foreach (BigInteger prevTxId in nextTransaction.Inputs.Select(x => x.PrevOutTxId).Where(x => !x.IsZero))
+                    {
+                        neededTransactions.Add(prevTxId);
+                    }
+                }
+
+                // This is important to do now -- for some reason, the Satoshi client gives us recent blocks even when we're building from the genesis block!
+                // So, one thing we REALLY don't want to do is to fetch all the old transactions!
+                ProtocolTxIn cb = includedTransactions[0].Inputs[0];
+                if (version > 1 && cb.ScriptSig[0] == 3)
+                {
+                    byte[] serializedHeight = cb.ScriptSig.Skip(1).Take(3).ToArray();
+                    Array.Resize(ref serializedHeight, 4);
+
+                    uint probableHeight = BitConverter.ToUInt32(serializedHeight.LittleEndianToOrFromBitConverterEndianness(), 0);
+                    if (probableHeight - Cheating.GetBlockIdentifiers().Count > 1000)
+                    {
+                        // So we've got a block message from a recent block.
+                        // Don't waste any more time on it than we have.
+                        return HandledNetworkMessageResult.ContextuallyInvalid;
+                    }
                 }
 
                 ImmutableList<byte> dataToHash = ImmutableList.CreateRange(BitConverter.GetBytes(version).LittleEndianToOrFromBitConverterEndianness())
@@ -60,144 +85,146 @@ namespace Evercoin.Network.MessageHandlers
                 IHashAlgorithm hashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(HashAlgorithmIdentifiers.DoubleSHA256);
                 ImmutableList<byte> blockHash = hashAlgorithm.CalculateHash(dataToHash);
                 BigInteger blockIdentifier = new BigInteger(blockHash.ToArray());
-
                 BigInteger target = TargetFromBits(bits);
                 if (blockIdentifier >= target)
                 {
                     return HandledNetworkMessageResult.ContextuallyInvalid;
                 }
 
-                Instant waitingStarted = Instant.FromDateTimeUtc(DateTime.UtcNow);
-                while (!Cheating.BlockIdentifiers.Contains(prevBlockId))
-                {
-                    Instant now = Instant.FromDateTimeUtc(DateTime.UtcNow);
-                    if (now - waitingStarted > Duration.FromSeconds(2))
-                    {
-                        return HandledNetworkMessageResult.ContextuallyInvalid;
-                    }
+                Dictionary<BigInteger, Task<ITransaction>> neededTransactionFetchers = neededTransactions.ToDictionary(x => x, x => this.ReadOnlyChainStore.GetTransactionAsync(x, token));
 
-                    await Task.Delay(100, token);
+                foreach (ProtocolTransaction includedTransaction in includedTransactions)
+                {
+                    includedTransaction.CalculateTxId(hashAlgorithm);
                 }
 
-                Cheating.BlockIdentifiers.Add(blockIdentifier);
-            }
+                UselessSignatureChecker dummySignatureChecker = new UselessSignatureChecker();
+                Dictionary<BigInteger, ProtocolTransaction> ownTransactions = includedTransactions.ToDictionary(x => x.TxId);
+                Dictionary<BigInteger, ITransaction> foundTransactions = new Dictionary<BigInteger, ITransaction>(neededTransactionFetchers.Count);
 
-            /*
-            NetworkBlock block = new NetworkBlock();
-            List<Task> putThingsTasks = new List<Task>();
-            using (MemoryStream payloadStream = new MemoryStream(message.Payload.ToArray()))
-            {
-                ImmutableList<byte> versionBytes = await payloadStream.ReadBytesAsyncWithIntParam(4, CancellationToken.None);
-                block.Version = BitConverter.ToUInt32(versionBytes.ToArray().LittleEndianToOrFromBitConverterEndianness(), 0);
-
-                ImmutableList<byte> prevBlockBytes = await payloadStream.ReadBytesAsyncWithIntParam(32, CancellationToken.None);
-                block.PreviousBlockIdentifier = ByteTwiddling.ByteArrayToHexString(prevBlockBytes);
-
-                ImmutableList<byte> unused = await payloadStream.ReadBytesAsyncWithIntParam(32, CancellationToken.None);
-
-                ImmutableList<byte> timestampBytes = await payloadStream.ReadBytesAsyncWithIntParam(4, CancellationToken.None);
-                uint timestamp = BitConverter.ToUInt32(timestampBytes.ToArray().LittleEndianToOrFromBitConverterEndianness(), 0);
-                block.Timestamp = Instant.FromSecondsSinceUnixEpoch(timestamp);
-
-                ImmutableList<byte> difficultyTargetBytes = await payloadStream.ReadBytesAsyncWithIntParam(4, CancellationToken.None);
-                block.DifficultyTarget = BitConverter.ToUInt32(difficultyTargetBytes.ToArray().LittleEndianToOrFromBitConverterEndianness(), 0);
-
-                ImmutableList<byte> nonceBytes = await payloadStream.ReadBytesAsyncWithIntParam(4, CancellationToken.None);
-                block.Nonce = BitConverter.ToUInt32(nonceBytes.ToArray().LittleEndianToOrFromBitConverterEndianness(), 0);
-
-                ImmutableList<byte> dataToHash = ImmutableList.CreateRange(versionBytes)
-                                                              .AddRange(prevBlockBytes)
-                                                              .AddRange(unused)
-                                                              .AddRange(timestampBytes)
-                                                              .AddRange(difficultyTargetBytes)
-                                                              .AddRange(nonceBytes);
-
-                // Hey look -- I'm cheating!
-                byte[] dataToHashInAnArray = dataToHash.ToArray();
-                SHA256 theWrongWayToHash = SHA256.Create();
-                byte[] blockHash = theWrongWayToHash.ComputeHash(theWrongWayToHash.ComputeHash(dataToHashInAnArray));
-                block.Identifier = ByteTwiddling.ByteArrayToHexString(blockHash);
-
-                ProtocolCompactSize transactionCount = new ProtocolCompactSize();
-                await transactionCount.LoadFromStreamAsync(payloadStream, CancellationToken.None);
-
-                decimal coinbaseValue = 0;
-
-                while ((ulong)block.Transactions.Count < transactionCount.Value)
+                foreach (ProtocolTransaction tx in includedTransactions)
                 {
-                    bool isCoinbase = false;
-                    NetworkTransaction transaction = new NetworkTransaction();
-                    ProtocolTransaction protoTransaction = new ProtocolTransaction();
-                    await protoTransaction.LoadFromStreamAsync(payloadStream, CancellationToken.None);
-
-                    byte[] transactionHash = theWrongWayToHash.ComputeHash(theWrongWayToHash.ComputeHash(protoTransaction.ByteRepresentation.ToArray()));
-                    transaction.Identifier = ByteTwiddling.ByteArrayToHexString(transactionHash);
-                    transaction.Version = protoTransaction.Version;
-
-                    foreach (ProtocolTxIn txIn in protoTransaction.Inputs)
+                    foreach (ProtocolTxIn input in tx.Inputs)
                     {
-                        if (txIn.PrevOutTxId == CoinbasePrevIn)
+                        ImmutableList<byte> script = input.ScriptSig;
+                        if (!input.PrevOutTxId.IsZero)
                         {
-                            isCoinbase = true;
-                            continue;
+                            ProtocolTransaction prevTransaction;
+                            if (ownTransactions.TryGetValue(input.PrevOutTxId, out prevTransaction))
+                            {
+                                script = script.AddRange(prevTransaction.Outputs[(int)input.PrevOutN].ScriptPubKey);
+                            }
+                            else
+                            {
+                                ITransaction t;
+                                if (!foundTransactions.TryGetValue(input.PrevOutTxId, out t))
+                                {
+                                    t = await neededTransactionFetchers[input.PrevOutTxId];
+                                    foundTransactions[input.PrevOutTxId] = t;
+                                }
+
+                                script = script.AddRange(t.Outputs[(int)input.PrevOutN].ScriptPublicKey);
+                            }
                         }
 
-                        NetworkTransactionValueSource valueSource = new NetworkTransactionValueSource();
-                        if (!await this.ReadOnlyChainStore.ContainsTransactionAsync(txIn.PrevOutTxId))
+                        if (!this.scriptRunner.EvaluateScript(script, dummySignatureChecker))
                         {
                             return HandledNetworkMessageResult.ContextuallyInvalid;
                         }
-
-                        ITransaction prevTransaction = await this.ReadOnlyChainStore.GetTransactionAsync(txIn.PrevOutTxId);
-                        IValueSource prevOut = prevTransaction.Outputs.ElementAtOrDefault((int)txIn.PrevOutN);
-                        if (prevOut == null)
-                        {
-                            return HandledNetworkMessageResult.ContextuallyInvalid;
-                        }
-
-                        valueSource.Transaction = new NetworkTransaction(prevTransaction);
-                        valueSource.AvailableValue = prevOut.AvailableValue;
-                        foreach (byte scriptByte in prevOut.ScriptPubKey)
-                        {
-                            valueSource.ScriptPubKey.Add(scriptByte);
-                        }
-
-                        transaction.Inputs.Add(valueSource);
                     }
-
-                    foreach (ProtocolTxOut txOut in protoTransaction.Outputs)
-                    {
-                        NetworkTransactionValueSource valueSource = new NetworkTransactionValueSource
-                                                                    {
-                                                                        AvailableValue = txOut.ValueInSatoshis,
-                                                                        Transaction = transaction
-                                                                    };
-
-                        if (isCoinbase)
-                        {
-                            coinbaseValue += valueSource.AvailableValue;
-                        }
-
-                        foreach (byte scriptByte in txOut.ScriptPubKey)
-                        {
-                            valueSource.ScriptPubKey.Add(scriptByte);
-                        }
-
-                        transaction.Outputs.Add(valueSource);
-                    }
-
-                    putThingsTasks.Add(this.ChainStore.PutTransactionAsync(transaction));
                 }
 
-                block.Coinbase = new NetworkValueSource
-                                 {
-                                     AvailableValue = coinbaseValue
-                                 };
+                NetworkBlock newBlock = new NetworkBlock
+                                        {
+                                            DifficultyTarget = target,
+                                            Identifier = blockIdentifier,
+                                            Nonce = nonce,
+                                            PreviousBlockIdentifier = prevBlockId,
+                                            Timestamp = Instant.FromSecondsSinceUnixEpoch(timestamp),
+                                            Version = version,
+                                            TransactionIdentifiers = includedTransactions.Select(x => x.TxId).ToImmutableList(),
+                                        };
+                ICoinbaseValueSource coinbase = new NetworkCoinbaseValueSource
+                                                {
+                                                    // For now, assume that the coinbase outputs are valid.
+                                                    AvailableValue = includedTransactions[0].Outputs.Sum(x => x.ValueInSatoshis),
+                                                    OriginatingBlockIdentifier = blockIdentifier
+                                                };
+                newBlock.Coinbase = coinbase;
+                List<Task> thingPutters = new List<Task>();
 
-                putThingsTasks.Add(this.ChainStore.PutBlockAsync(block));
+                foreach (ProtocolTransaction newProtoTransaction in includedTransactions)
+                {
+                    NetworkTransaction newTransaction = new NetworkTransaction
+                                                        {
+                                                            Identifier = newProtoTransaction.TxId,
+                                                            ContainingBlockIdentifier = blockIdentifier,
+                                                            Inputs = ImmutableList<IValueSpender>.Empty,
+                                                            Outputs = ImmutableList<ITransactionValueSource>.Empty,
+                                                            Version = version
+                                                        };
+
+                    foreach (ProtocolTxIn txIn in newProtoTransaction.Inputs)
+                    {
+                        IValueSource source;
+                        if (txIn.PrevOutTxId.IsZero)
+                        {
+                            source = coinbase;
+                        }
+                        else
+                        {
+                            ProtocolTransaction ownPrevTransaction;
+                            if (ownTransactions.TryGetValue(txIn.PrevOutTxId, out ownPrevTransaction))
+                            {
+                                ProtocolTxOut prevOut = ownPrevTransaction.Outputs[(int)txIn.PrevOutN];
+                                source = new NetworkTransactionValueSource
+                                         {
+                                             AvailableValue = prevOut.ValueInSatoshis,
+                                             ScriptPublicKey = prevOut.ScriptPubKey
+                                         };
+                            }
+                            else
+                            {
+                                ITransaction prevTransaction = foundTransactions[txIn.PrevOutTxId];
+                                source = prevTransaction.Outputs[(int)txIn.PrevOutN];
+                            }
+                        }
+
+                        NetworkValueSpender spender = new NetworkValueSpender
+                                                      {
+                                                          ScriptSignature = txIn.ScriptSig,
+                                                          SpendingTransactionIdentifier = txIn.PrevOutTxId,
+                                                          SpendingTransactionInputIndex = txIn.PrevOutN,
+                                                          SpendingValueSource = source
+                                                      };
+
+                        newTransaction.Inputs = newTransaction.Inputs.Add(spender);
+                    }
+
+                    for (int i = 0; i < newProtoTransaction.Outputs.Count; i++)
+                    {
+                        ProtocolTxOut txOut = newProtoTransaction.Outputs[i];
+                        NetworkTransactionValueSource source = new NetworkTransactionValueSource
+                                                               {
+                                                                   AvailableValue = txOut.ValueInSatoshis,
+                                                                   OriginatingTransactionIdentifier = newTransaction.Identifier,
+                                                                   OriginatingTransactionOutputIndex = (uint)i,
+                                                                   ScriptPublicKey = txOut.ScriptPubKey
+                                                               };
+
+                        newTransaction.Outputs = newTransaction.Outputs.Add(source);
+                    }
+
+                    thingPutters.Add(this.ChainStore.PutTransactionAsync(newTransaction, token));
+                }
+
+                IBlock prevBlock = await prevBlockGetter;
+                newBlock.Height = prevBlock.Height + 1;
+                thingPutters.Add(this.ChainStore.PutBlockAsync(newBlock, token));
+                await Task.WhenAll(thingPutters);
+                Cheating.Add((int)newBlock.Height, blockIdentifier);
             }
 
-            await Task.WhenAll(putThingsTasks);*/
             return HandledNetworkMessageResult.Okay;
         }
 
@@ -225,6 +252,14 @@ namespace Evercoin.Network.MessageHandlers
             }
 
             return result;
+        }
+
+        private sealed class UselessSignatureChecker : ISignatureChecker
+        {
+            public bool CheckSignature(IEnumerable<byte> signature, IEnumerable<byte> publicKey, IEnumerable<byte> scriptCode)
+            {
+                return true;
+            }
         }
     }
 }

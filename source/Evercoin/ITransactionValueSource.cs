@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
+using System.Numerics;
 
 namespace Evercoin
 {
@@ -12,7 +13,13 @@ namespace Evercoin
         /// Gets the <see cref="ITransaction"/> that contains this
         /// as one of its outputs.
         /// </summary>
-        ITransaction OriginatingTransaction { get; }
+        BigInteger OriginatingTransactionIdentifier { get; }
+
+        /// <summary>
+        /// Gets the <see cref="ITransaction"/> that contains this
+        /// as one of its outputs.
+        /// </summary>
+        uint OriginatingTransactionOutputIndex { get; }
 
         /// <summary>
         /// The serialized script that dictates how the value

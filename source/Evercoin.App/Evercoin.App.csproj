@@ -31,7 +31,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <Prefer32Bit>false</Prefer32Bit>
+    <Prefer32Bit>true</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
@@ -84,6 +84,9 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="packages.config" />
+    <None Include="..\..\external\LevelDB\$(Configuration)\LevelDB.dll">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Evercoin.Algorithms\Evercoin.Algorithms.csproj">
@@ -97,6 +100,10 @@
     <ProjectReference Include="..\Evercoin.Storage\Evercoin.Storage.csproj">
       <Project>{643d4a18-1853-47a5-ab6c-56bcdb6e234b}</Project>
       <Name>Evercoin.Storage</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Evercoin.TransactionScript\Evercoin.TransactionScript.csproj">
+      <Project>{9afa0ff3-e2bc-47e2-8077-3a9dc9bf15b0}</Project>
+      <Name>Evercoin.TransactionScript</Name>
     </ProjectReference>
     <ProjectReference Include="..\Evercoin\Evercoin.csproj">
       <Project>{C10F2413-4E30-421A-BCFF-2DD813239323}</Project>

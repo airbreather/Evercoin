@@ -19,8 +19,9 @@ namespace Evercoin.App
             AssemblyCatalog catalog1 = new AssemblyCatalog(Assembly.Load(new AssemblyName("Evercoin.Network")));
             AssemblyCatalog catalog2 = new AssemblyCatalog(Assembly.Load(new AssemblyName("Evercoin.Algorithms")));
             AssemblyCatalog catalog3 = new AssemblyCatalog(Assembly.Load(new AssemblyName("Evercoin.Storage")));
-            AssemblyCatalog catalog4 = new AssemblyCatalog(Assembly.GetExecutingAssembly());
-            AggregateCatalog catalog = new AggregateCatalog(catalog1, catalog2, catalog3, catalog4);
+            AssemblyCatalog catalog4 = new AssemblyCatalog(Assembly.Load(new AssemblyName("Evercoin.TransactionScript")));
+            AssemblyCatalog catalog5 = new AssemblyCatalog(Assembly.GetExecutingAssembly());
+            AggregateCatalog catalog = new AggregateCatalog(catalog1, catalog2, catalog3, catalog4, catalog5);
             using (CompositionContainer container = new CompositionContainer(catalog))
             {
                 Catalog c = new Catalog();
@@ -59,11 +60,11 @@ namespace Evercoin.App
                 Console.WriteLine("(!) = Unknown error");
                 Console.WriteLine();
                 Console.WriteLine();
-                Console.WriteLine("Press any key to quit...");
+                Console.WriteLine("Press Enter to quit...");
                 using (CancellationTokenSource cts = new CancellationTokenSource())
                 {
                     Task t = runner.Run(cts.Token);
-                    Console.ReadKey(intercept: true);
+                    Console.ReadLine();
                     cts.Cancel();
                     t.Wait();
                 }

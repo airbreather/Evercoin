@@ -1,0 +1,3 @@
+[submodule "external/LevelDB"]
+	path = external/LevelDB
+	url = https://github.com/Reactive-Extensions/LevelDB.git
