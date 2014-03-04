@@ -62,6 +62,7 @@
     <Compile Include="Extensions.cs" />
     <Compile Include="Model\Block.cs" />
     <Compile Include="Model\CoinbaseValueSource.cs" />
+    <Compile Include="Model\MerkleTreeNode.cs" />
     <Compile Include="Model\Transaction.cs" />
     <Compile Include="Model\TransactionValueSource.cs" />
     <Compile Include="Model\ValueSource.cs" />

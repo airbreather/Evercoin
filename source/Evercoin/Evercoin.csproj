@@ -61,6 +61,7 @@
     <Compile Include="DisposableObject.cs" />
     <Compile Include="HandledNetworkMessageResult.cs" />
     <Compile Include="ICoinbaseValueSource.cs" />
+    <Compile Include="IMerkleTreeNode.cs" />
     <Compile Include="INetworkMessage.cs" />
     <Compile Include="INetworkMessageHandler.cs" />
     <Compile Include="IValueSpender.cs" />

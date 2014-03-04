@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.Serialization;
@@ -24,7 +22,6 @@ namespace Evercoin.Storage.Model
 
         public Block()
         {
-            this.TransactionIdentifiers = ImmutableList<BigInteger>.Empty;
         }
 
         public Block(IBlock copyFrom)
@@ -36,7 +33,7 @@ namespace Evercoin.Storage.Model
             this.Timestamp = copyFrom.Timestamp;
             this.Nonce = copyFrom.Nonce;
             this.DifficultyTarget = copyFrom.DifficultyTarget;
-            this.TransactionIdentifiers.AddRange(copyFrom.TransactionIdentifiers);
+            this.TransactionIdentifiers = new MerkleTreeNode(copyFrom.TransactionIdentifiers);
             this.Version = copyFrom.Version;
             this.TypedCoinbase = new CoinbaseValueSource(copyFrom.Coinbase);
         }
@@ -51,7 +48,7 @@ namespace Evercoin.Storage.Model
             this.DifficultyTarget = info.GetValue<BigInteger>(SerializationName_DifficultyTarget);
             this.Version = info.GetUInt32(SerializationName_Version);
             this.TypedCoinbase = info.GetValue<CoinbaseValueSource>(SerializationName_TypedCoinbase);
-            this.TransactionIdentifiers = info.GetValue<List<BigInteger>>(SerializationName_TransactionIdentifiers).ToImmutableList();
+            this.TransactionIdentifiers = info.GetValue<MerkleTreeNode>(SerializationName_TransactionIdentifiers);
         }
 
         /// <summary>
@@ -68,16 +65,14 @@ namespace Evercoin.Storage.Model
                 return true;
             }
 
-            IBlock explicitInterface = this;
-
             return other != null &&
-                   explicitInterface.Identifier == other.Identifier &&
-                   explicitInterface.PreviousBlockIdentifier == other.PreviousBlockIdentifier &&
+                   this.Identifier == other.Identifier &&
+                   this.PreviousBlockIdentifier == other.PreviousBlockIdentifier &&
                    this.Height == other.Height &&
                    this.Timestamp == other.Timestamp &&
                    this.Nonce == other.Nonce &&
-                   explicitInterface.DifficultyTarget == other.DifficultyTarget &&
-                   explicitInterface.TransactionIdentifiers.SequenceEqual(other.TransactionIdentifiers) &&
+                   this.DifficultyTarget == other.DifficultyTarget &&
+                   this.TransactionIdentifiers.Data.SequenceEqual(other.TransactionIdentifiers.Data) &&
                    this.Version == other.Version;
         }
 
@@ -90,7 +85,9 @@ namespace Evercoin.Storage.Model
         /// Gets the ordered list of the identifiers of
         /// <see cref="ITransaction"/> objects contained within this block.
         /// </summary>
-        public ImmutableList<BigInteger> TransactionIdentifiers { get; set; }
+        public MerkleTreeNode TransactionIdentifiers { get; set; }
+
+        IMerkleTreeNode IBlock.TransactionIdentifiers { get { return this.TransactionIdentifiers; } }
 
         /// <summary>
         /// Gets the version of this block.
@@ -144,7 +141,7 @@ namespace Evercoin.Storage.Model
             info.AddValue(SerializationName_DifficultyTarget, this.DifficultyTarget);
             info.AddValue(SerializationName_Version, this.Version);
             info.AddValue(SerializationName_TypedCoinbase, this.TypedCoinbase);
-            info.AddValue(SerializationName_TransactionIdentifiers, this.TransactionIdentifiers.ToList());
+            info.AddValue(SerializationName_TransactionIdentifiers, this.TransactionIdentifiers);
         }
     }
 }

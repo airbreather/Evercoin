@@ -142,8 +142,13 @@ namespace Evercoin.Network.MessageHandlers
                                             PreviousBlockIdentifier = prevBlockId,
                                             Timestamp = Instant.FromSecondsSinceUnixEpoch(timestamp),
                                             Version = version,
-                                            TransactionIdentifiers = includedTransactions.Select(x => x.TxId).ToImmutableList(),
+                                            TransactionIdentifiers = includedTransactions.Select(x => x.TxId.ToLittleEndianUInt256Array().ToImmutableList()).ToMerkleTree(hashAlgorithm),
                                         };
+                if (!newBlock.TransactionIdentifiers.Data.SequenceEqual(merkleRoot.ToLittleEndianUInt256Array()))
+                {
+                    return HandledNetworkMessageResult.ContextuallyInvalid;
+                }
+
                 ICoinbaseValueSource coinbase = new NetworkCoinbaseValueSource
                                                 {
                                                     // For now, assume that the coinbase outputs are valid.

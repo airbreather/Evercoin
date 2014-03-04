@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.Numerics;
 
 using NodaTime;
@@ -23,7 +22,7 @@ namespace Evercoin
         /// Gets the ordered list of the identifiers of
         /// <see cref="ITransaction"/> objects contained within this block.
         /// </summary>
-        ImmutableList<BigInteger> TransactionIdentifiers { get; }
+        IMerkleTreeNode TransactionIdentifiers { get; }
 
         /// <summary>
         /// Gets the version of this block.

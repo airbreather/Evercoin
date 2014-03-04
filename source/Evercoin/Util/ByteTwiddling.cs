@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.IO;
+using System.Linq;
 using System.Numerics;
 
 namespace Evercoin.Util
@@ -156,6 +157,68 @@ namespace Evercoin.Util
             }
 
             return scriptCode.ToImmutableList();
+        }
+
+        /// <summary>
+        /// Determines whether this Merkle tree is valid, using a given
+        /// <see cref="IHashAlgorithm"/> if needed to calculate child hashes.
+        /// </summary>
+        /// <param name="node">
+        /// This node to validate.
+        /// </param>
+        /// <param name="hashAlgorithm">
+        /// The <see cref="IHashAlgorithm"/> to use to calculate child hashes.
+        /// </param>
+        /// <returns>
+        /// A value indicating whether this Merkle tree is valid.
+        /// </returns>
+        /// <remarks>
+        /// Rules:
+        /// 1. Each non-null child must also be valid by the given algorithm.
+        /// 2. If left child is null, then right child must be null.
+        /// 3. If left child is null, and previous checks all pass, then this
+        ///    tree is valid.
+        /// 4. Otherwise, let A denote the left child's data.  If right child
+        ///    is non-null, then let B denote the right child's data.
+        ///    Otherwise, let B denote the same value as A.  Then this tree is
+        ///    valid if the given hash algorithm returns a result equal to this
+        ///    tree's data when hashing A + B, where "+" denotes concatenation.
+        /// 5. Otherwise, this tree is invalid.
+        /// </remarks>
+        public static bool IsValid(this IMerkleTreeNode node, IHashAlgorithm hashAlgorithm)
+        {
+            if (node == null)
+            {
+                throw new ArgumentNullException("node");
+            }
+
+            if (hashAlgorithm == null)
+            {
+                throw new ArgumentNullException("hashAlgorithm");
+            }
+
+            if (node.LeftChild == null)
+            {
+                return node.RightChild == null;
+            }
+
+            if (!node.LeftChild.IsValid(hashAlgorithm))
+            {
+                return false;
+            }
+
+            if (node.RightChild != null &&
+                !node.RightChild.IsValid(hashAlgorithm))
+            {
+                return false;
+            }
+
+            IMerkleTreeNode firstNode = node.LeftChild;
+            IMerkleTreeNode secondNode = node.RightChild ?? node.LeftChild;
+            IEnumerable<byte> dataToHash = firstNode.Data.Concat(secondNode.Data);
+
+            ImmutableList<byte> hashResult = hashAlgorithm.CalculateHash(dataToHash);
+            return hashResult.SequenceEqual(node.Data);
         }
 
         // http://en.wikipedia.org/wiki/Knuth%E2%80%93Morris%E2%80%93Pratt_algorithm

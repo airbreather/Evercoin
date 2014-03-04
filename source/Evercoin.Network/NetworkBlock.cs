@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Linq;
+﻿using System.Linq;
 using System.Numerics;
 
 using NodaTime;
@@ -38,7 +37,7 @@ namespace Evercoin.Network
                    this.PreviousBlockIdentifier == other.PreviousBlockIdentifier &&
                    this.Version == other.Version &&
                    this.DifficultyTarget == other.DifficultyTarget &&
-                   this.TransactionIdentifiers.SequenceEqual(other.TransactionIdentifiers);
+                   this.TransactionIdentifiers.Data.SequenceEqual(other.TransactionIdentifiers.Data);
         }
 
         /// <summary>
@@ -50,7 +49,7 @@ namespace Evercoin.Network
         /// Gets the ordered list of the identifiers of
         /// <see cref="ITransaction"/> objects contained within this block.
         /// </summary>
-        public ImmutableList<BigInteger> TransactionIdentifiers { get; set; }
+        public IMerkleTreeNode TransactionIdentifiers { get; set; }
 
         /// <summary>
         /// Gets the version of this block.
