@@ -9,8 +9,8 @@ using Evercoin.BaseImplementations;
 
 namespace Evercoin.Storage
 {
-    [Export(typeof(IChainStore))]
-    [Export(typeof(IReadOnlyChainStore))]
+    ////[Export(typeof(IChainStore))]
+    ////[Export(typeof(IReadOnlyChainStore))]
     public sealed class CachingChainStorage : ReadWriteChainStoreBase
     {
         private readonly IChainStore underlyingChainStore;

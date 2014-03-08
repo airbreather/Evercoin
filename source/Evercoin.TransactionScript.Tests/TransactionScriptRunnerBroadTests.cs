@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Linq;
 
 using Moq;
@@ -23,15 +24,22 @@ namespace Evercoin.TransactionScript
         [Fact]
         public void ConstructorShouldThrowOnNullHashAlgorithmStore()
         {
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => new TransactionScriptRunner(null));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => new TransactionScriptRunner(null, Mock.Of<ITransactionScriptParser>()));
             Assert.Equal("hashAlgorithmStore", thrownException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorShouldThrowOnNullTransactionScriptParser()
+        {
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => new TransactionScriptRunner(Mock.Of<IHashAlgorithmStore>(), null));
+            Assert.Equal("transactionScriptParser", thrownException.ParamName);
         }
 
         [Fact]
         public void EvaluateScriptShouldThrowOnNullScript()
         {
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(null, Mock.Of<ISignatureChecker>()));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(null, Mock.Of<ISignatureChecker>(), new Stack<StackItem>(), new Stack<StackItem>()));
             Assert.Equal("serializedScript", thrownException.ParamName);
         }
 
@@ -39,8 +47,24 @@ namespace Evercoin.TransactionScript
         public void EvaluateScriptShouldThrowOnNullSignatureChecker()
         {
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<byte>(), null));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<byte>(), null, new Stack<StackItem>(), new Stack<StackItem>()));
             Assert.Equal("signatureChecker", thrownException.ParamName);
+        }
+
+        [Fact]
+        public void EvaluateScriptShouldThrowOnNullMainStack()
+        {
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<byte>(), Mock.Of<ISignatureChecker>(), null, new Stack<StackItem>()));
+            Assert.Equal("mainStack", thrownException.ParamName);
+        }
+
+        [Fact]
+        public void EvaluateScriptShouldThrowOnNullAlternateStack()
+        {
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<byte>(), Mock.Of<ISignatureChecker>(), new Stack<StackItem>(), null));
+            Assert.Equal("alternateStack", thrownException.ParamName);
         }
 
         [Theory]
@@ -64,17 +88,24 @@ namespace Evercoin.TransactionScript
         [PropertyData("MissingOpcodes")]
         public void DisabledOpcodesShouldCauseScriptFailureEvenIfNotExecuted(ScriptOpcode disabledOpcode)
         {
-            byte[] scriptBytes = {
-                                     (byte)ScriptOpcode.OP_1,
-                                     (byte)ScriptOpcode.OP_IF,
-                                     (byte)ScriptOpcode.OP_1,
-                                     (byte)ScriptOpcode.OP_ELSE,
-                                     (byte)disabledOpcode,
-                                     (byte)ScriptOpcode.OP_ENDIF
-                                 };
+            // Execute the reserved opcode in an "if false" context,
+            // and leave "true" on the stack after.
+            Stack<StackItem> stack = new Stack<StackItem>();
+            stack.Push(true);
+            stack.Push(false);
 
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
+            ImmutableList<TransactionScriptOperation> script = ImmutableList.Create<TransactionScriptOperation>
+            (
+                (byte)ScriptOpcode.OP_IF,
+                (byte)disabledOpcode,
+                (byte)ScriptOpcode.OP_ENDIF
+            );
+
+            byte[] scriptBytes = Guid.NewGuid().ToByteArray();
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
+                .WithParsedScript(scriptBytes, script);
+
+            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>(), stack));
         }
 
         [Theory]
@@ -84,17 +115,20 @@ namespace Evercoin.TransactionScript
         [InlineData(ScriptOpcode.OP_RESERVED2)]
         public void ReservedOpcodesShouldCauseScriptFailureIfExecuted(ScriptOpcode reservedOpcode)
         {
-            byte[] scriptBytes = {
-                                     (byte)ScriptOpcode.OP_1,
-                                     (byte)ScriptOpcode.OP_IF,
-                                     (byte)reservedOpcode,
-                                     (byte)ScriptOpcode.OP_ELSE,
-                                     (byte)ScriptOpcode.OP_1,
-                                     (byte)ScriptOpcode.OP_ENDIF
-                                 };
+            // Leave "true" on the stack so we should pass.
+            Stack<StackItem> stack = new Stack<StackItem>();
+            stack.Push(true);
 
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
+            ImmutableList<TransactionScriptOperation> script = ImmutableList.Create<TransactionScriptOperation>
+            (
+                (byte)reservedOpcode
+            );
+
+            byte[] scriptBytes = Guid.NewGuid().ToByteArray();
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
+                .WithParsedScript(scriptBytes, script);
+
+            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>(), stack));
         }
 
         [Theory]
@@ -104,17 +138,24 @@ namespace Evercoin.TransactionScript
         [InlineData(ScriptOpcode.OP_RESERVED2)]
         public void ReservedOpcodesShouldNotCauseScriptFailureIfUnexecuted(ScriptOpcode reservedOpcode)
         {
-            byte[] scriptBytes = {
-                                     (byte)ScriptOpcode.OP_1,
-                                     (byte)ScriptOpcode.OP_IF,
-                                     (byte)ScriptOpcode.OP_1,
-                                     (byte)ScriptOpcode.OP_ELSE,
-                                     (byte)reservedOpcode,
-                                     (byte)ScriptOpcode.OP_ENDIF
-                                 };
+            // Execute the reserved opcode in an "if false" context,
+            // and leave "true" on the stack after.
+            Stack<StackItem> stack = new Stack<StackItem>();
+            stack.Push(true);
+            stack.Push(false);
 
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.True(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
+            ImmutableList<TransactionScriptOperation> script = ImmutableList.Create<TransactionScriptOperation>
+            (
+                (byte)ScriptOpcode.OP_IF,
+                (byte)reservedOpcode,
+                (byte)ScriptOpcode.OP_ENDIF
+            );
+
+            byte[] scriptBytes = Guid.NewGuid().ToByteArray();
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
+                .WithParsedScript(scriptBytes, script);
+
+            Assert.True(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>(), stack));
         }
 
         [Theory]
@@ -171,16 +212,22 @@ namespace Evercoin.TransactionScript
         [InlineData(ScriptOpcode.OP_CHECKMULTISIGVERIFY, 1)]
         public void StackManipulationOpcodesShouldCauseScriptFailureWithoutEnoughItemsOnStack(ScriptOpcode opcode, int requiredStackDepth)
         {
-            List<byte> scriptBytes = new List<byte>();
+            Stack<StackItem> stack = new Stack<StackItem>();
             for (int i = 0; i < requiredStackDepth - 1; i++)
             {
-                scriptBytes.Add((byte)ScriptOpcode.OP_1);
+                stack.Push(true);
             }
 
-            scriptBytes.Add((byte)opcode);
+            ImmutableList<TransactionScriptOperation> script = ImmutableList.Create<TransactionScriptOperation>
+            (
+                (byte)opcode
+            );
 
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
+            byte[] scriptBytes = Guid.NewGuid().ToByteArray();
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
+                .WithParsedScript(scriptBytes, script);
+
+            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>(), stack));
         }
     }
 }

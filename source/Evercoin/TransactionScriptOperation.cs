@@ -51,6 +51,11 @@ namespace Evercoin
             }
         }
 
+        public static implicit operator TransactionScriptOperation(byte opcode)
+        {
+            return new TransactionScriptOperation(opcode);
+        }
+
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>

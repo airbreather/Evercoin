@@ -1,6 +1,7 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -12,8 +13,8 @@ using Evercoin.Util;
 
 namespace Evercoin.Storage
 {
-    ////[Export(typeof(IChainStore))]
-    ////[Export(typeof(IReadOnlyChainStore))]
+    [Export(typeof(IChainStore))]
+    [Export(typeof(IReadOnlyChainStore))]
     public sealed class MemoryChainStore : ReadWriteChainStoreBase
     {
         private readonly Dictionary<BigInteger, IBlock> blocks = new Dictionary<BigInteger, IBlock>();
@@ -46,13 +47,10 @@ namespace Evercoin.Storage
             }
 
             ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, _ => new ManualResetEventSlim());
-            using (mres)
+            if (mres.Wait(10000) &&
+                this.blockWaiters.TryRemove(blockIdentifier, out mres))
             {
-                if (mres.Wait(10000))
-                {
-                    ManualResetEventSlim _;
-                    this.blockWaiters.TryRemove(blockIdentifier, out _);
-                }
+                mres.Dispose();
             }
 
             this.blocks.TryGetValue(blockIdentifier, out block);
@@ -68,13 +66,10 @@ namespace Evercoin.Storage
             }
 
             ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, _ => new ManualResetEventSlim());
-            using (mres)
+            if (mres.Wait(10000) &&
+                this.txWaiters.TryRemove(transactionIdentifier, out mres))
             {
-                if (mres.Wait(10000))
-                {
-                    ManualResetEventSlim _;
-                    this.txWaiters.TryRemove(transactionIdentifier, out _);
-                }
+                mres.Dispose();
             }
 
             this.transactions.TryGetValue(transactionIdentifier, out transaction);

@@ -1,6 +1,7 @@
 ﻿using System;
-
-using Evercoin.Util;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 
 using Moq;
 
@@ -11,218 +12,46 @@ namespace Evercoin.TransactionScript
 {
     public sealed class TransactionScriptRunnerPushDataTests
     {
-        // All opcodes between 0 and END_OP_DATA (= 75), inclusive, mean
-        // "push the next n bytes of data onto the stack", where "n" is the
-        // value of the opcode.
-        [Theory]
-        [InlineData(2, 1)]
-        [InlineData(5, 3)]
-        [InlineData(19, 18)]
-        [InlineData(72, 71)]
-        [InlineData(75, 74)]
-        public void PushDataWithoutProvidingEnoughDataShouldFailScript(int opcode, int numberOfBytesToProvide)
+        public static IEnumerable<object[]> DataOpcodes
         {
-            byte[] scriptBytes = new byte[numberOfBytesToProvide + 1];
-            scriptBytes[0] = (byte)opcode;
-            scriptBytes[1] = 1;
-
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
-        }
-
-        [Theory]
-        [InlineData(ScriptOpcode.OP_PUSHDATA1, 0)]
-        [InlineData(ScriptOpcode.OP_PUSHDATA2, 0)]
-        [InlineData(ScriptOpcode.OP_PUSHDATA2, 1)]
-        [InlineData(ScriptOpcode.OP_PUSHDATA4, 0)]
-        [InlineData(ScriptOpcode.OP_PUSHDATA4, 1)]
-        [InlineData(ScriptOpcode.OP_PUSHDATA4, 2)]
-        [InlineData(ScriptOpcode.OP_PUSHDATA4, 3)]
-        public void PushDataWithoutProvidingEnoughDataForSizeShouldFailScript(ScriptOpcode opcode, int numberOfBytesToProvide)
-        {
-            byte[] scriptBytes = new byte[numberOfBytesToProvide + 1];
-            scriptBytes[0] = (byte)opcode;
-
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
-        }
-
-        [Theory]
-        [InlineData(2, 1)]
-        [InlineData(5, 3)]
-        [InlineData(19, 18)]
-        [InlineData(72, 71)]
-        [InlineData(75, 74)]
-        [InlineData(byte.MaxValue, byte.MaxValue - 1)]
-        public void PushData1WithoutProvidingEnoughDataShouldFailScript(int numberOfBytesToExpect, int numberOfBytesToProvide)
-        {
-            byte[] scriptBytes = new byte[numberOfBytesToProvide + 2];
-            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA1;
-            scriptBytes[1] = (byte)numberOfBytesToExpect;
-            scriptBytes[2] = 1;
-
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
-        }
-
-        [Theory]
-        [InlineData(2, 1)]
-        [InlineData(5, 3)]
-        [InlineData(19, 18)]
-        [InlineData(72, 71)]
-        [InlineData(75, 74)]
-        [InlineData(byte.MaxValue, byte.MaxValue - 1)]
-        [InlineData(byte.MaxValue + 1, byte.MaxValue)]
-        [InlineData(ushort.MaxValue, ushort.MaxValue - 1)]
-        public void PushData2WithoutProvidingEnoughDataShouldFailScript(int numberOfBytesToExpect, int numberOfBytesToProvide)
-        {
-            byte[] scriptBytes = new byte[numberOfBytesToProvide + 3];
-
-            byte[] dataSizeBytes = BitConverter.GetBytes((ushort)numberOfBytesToExpect)
-                                               .LittleEndianToOrFromBitConverterEndianness();
-
-            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA2;
-            scriptBytes[1] = dataSizeBytes[0];
-            scriptBytes[2] = dataSizeBytes[1];
-            scriptBytes[3] = 1;
-
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
-        }
-
-        [Theory]
-        [InlineData(2, 1)]
-        [InlineData(5, 3)]
-        [InlineData(19, 18)]
-        [InlineData(72, 71)]
-        [InlineData(75, 74)]
-        [InlineData(byte.MaxValue, byte.MaxValue - 1)]
-        [InlineData(byte.MaxValue + 1, byte.MaxValue)]
-        [InlineData(ushort.MaxValue, ushort.MaxValue - 1)]
-        [InlineData(ushort.MaxValue + 1, ushort.MaxValue)]
-        [InlineData(0x00FFFFFF, 0x00FFFFFE)]
-        [InlineData(0x01000000, 0x00FFFFFF)]
-        public void PushData4WithoutProvidingEnoughDataShouldFailScript(int numberOfBytesToExpect, int numberOfBytesToProvide)
-        {
-            byte[] scriptBytes = new byte[numberOfBytesToProvide + 5];
-
-            byte[] dataSizeBytes = BitConverter.GetBytes((uint)numberOfBytesToExpect)
-                                               .LittleEndianToOrFromBitConverterEndianness();
-
-            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA4;
-            scriptBytes[1] = dataSizeBytes[0];
-            scriptBytes[2] = dataSizeBytes[1];
-            scriptBytes[3] = dataSizeBytes[2];
-            scriptBytes[4] = dataSizeBytes[3];
-            scriptBytes[5] = 1;
-
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
-        }
-
-        [Theory]
-        [InlineData(1, 1)]
-        [InlineData(5, 5)]
-        [InlineData(19, 19)]
-        [InlineData(72, 72)]
-        [InlineData(75, 75)]
-        public void PushDataProvidingJustEnoughDataShouldPassScript(int opcode, int numberOfBytesToProvide)
-        {
-            byte[] scriptBytes = new byte[numberOfBytesToProvide + 1];
-            scriptBytes[0] = (byte)opcode;
-            scriptBytes[1] = 1;
-
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.True(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
-        }
-
-        [Theory]
-        [InlineData(ScriptOpcode.OP_0, 0)]
-        [InlineData(ScriptOpcode.OP_PUSHDATA1, 1)]
-        [InlineData(ScriptOpcode.OP_PUSHDATA2, 2)]
-        [InlineData(ScriptOpcode.OP_PUSHDATA4, 4)]
-        public void PushZeroShouldPutFalseOnTheStack(ScriptOpcode opcode, int numberOfZeroBytesAfterOpcode)
-        {
-            byte[] scriptBytes = new byte[numberOfZeroBytesAfterOpcode + 1];
-            scriptBytes[0] = (byte)opcode;
-            for (int i = 0; i < numberOfZeroBytesAfterOpcode; i++)
+            get
             {
-                scriptBytes[i + 1] = 0;
+                return Enumerable.Range((int)ScriptOpcode.BEGIN_OP_DATA, ScriptOpcode.END_OP_DATA - ScriptOpcode.BEGIN_OP_DATA + 1)
+                                 .Select(opcode => new object[] { (ScriptOpcode)opcode });
             }
-
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
         }
 
         [Theory]
-        [InlineData(1)]
-        [InlineData(17)]
-        [InlineData(42)]
-        [InlineData(byte.MaxValue - 1)]
-        [InlineData(byte.MaxValue)]
-        public void PushData1ShouldUseNextByte(int numberOfBytesToPush)
+        [PropertyData("DataOpcodes")]
+        [InlineData(ScriptOpcode.OP_PUSHDATA1)]
+        [InlineData(ScriptOpcode.OP_PUSHDATA2)]
+        [InlineData(ScriptOpcode.OP_PUSHDATA4)]
+        public void PushDataShouldPushData(int opcode)
         {
-            byte[] scriptBytes = new byte[numberOfBytesToPush + 2];
+            int seed = Guid.NewGuid().GetHashCode();
+            Console.WriteLine("seed: {0}", seed);
 
-            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA1;
-            scriptBytes[1] = (byte)numberOfBytesToPush;
-            scriptBytes[2] = 1;
+            Random random = new Random(seed);
+            int numberOfBytesToProvide = random.Next(4000);
+            byte[] dataArray = new byte[numberOfBytesToProvide];
 
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.True(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
-        }
+            random.NextBytes(dataArray);
+            ImmutableList<byte> data = dataArray.ToImmutableList();
 
-        [Theory]
-        [InlineData(1)]
-        [InlineData(17)]
-        [InlineData(42)]
-        [InlineData(byte.MaxValue)]
-        [InlineData(byte.MaxValue + 1)]
-        [InlineData(ushort.MaxValue - 1)]
-        [InlineData(ushort.MaxValue)]
-        public void PushData2ShouldUseNextTwoBytes(int numberOfBytesToPush)
-        {
-            byte[] scriptBytes = new byte[numberOfBytesToPush + 3];
+            ImmutableList<TransactionScriptOperation> script = ImmutableList.Create
+            (
+                new TransactionScriptOperation((byte)opcode, data)
+            );
 
-            byte[] dataSizeBytes = BitConverter.GetBytes((ushort)numberOfBytesToPush)
-                                               .LittleEndianToOrFromBitConverterEndianness();
+            byte[] scriptBytes = Guid.NewGuid().ToByteArray();
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
+                .WithParsedScript(scriptBytes, script);
 
-            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA2;
-            scriptBytes[1] = dataSizeBytes[0];
-            scriptBytes[2] = dataSizeBytes[1];
-            scriptBytes[3] = 1;
+            ScriptEvaluationResult result = sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>());
 
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.True(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
-        }
-
-        [Theory]
-        [InlineData(1)]
-        [InlineData(17)]
-        [InlineData(42)]
-        [InlineData(byte.MaxValue)]
-        [InlineData(byte.MaxValue + 1)]
-        [InlineData(ushort.MaxValue - 1)]
-        [InlineData(ushort.MaxValue)]
-        [InlineData(ushort.MaxValue + 1)]
-        [InlineData(0x00FFFFFF)]
-        [InlineData(0x01000000)]
-        public void PushData4ShouldUseNextFourBytes(int numberOfBytesToPush)
-        {
-            byte[] scriptBytes = new byte[numberOfBytesToPush + 5];
-
-            byte[] dataSizeBytes = BitConverter.GetBytes((uint)numberOfBytesToPush)
-                                               .LittleEndianToOrFromBitConverterEndianness();
-
-            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA4;
-            scriptBytes[1] = dataSizeBytes[0];
-            scriptBytes[2] = dataSizeBytes[1];
-            scriptBytes[3] = dataSizeBytes[2];
-            scriptBytes[4] = dataSizeBytes[3];
-            scriptBytes[5] = 1;
-
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            Assert.True(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>()));
+            Stack<StackItem> mainStack = result.MainStack;
+            Assert.Equal(1, mainStack.Count);
+            Assert.Equal<byte>(data, (ImmutableList<byte>)mainStack.Pop());
         }
     }
 }

@@ -1,13 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
 using Evercoin.ProtocolObjects;
+using Evercoin.Util;
 
-using Org.BouncyCastle.Asn1;
-using Org.BouncyCastle.Asn1.Sec;
-using Org.BouncyCastle.Crypto.Parameters;
-using Org.BouncyCastle.Crypto.Signers;
+using Secp256k1;
 
 namespace Evercoin.Algorithms
 {
@@ -32,29 +31,15 @@ namespace Evercoin.Algorithms
             byte hashType = signatureBytes[signatureBytes.Count - 1];
             signatureBytes = signatureBytes.GetRange(0, signatureBytes.Count - 1);
 
-            byte[] hashTypeBytes = { hashType, 0, 0, 0};
+            byte[] hashTypeBytes = { hashType, 0, 0, 0 };
 
             ImmutableList<ProtocolTxIn> inputs = ImmutableList.CreateRange(this.transaction.Inputs.Select((input, n) => new ProtocolTxIn(input.SpendingTransactionIdentifier, input.SpendingTransactionInputIndex, n == this.outputIndex ? script.Aggregate(ImmutableList<byte>.Empty, (prevData, nextOp) => prevData.AddRange(ScriptOpToBytes(nextOp))) : ImmutableList<byte>.Empty, input.SequenceNumber)));
             ImmutableList<ProtocolTxOut> outputs = ImmutableList.CreateRange(this.transaction.Outputs.Select(x => new ProtocolTxOut((long)x.AvailableValue, x.ScriptPublicKey)));
             ProtocolTransaction tx = new ProtocolTransaction(this.transaction.Version, inputs, outputs, this.transaction.LockTime);
 
-            var secp256k1 = SecNamedCurves.GetByName("secp256k1");
-            var ecParams = new ECDomainParameters(secp256k1.Curve, secp256k1.G, secp256k1.N, secp256k1.H);
-            ECPublicKeyParameters par = new ECPublicKeyParameters(secp256k1.Curve.DecodePoint(publicKey.ToArray()), ecParams);
-            ECDsaSigner signer = new ECDsaSigner();
-            signer.Init(false, par);
-            DerInteger r, s;
-            using (Asn1InputStream decoder = new Asn1InputStream(signatureBytes.ToArray()))
-            {
-                DerSequence seq = (DerSequence)decoder.ReadObject();
-                r = (DerInteger)seq[0];
-                s = (DerInteger)seq[1];
-            }
-
             var dataToHash = tx.Data.Concat(hashTypeBytes);
             var hashedData = this.hashAlgorithm.CalculateHash(dataToHash);
-            var a1 = signer.VerifySignature(hashedData.ToArray(), r.Value, s.Value);
-            return a1;
+            return Signatures.Verify(hashedData.ToArray(), signatureBytes.ToArray(), publicKey.ToArray()) == Signatures.VerifyResult.Verified;
         }
 
         private static ImmutableList<byte> ScriptOpToBytes(TransactionScriptOperation op)
@@ -62,19 +47,21 @@ namespace Evercoin.Algorithms
             switch (op.Opcode)
             {
                 case (0x4c):
-                    {
-                        return ImmutableList.Create(op.Opcode).AddRange(op.Data.Skip(1));
-                    }
+                {
+                    return ImmutableList.Create(op.Opcode).Add((byte)op.Data.Count).AddRange(op.Data);
+                }
 
                 case (0x4d):
-                    {
-                        return ImmutableList.Create(op.Opcode).AddRange(op.Data.Skip(2));
-                    }
+                {
+                    byte[] size = BitConverter.GetBytes((ushort)op.Data.Count).LittleEndianToOrFromBitConverterEndianness();
+                    return ImmutableList.Create(op.Opcode).AddRange(size).AddRange(op.Data);
+                }
 
                 case (0x4e):
-                    {
-                        return ImmutableList.Create(op.Opcode).AddRange(op.Data.Skip(4));
-                    }
+                {
+                    byte[] size = BitConverter.GetBytes((uint)op.Data.Count).LittleEndianToOrFromBitConverterEndianness();
+                    return ImmutableList.Create(op.Opcode).AddRange(size).AddRange(op.Data);
+                }
 
                 default:
                 {

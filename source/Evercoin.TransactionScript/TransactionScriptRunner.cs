@@ -110,15 +110,23 @@ namespace Evercoin.TransactionScript
 
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
+        private readonly ITransactionScriptParser transactionScriptParser;
+
         [ImportingConstructor]
-        public TransactionScriptRunner(IHashAlgorithmStore hashAlgorithmStore)
+        public TransactionScriptRunner(IHashAlgorithmStore hashAlgorithmStore, ITransactionScriptParser transactionScriptParser)
         {
             if (hashAlgorithmStore == null)
             {
                 throw new ArgumentNullException("hashAlgorithmStore");
             }
 
+            if (transactionScriptParser == null)
+            {
+                throw new ArgumentNullException("transactionScriptParser");
+            }
+
             this.hashAlgorithmStore = hashAlgorithmStore;
+            this.transactionScriptParser = transactionScriptParser;
         }
 
         public override ScriptEvaluationResult EvaluateScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker, Stack<StackItem> mainStack, Stack<StackItem> alternateStack)
@@ -143,7 +151,7 @@ namespace Evercoin.TransactionScript
                 throw new ArgumentNullException("alternateStack");
             }
 
-            ImmutableList<TransactionScriptOperation> scriptOperations = new TransactionScriptParser().Parse(serializedScript).ToImmutableList();
+            ImmutableList<TransactionScriptOperation> scriptOperations = this.transactionScriptParser.Parse(serializedScript);
 
             int afterLastSep = 0;
             Stack<bool> conditionalStack = new Stack<bool>();
@@ -350,8 +358,8 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOpcode.OP_SIZE:
                 {
-                    byte[] item = mainStack.Peek();
-                    BigInteger size = item.Length;
+                    ImmutableList<byte> item = mainStack.Peek();
+                    BigInteger size = item.Count;
 
                     mainStack.Push(size);
                     return true;
@@ -526,8 +534,8 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_EQUAL:
                 case ScriptOpcode.OP_EQUALVERIFY:
                 {
-                    byte[] firstItem = mainStack.Pop();
-                    byte[] secondItem = mainStack.Pop();
+                    ImmutableList<byte> firstItem = mainStack.Pop();
+                    ImmutableList<byte> secondItem = mainStack.Pop();
 
                     mainStack.Push(firstItem.SequenceEqual(secondItem));
 
@@ -726,7 +734,7 @@ namespace Evercoin.TransactionScript
 
                     IHashAlgorithm hashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(hashAlgorithmIdentifier);
 
-                    byte[] dataToHash = mainStack.Pop();
+                    ImmutableList<byte> dataToHash = mainStack.Pop();
                     ImmutableList<byte> hash = hashAlgorithm.CalculateHash(dataToHash);
                     mainStack.Push(hash.ToArray());
                     return true;
@@ -741,8 +749,8 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_CHECKSIG:
                 case ScriptOpcode.OP_CHECKSIGVERIFY:
                 {
-                    byte[] publicKey = mainStack.Pop();
-                    byte[] signature = mainStack.Pop();
+                    ImmutableList<byte> publicKey = mainStack.Pop();
+                    ImmutableList<byte> signature = mainStack.Pop();
 
                     TransactionScriptOperation sigOp = GetDataPushOp(signature);
 
@@ -764,7 +772,7 @@ namespace Evercoin.TransactionScript
                         return false;
                     }
 
-                    LinkedList<byte[]> publicKeys = new LinkedList<byte[]>();
+                    LinkedList<ImmutableList<byte>> publicKeys = new LinkedList<ImmutableList<byte>>();
                     for (int i = 0; i < keyCount; i++)
                     {
                         publicKeys.AddLast(mainStack.Pop());
@@ -776,7 +784,7 @@ namespace Evercoin.TransactionScript
                         return false;
                     }
 
-                    LinkedList<byte[]> signatures = new LinkedList<byte[]>();
+                    LinkedList<ImmutableList<byte>> signatures = new LinkedList<ImmutableList<byte>>();
                     for (int i = 0; i < signatureCount; i++)
                     {
                         signatures.AddLast(mainStack.Pop());
@@ -798,14 +806,14 @@ namespace Evercoin.TransactionScript
 
                     int validSignatureCount = 0;
 
-                    LinkedListNode<byte[]> signatureToValidate = signatures.First;
-                    LinkedListNode<byte[]> publicKeyToAttempt = publicKeys.First;
+                    LinkedListNode<ImmutableList<byte>> signatureToValidate = signatures.First;
+                    LinkedListNode<ImmutableList<byte>> publicKeyToAttempt = publicKeys.First;
 
                     while (publicKeyToAttempt != null &&
                            signatureToValidate != null)
                     {
-                        byte[] signature = signatureToValidate.Value;
-                        byte[] publicKey = publicKeyToAttempt.Value;
+                        ImmutableList<byte> signature = signatureToValidate.Value;
+                        ImmutableList<byte> publicKey = publicKeyToAttempt.Value;
 
                         if (signatureChecker.CheckSignature(signature, publicKey, subscript))
                         {
@@ -840,37 +848,24 @@ namespace Evercoin.TransactionScript
             return true;
         }
 
-        private static TransactionScriptOperation GetDataPushOp(byte[] dataToPush)
+        private static TransactionScriptOperation GetDataPushOp(ImmutableList<byte> dataToPush)
         {
-            if (dataToPush.Length <= (byte)ScriptOpcode.END_OP_DATA)
+            if (dataToPush.Count <= (byte)ScriptOpcode.END_OP_DATA)
             {
-                return new TransactionScriptOperation((byte)dataToPush.Length, dataToPush);
+                return new TransactionScriptOperation((byte)dataToPush.Count, dataToPush);
             }
 
-            if (dataToPush.Length <= 0xff)
+            if (dataToPush.Count <= 0xff)
             {
-                byte[] data = new byte[dataToPush.Length + 1];
-                Buffer.BlockCopy(dataToPush, 0, data, 1, dataToPush.Length);
-                data[0] = (byte)dataToPush.Length;
-                return new TransactionScriptOperation((byte)ScriptOpcode.OP_PUSHDATA1, data);
+                return new TransactionScriptOperation((byte)ScriptOpcode.OP_PUSHDATA1, dataToPush);
             }
 
-            if (dataToPush.Length <= 0xffff)
+            if (dataToPush.Count <= 0xffff)
             {
-                byte[] data = new byte[dataToPush.Length + 2];
-                Buffer.BlockCopy(dataToPush, 0, data, 3, dataToPush.Length);
-                byte[] sizeBytes = BitConverter.GetBytes((ushort)dataToPush.Length).LittleEndianToOrFromBitConverterEndianness();
-                Buffer.BlockCopy(sizeBytes, 0, data, 0, 2);
-                return new TransactionScriptOperation((byte)ScriptOpcode.OP_PUSHDATA2, data);
+                return new TransactionScriptOperation((byte)ScriptOpcode.OP_PUSHDATA2, dataToPush);
             }
-            else
-            {
-                byte[] data = new byte[dataToPush.Length + 4];
-                Buffer.BlockCopy(dataToPush, 0, data, 4, dataToPush.Length);
-                byte[] sizeBytes = BitConverter.GetBytes((uint)dataToPush.Length).LittleEndianToOrFromBitConverterEndianness();
-                Buffer.BlockCopy(sizeBytes, 0, data, 0, 4);
-                return new TransactionScriptOperation((byte)ScriptOpcode.OP_PUSHDATA4, data);
-            }
+
+            return new TransactionScriptOperation((byte)ScriptOpcode.OP_PUSHDATA4, dataToPush);
         }
     }
 }

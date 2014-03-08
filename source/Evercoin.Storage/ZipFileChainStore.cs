@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -14,9 +15,11 @@ using Evercoin.Util;
 
 using Ionic.Zip;
 
+using NodaTime;
+
 namespace Evercoin.Storage
 {
-    [Export("UncachedChainStore", typeof(IChainStore))]
+    ////[Export("UncachedChainStore", typeof(IChainStore))]
     public sealed class ZipFileChainStore : ReadWriteChainStoreBase
     {
         private const string ZipFileName = @"C:\Freedom\evercoin.zip";
@@ -32,6 +35,8 @@ namespace Evercoin.Storage
         private readonly ConcurrentDictionary<BigInteger, ManualResetEventSlim> txWaiters = new ConcurrentDictionary<BigInteger, ManualResetEventSlim>();
 
         private readonly ZipFile archive;
+
+        private Instant lastSave = Instant.FromDateTimeUtc(DateTime.UtcNow);
 
         public ZipFileChainStore()
         {
@@ -74,7 +79,9 @@ namespace Evercoin.Storage
                             continue;
                         }
 
-                        BigInteger blockId = new BigInteger(ByteTwiddling.HexStringToByteArray(fn));
+                        byte[] blockIdentifierBytes = ByteTwiddling.HexStringToByteArray(fn);
+                        Array.Reverse(blockIdentifierBytes);
+                        BigInteger blockId = new BigInteger(blockIdentifierBytes);
                         Block block;
                         using (var stream = entry.OpenReader())
                         {
@@ -124,11 +131,6 @@ namespace Evercoin.Storage
                     var data = this.archive[GetBlockEntryName(blockIdentifier)];
                     if (data != null)
                     {
-                        if (!data.IncludedInMostRecentSave)
-                        {
-                            this.archive.Save();
-                        }
-
                         using (var stream = data.OpenReader())
                         {
                             BinaryFormatter binaryFormatter = new BinaryFormatter();
@@ -138,13 +140,10 @@ namespace Evercoin.Storage
                 }
 
                 ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, _ => new ManualResetEventSlim());
-                using (mres)
+                if (mres.Wait(10000) &&
+                    this.blockWaiters.TryRemove(blockIdentifier, out mres))
                 {
-                    if (mres.Wait(10000))
-                    {
-                        ManualResetEventSlim _;
-                        this.blockWaiters.TryRemove(blockIdentifier, out _);
-                    }
+                    mres.Dispose();
                 }
             }
             while (true);
@@ -159,11 +158,6 @@ namespace Evercoin.Storage
                     var data = this.archive[GetTransactionEntryName(transactionIdentifier)];
                     if (data != null)
                     {
-                        if (!data.IncludedInMostRecentSave)
-                        {
-                            this.archive.Save();
-                        }
-
                         using (var stream = data.OpenReader())
                         {
                             BinaryFormatter binaryFormatter = new BinaryFormatter();
@@ -173,13 +167,10 @@ namespace Evercoin.Storage
                 }
 
                 ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, _ => new ManualResetEventSlim());
-                using (mres)
+                if (mres.Wait(10000) &&
+                    this.txWaiters.TryRemove(transactionIdentifier, out mres))
                 {
-                    if (mres.Wait(10000))
-                    {
-                        ManualResetEventSlim _;
-                        this.txWaiters.TryRemove(transactionIdentifier, out _);
-                    }
+                    mres.Dispose();
                 }
             }
             while (true);
@@ -192,15 +183,13 @@ namespace Evercoin.Storage
             lock (this.zipLock)
             {
                 this.archive.AddEntry(GetBlockEntryName(typedBlock), (_, entryStream) => binaryFormatter.Serialize(entryStream, typedBlock));
+                this.Save();
             }
 
             ManualResetEventSlim mres;
             if (this.blockWaiters.TryRemove(block.Identifier, out mres))
             {
-                using (mres)
-                {
-                    mres.Set();
-                }
+                mres.Set();
             }
         }
 
@@ -211,15 +200,13 @@ namespace Evercoin.Storage
             lock (this.zipLock)
             {
                 this.archive.AddEntry(GetTransactionEntryName(typedTransaction), (_, entryStream) => binaryFormatter.Serialize(entryStream, typedTransaction));
+                this.Save();
             }
 
             ManualResetEventSlim mres;
             if (this.txWaiters.TryRemove(transaction.Identifier, out mres))
             {
-                using (mres)
-                {
-                    mres.Set();
-                }
+                mres.Set();
             }
         }
 
@@ -236,7 +223,9 @@ namespace Evercoin.Storage
 
         private static string GetBlockEntryName(BigInteger blockIdentifier)
         {
-            string id = ByteTwiddling.ByteArrayToHexString(blockIdentifier.ToLittleEndianUInt256Array());
+            byte[] blockIdentifierBytes = blockIdentifier.ToLittleEndianUInt256Array();
+            Array.Reverse(blockIdentifierBytes);
+            string id = ByteTwiddling.ByteArrayToHexString(blockIdentifierBytes);
             return String.Join(EntrySep, BlockDir, id);
         }
 
@@ -247,8 +236,20 @@ namespace Evercoin.Storage
 
         private static string GetTransactionEntryName(BigInteger transactionIdentifier)
         {
-            string id = ByteTwiddling.ByteArrayToHexString(transactionIdentifier.ToLittleEndianUInt256Array());
+            byte[] transactionIdentifierBytes = transactionIdentifier.ToLittleEndianUInt256Array();
+            Array.Reverse(transactionIdentifierBytes);
+            string id = ByteTwiddling.ByteArrayToHexString(transactionIdentifierBytes);
             return String.Join(EntrySep, TxDir, id);
+        }
+
+        private void Save()
+        {
+            Instant now = Instant.FromDateTimeUtc(DateTime.UtcNow);
+            if (now - this.lastSave > Duration.FromSeconds(1))
+            {
+                this.archive.Save();
+                this.lastSave = Instant.FromDateTimeUtc(DateTime.UtcNow);
+            }
         }
     }
 }

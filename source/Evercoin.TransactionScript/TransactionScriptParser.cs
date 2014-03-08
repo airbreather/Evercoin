@@ -1,15 +1,22 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel.Composition;
 using System.Linq;
 
 using Evercoin.Util;
 
 namespace Evercoin.TransactionScript
 {
-    internal sealed class TransactionScriptParser : ITransactionScriptParser
+    [Export(typeof(ITransactionScriptParser))]
+    public sealed class TransactionScriptParser : ITransactionScriptParser
     {
-        public IEnumerable<TransactionScriptOperation> Parse(IEnumerable<byte> bytes)
+        public ImmutableList<TransactionScriptOperation> Parse(IEnumerable<byte> bytes)
+        {
+            return this.ParseCore(bytes).ToImmutableList();
+        }
+
+        private IEnumerable<TransactionScriptOperation> ParseCore(IEnumerable<byte> bytes)
         {
             ImmutableList<byte> scriptBytes = bytes.ToImmutableList();
 
