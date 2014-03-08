@@ -79,15 +79,8 @@
     <Compile Include="NetworkValueSource.cs" />
     <Compile Include="NetworkValueSpender.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ProtocolCompactSize.cs" />
-    <Compile Include="ProtocolInventoryVector.cs" />
-    <Compile Include="ProtocolNetworkAddress.cs" />
     <Compile Include="ProtocolStreamReader.cs" />
-    <Compile Include="ProtocolString.cs" />
     <Compile Include="MessageHandlers\GetAddressesMessageBuilder.cs" />
-    <Compile Include="ProtocolTransaction.cs" />
-    <Compile Include="ProtocolTxIn.cs" />
-    <Compile Include="ProtocolTxOut.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

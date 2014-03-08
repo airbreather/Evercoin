@@ -132,33 +132,6 @@ namespace Evercoin.Util
             return result;
         }
 
-        public static ImmutableList<byte> DeleteAllOccurrencesOfSubsequence(this IImmutableList<byte> scriptCode, IReadOnlyList<byte> signature)
-        {
-            if (scriptCode == null)
-            {
-                throw new ArgumentNullException("scriptCode");
-            }
-
-            if (signature == null)
-            {
-                throw new ArgumentNullException("signature");
-            }
-
-            if (scriptCode.Count == 0 || signature.Count == 0)
-            {
-                return scriptCode.ToImmutableList();
-            }
-
-            int i;
-            int[] kmpLookup = CreateKMPLookup(signature);
-            while ((i = FindIndexOfNeedleInHaystack(scriptCode, signature, kmpLookup)) < scriptCode.Count)
-            {
-                scriptCode = scriptCode.RemoveRange(i, signature.Count);
-            }
-
-            return scriptCode.ToImmutableList();
-        }
-
         /// <summary>
         /// Determines whether this Merkle tree is valid, using a given
         /// <see cref="IHashAlgorithm"/> if needed to calculate child hashes.
@@ -219,56 +192,6 @@ namespace Evercoin.Util
 
             ImmutableList<byte> hashResult = hashAlgorithm.CalculateHash(dataToHash);
             return hashResult.SequenceEqual(node.Data);
-        }
-
-        // http://en.wikipedia.org/wiki/Knuth%E2%80%93Morris%E2%80%93Pratt_algorithm
-        private static int FindIndexOfNeedleInHaystack(IReadOnlyList<byte> haystack, IReadOnlyList<byte> needle, IReadOnlyList<int> lookup)
-        {
-            int m = 0;
-            int i = 0;
-            while (m + i < haystack.Count)
-            {
-                if (needle[i] == haystack[m + i])
-                {
-                    if (i++ == needle.Count - 1)
-                    {
-                        return m;
-                    }
-                }
-                else
-                {
-                    m = m + i - lookup[i];
-                    i = lookup[i] > -1 ? lookup[i] : 0;
-                }
-            }
-
-            return haystack.Count;
-        }
-
-        // http://en.wikipedia.org/wiki/Knuth%E2%80%93Morris%E2%80%93Pratt_algorithm
-        private static int[] CreateKMPLookup(IReadOnlyList<byte> needle)
-        {
-            int[] lookup = new int[needle.Count];
-            lookup[0] = -1;
-            int pos = 2;
-            int cnd = 0;
-            while (pos < needle.Count)
-            {
-                if (needle[pos - 1] == needle[cnd])
-                {
-                    lookup[pos++] = ++cnd;
-                }
-                else if (cnd > 0)
-                {
-                    cnd = lookup[cnd];
-                }
-                else
-                {
-                    lookup[pos++] = 0;
-                }
-            }
-
-            return lookup;
         }
     }
 }

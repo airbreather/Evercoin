@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
+using System.Reactive.Concurrency;
+using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -39,7 +41,7 @@ namespace Evercoin.App
 
             ConcurrentDictionary<Guid, int> readableIdMapping = new ConcurrentDictionary<Guid, int>();
 
-            this.network.ReceivedMessages.Subscribe(
+            this.network.ReceivedMessages.SubscribeOn(TaskPoolScheduler.Default).ObserveOn(TaskPoolScheduler.Default).Subscribe(
                 msg =>
                 {
                     INetworkMessageHandler correctHandler = this.messageHandlers.FirstOrDefault(handler => handler.RecognizesMessage(msg));

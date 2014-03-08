@@ -31,14 +31,14 @@ namespace Evercoin.TransactionScript
         }
 
         [Theory]
-        [InlineData(ScriptOperation.OP_PUSHDATA1, 0)]
-        [InlineData(ScriptOperation.OP_PUSHDATA2, 0)]
-        [InlineData(ScriptOperation.OP_PUSHDATA2, 1)]
-        [InlineData(ScriptOperation.OP_PUSHDATA4, 0)]
-        [InlineData(ScriptOperation.OP_PUSHDATA4, 1)]
-        [InlineData(ScriptOperation.OP_PUSHDATA4, 2)]
-        [InlineData(ScriptOperation.OP_PUSHDATA4, 3)]
-        public void PushDataWithoutProvidingEnoughDataForSizeShouldFailScript(ScriptOperation opcode, int numberOfBytesToProvide)
+        [InlineData(ScriptOpcode.OP_PUSHDATA1, 0)]
+        [InlineData(ScriptOpcode.OP_PUSHDATA2, 0)]
+        [InlineData(ScriptOpcode.OP_PUSHDATA2, 1)]
+        [InlineData(ScriptOpcode.OP_PUSHDATA4, 0)]
+        [InlineData(ScriptOpcode.OP_PUSHDATA4, 1)]
+        [InlineData(ScriptOpcode.OP_PUSHDATA4, 2)]
+        [InlineData(ScriptOpcode.OP_PUSHDATA4, 3)]
+        public void PushDataWithoutProvidingEnoughDataForSizeShouldFailScript(ScriptOpcode opcode, int numberOfBytesToProvide)
         {
             byte[] scriptBytes = new byte[numberOfBytesToProvide + 1];
             scriptBytes[0] = (byte)opcode;
@@ -57,7 +57,7 @@ namespace Evercoin.TransactionScript
         public void PushData1WithoutProvidingEnoughDataShouldFailScript(int numberOfBytesToExpect, int numberOfBytesToProvide)
         {
             byte[] scriptBytes = new byte[numberOfBytesToProvide + 2];
-            scriptBytes[0] = (byte)ScriptOperation.OP_PUSHDATA1;
+            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA1;
             scriptBytes[1] = (byte)numberOfBytesToExpect;
             scriptBytes[2] = 1;
 
@@ -81,7 +81,7 @@ namespace Evercoin.TransactionScript
             byte[] dataSizeBytes = BitConverter.GetBytes((ushort)numberOfBytesToExpect)
                                                .LittleEndianToOrFromBitConverterEndianness();
 
-            scriptBytes[0] = (byte)ScriptOperation.OP_PUSHDATA2;
+            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA2;
             scriptBytes[1] = dataSizeBytes[0];
             scriptBytes[2] = dataSizeBytes[1];
             scriptBytes[3] = 1;
@@ -109,7 +109,7 @@ namespace Evercoin.TransactionScript
             byte[] dataSizeBytes = BitConverter.GetBytes((uint)numberOfBytesToExpect)
                                                .LittleEndianToOrFromBitConverterEndianness();
 
-            scriptBytes[0] = (byte)ScriptOperation.OP_PUSHDATA4;
+            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA4;
             scriptBytes[1] = dataSizeBytes[0];
             scriptBytes[2] = dataSizeBytes[1];
             scriptBytes[3] = dataSizeBytes[2];
@@ -137,11 +137,11 @@ namespace Evercoin.TransactionScript
         }
 
         [Theory]
-        [InlineData(ScriptOperation.OP_0, 0)]
-        [InlineData(ScriptOperation.OP_PUSHDATA1, 1)]
-        [InlineData(ScriptOperation.OP_PUSHDATA2, 2)]
-        [InlineData(ScriptOperation.OP_PUSHDATA4, 4)]
-        public void PushZeroShouldPutFalseOnTheStack(ScriptOperation opcode, int numberOfZeroBytesAfterOpcode)
+        [InlineData(ScriptOpcode.OP_0, 0)]
+        [InlineData(ScriptOpcode.OP_PUSHDATA1, 1)]
+        [InlineData(ScriptOpcode.OP_PUSHDATA2, 2)]
+        [InlineData(ScriptOpcode.OP_PUSHDATA4, 4)]
+        public void PushZeroShouldPutFalseOnTheStack(ScriptOpcode opcode, int numberOfZeroBytesAfterOpcode)
         {
             byte[] scriptBytes = new byte[numberOfZeroBytesAfterOpcode + 1];
             scriptBytes[0] = (byte)opcode;
@@ -164,7 +164,7 @@ namespace Evercoin.TransactionScript
         {
             byte[] scriptBytes = new byte[numberOfBytesToPush + 2];
 
-            scriptBytes[0] = (byte)ScriptOperation.OP_PUSHDATA1;
+            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA1;
             scriptBytes[1] = (byte)numberOfBytesToPush;
             scriptBytes[2] = 1;
 
@@ -187,7 +187,7 @@ namespace Evercoin.TransactionScript
             byte[] dataSizeBytes = BitConverter.GetBytes((ushort)numberOfBytesToPush)
                                                .LittleEndianToOrFromBitConverterEndianness();
 
-            scriptBytes[0] = (byte)ScriptOperation.OP_PUSHDATA2;
+            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA2;
             scriptBytes[1] = dataSizeBytes[0];
             scriptBytes[2] = dataSizeBytes[1];
             scriptBytes[3] = 1;
@@ -214,7 +214,7 @@ namespace Evercoin.TransactionScript
             byte[] dataSizeBytes = BitConverter.GetBytes((uint)numberOfBytesToPush)
                                                .LittleEndianToOrFromBitConverterEndianness();
 
-            scriptBytes[0] = (byte)ScriptOperation.OP_PUSHDATA4;
+            scriptBytes[0] = (byte)ScriptOpcode.OP_PUSHDATA4;
             scriptBytes[1] = dataSizeBytes[0];
             scriptBytes[2] = dataSizeBytes[1];
             scriptBytes[3] = dataSizeBytes[2];

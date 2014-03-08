@@ -11,7 +11,7 @@
     /// that details for many less-commonly-used opcodes differ from the actual
     /// implementations in the mainline Bitcoin client.
     /// </remarks>
-    public enum ScriptOperation : byte
+    public enum ScriptOpcode : byte
     {
         /// <summary>
         /// Marks the beginning (inclusive) of a range of opcodes that mean

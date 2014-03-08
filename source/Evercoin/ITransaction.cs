@@ -38,5 +38,7 @@ namespace Evercoin
         /// Gets the outputs of this transaction.
         /// </summary>
         ImmutableList<ITransactionValueSource> Outputs { get; }
+
+        uint LockTime { get; }
     }
 }

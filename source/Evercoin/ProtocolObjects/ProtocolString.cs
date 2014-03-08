@@ -1,9 +1,9 @@
 ﻿using System.Collections.Immutable;
 using System.Text;
 
-namespace Evercoin.Network
+namespace Evercoin.ProtocolObjects
 {
-    internal sealed class ProtocolString
+    public sealed class ProtocolString
     {
         private readonly string value;
 

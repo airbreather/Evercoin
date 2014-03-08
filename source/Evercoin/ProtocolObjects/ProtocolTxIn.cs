@@ -2,7 +2,7 @@
 using System.Collections.Immutable;
 using System.Numerics;
 
-namespace Evercoin.Network
+namespace Evercoin.ProtocolObjects
 {
     public sealed class ProtocolTxIn
     {

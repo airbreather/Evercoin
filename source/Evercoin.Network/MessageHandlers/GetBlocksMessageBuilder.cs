@@ -5,6 +5,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 
+using Evercoin.ProtocolObjects;
 using Evercoin.Util;
 
 namespace Evercoin.Network.MessageHandlers

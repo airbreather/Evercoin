@@ -1,4 +1,5 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Concurrent;
+using System.Collections.Immutable;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
@@ -16,13 +17,13 @@ using LevelDB;
 namespace Evercoin.Storage
 {
     [Export("UncachedChainStore", typeof(IChainStore))]
-    public sealed class SimpleChainStore : ReadWriteChainStoreBase
+    public sealed class LevelDBChainStore : ReadWriteChainStoreBase
     {
         private static readonly Options DbOptions = new Options
                                                     {
-                                                        ////WriteBufferSize = 100 * 1024 * 1024,
+                                                        WriteBufferSize = 100 * 1024 * 1024,
                                                         CreateIfMissing = true,
-                                                        ////BlockSize = 500 * 1024 * 1024
+                                                        BlockSize = 500 * 1024 * 1024
                                                     };
 
         private const string BlockFileName = @"C:\Freedom\blocks.leveldb";
@@ -35,7 +36,10 @@ namespace Evercoin.Storage
         private readonly DB blockDb = new DB(DbOptions, BlockFileName);
         private readonly DB txDb = new DB(DbOptions, TxFileName);
 
-        public SimpleChainStore()
+        private readonly ConcurrentDictionary<BigInteger, ManualResetEventSlim> blockWaiters = new ConcurrentDictionary<BigInteger, ManualResetEventSlim>();
+        private readonly ConcurrentDictionary<BigInteger, ManualResetEventSlim> txWaiters = new ConcurrentDictionary<BigInteger, ManualResetEventSlim>(); 
+
+        public LevelDBChainStore()
         {
             BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").Reverse().ToArray());
             if (!this.ContainsBlock(genesisBlockIdentifier))
@@ -98,17 +102,20 @@ namespace Evercoin.Storage
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
         {
-            byte[] data = null;
+            byte[] data = this.blockDb.Get(blockIdentifier.ToLittleEndianUInt256Array());
             while (data == null)
             {
-                lock (this.blockLock)
-                data = this.blockDb.Get(blockIdentifier.ToLittleEndianUInt256Array());
-                if (data == null)
+                ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, _ => new ManualResetEventSlim());
+                using (mres)
                 {
-                    Thread.Sleep(100);
+                    if (mres.Wait(10000))
+                    {
+                        ManualResetEventSlim _;
+                        this.blockWaiters.TryRemove(blockIdentifier, out _);
+                    }
                 }
 
-                this.ThrowIfDisposed();
+                data = this.blockDb.Get(blockIdentifier.ToLittleEndianUInt256Array());
             }
 
             using (var ms = new MemoryStream(data))
@@ -123,14 +130,17 @@ namespace Evercoin.Storage
             byte[] data = null;
             while (data == null)
             {
-                lock (this.txLock)
-                data = this.txDb.Get(transactionIdentifier.ToLittleEndianUInt256Array());
-                if (data == null)
+                ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, _ => new ManualResetEventSlim());
+                using (mres)
                 {
-                    Thread.Sleep(100);
+                    if (mres.Wait(10000))
+                    {
+                        ManualResetEventSlim _;
+                        this.txWaiters.TryRemove(transactionIdentifier, out _);
+                    }
                 }
 
-                this.ThrowIfDisposed();
+                data = this.txDb.Get(transactionIdentifier.ToLittleEndianUInt256Array());
             }
 
             using (var ms = new MemoryStream(data))
@@ -153,6 +163,15 @@ namespace Evercoin.Storage
 
             lock (this.blockLock)
             this.blockDb.Put(block.Identifier.ToLittleEndianUInt256Array(), data);
+
+            ManualResetEventSlim mres;
+            if (this.blockWaiters.TryRemove(block.Identifier, out mres))
+            {
+                using (mres)
+                {
+                    mres.Set();
+                }
+            }
         }
 
         protected override void PutTransactionCore(ITransaction transaction)
@@ -168,6 +187,15 @@ namespace Evercoin.Storage
 
             lock (this.txLock)
             this.txDb.Put(transaction.Identifier.ToLittleEndianUInt256Array(), data);
+
+            ManualResetEventSlim mres;
+            if (this.txWaiters.TryRemove(transaction.Identifier, out mres))
+            {
+                using (mres)
+                {
+                    mres.Set();
+                }
+            }
         }
 
         protected override void DisposeManagedResources()

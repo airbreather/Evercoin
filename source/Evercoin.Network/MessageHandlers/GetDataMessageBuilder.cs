@@ -4,6 +4,8 @@ using System.Collections.Immutable;
 using System.Linq;
 using System.Text;
 
+using Evercoin.ProtocolObjects;
+
 namespace Evercoin.Network.MessageHandlers
 {
     internal sealed class GetDataMessageBuilder

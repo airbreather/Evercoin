@@ -13,6 +13,7 @@ namespace Evercoin.Storage.Model
         private const string SerializationName_SpendingTransactionIdentifier = "SpendingTransactionIdentifier";
         private const string SerializationName_SpendingTransactionInputIndex = "SpendingTransactionInputIndex";
         private const string SerializationName_ScriptSignature = "ScriptSignature";
+        private const string SerializationName_SequenceNumber = "SequenceNumber";
 
         public ValueSpender()
         {
@@ -22,6 +23,7 @@ namespace Evercoin.Storage.Model
         {
             this.SpendingTransactionIdentifier = copyFrom.SpendingTransactionIdentifier;
             this.SpendingTransactionInputIndex = copyFrom.SpendingTransactionInputIndex;
+            this.SequenceNumber = copyFrom.SequenceNumber;
             this.ScriptSignature = copyFrom.ScriptSignature;
         }
 
@@ -29,6 +31,7 @@ namespace Evercoin.Storage.Model
         {
             this.SpendingTransactionIdentifier = info.GetValue<BigInteger>(SerializationName_SpendingTransactionIdentifier);
             this.SpendingTransactionInputIndex = info.GetUInt32(SerializationName_SpendingTransactionInputIndex);
+            this.SequenceNumber = info.GetUInt32(SerializationName_SequenceNumber);
             this.ScriptSignature = info.GetValue<List<byte>>(SerializationName_ScriptSignature).ToImmutableList();
         }
 
@@ -50,7 +53,8 @@ namespace Evercoin.Storage.Model
                    this.SpendingTransactionIdentifier == other.SpendingTransactionIdentifier &&
                    this.SpendingTransactionInputIndex == other.SpendingTransactionInputIndex &&
                    Equals(this.SpendingValueSource, other.SpendingValueSource) &&
-                   this.ScriptSignature.SequenceEqual(other.ScriptSignature);
+                   this.ScriptSignature.SequenceEqual(other.ScriptSignature) &&
+                   this.SequenceNumber == other.SequenceNumber;
         }
 
         /// <summary>
@@ -82,6 +86,8 @@ namespace Evercoin.Storage.Model
         /// </remarks>
         public ImmutableList<byte> ScriptSignature { get; set; }
 
+        public uint SequenceNumber { get; set; }
+
         /// <summary>
         /// Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo"/> with the data needed to serialize the target object.
         /// </summary>
@@ -90,6 +96,7 @@ namespace Evercoin.Storage.Model
         {
             info.AddValue(SerializationName_SpendingTransactionIdentifier, this.SpendingTransactionIdentifier);
             info.AddValue(SerializationName_SpendingTransactionInputIndex, this.SpendingTransactionInputIndex);
+            info.AddValue(SerializationName_SequenceNumber, this.SequenceNumber);
             info.AddValue(SerializationName_ScriptSignature, this.ScriptSignature.ToList());
         }
     }

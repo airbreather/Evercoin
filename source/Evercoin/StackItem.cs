@@ -1,12 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using System.Numerics;
 
-namespace Evercoin.TransactionScript
+namespace Evercoin
 {
     /// <summary>
     /// An item that can be put on the stack.
     /// </summary>
-    internal struct StackItem : IEquatable<StackItem>, IComparable<StackItem>, IComparable
+    public struct StackItem : IEquatable<StackItem>, IComparable<StackItem>, IComparable
     {
         /// <summary>
         /// The underlying data item being stored on the stack.
@@ -24,17 +27,17 @@ namespace Evercoin.TransactionScript
             this.value = value;
         }
 
-        public StackItem(byte[] data)
+        public StackItem(IEnumerable<byte> data)
             : this()
         {
-            this.data = data;
+            this.data = data.ToArray();
         }
 
         public static implicit operator BigInteger(StackItem item)
         {
             if (!item.value.HasValue)
             {
-                item.value = new BigInteger(item.data);
+                item.value = new BigInteger(item.data.ToArray());
             }
 
             return item.value.Value;

@@ -24,7 +24,8 @@ namespace Evercoin.Network
                    this.SpendingTransactionIdentifier == other.SpendingTransactionIdentifier &&
                    this.SpendingTransactionInputIndex == other.SpendingTransactionInputIndex &&
                    Equals(this.SpendingValueSource, other.SpendingValueSource) &&
-                   this.ScriptSignature.SequenceEqual(other.ScriptSignature);
+                   this.ScriptSignature.SequenceEqual(other.ScriptSignature) &&
+                   this.SequenceNumber == other.SequenceNumber;
         }
 
         /// <summary>
@@ -53,5 +54,7 @@ namespace Evercoin.Network
         /// For the coinbase found in blocks, this is usually just a data push.
         /// </remarks>
         public ImmutableList<byte> ScriptSignature { get; set; }
+
+        public uint SequenceNumber { get; set; }
     }
 }

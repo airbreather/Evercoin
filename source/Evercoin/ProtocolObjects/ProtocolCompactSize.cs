@@ -3,7 +3,7 @@ using System.Collections.Immutable;
 
 using Evercoin.Util;
 
-namespace Evercoin.Network
+namespace Evercoin.ProtocolObjects
 {
     public sealed class ProtocolCompactSize
     {

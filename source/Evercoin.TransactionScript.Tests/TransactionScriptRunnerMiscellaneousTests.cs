@@ -8,22 +8,22 @@ namespace Evercoin.TransactionScript
     public sealed class TransactionScriptRunnerMiscellaneousTests
     {
         [Theory]
-        [InlineData(ScriptOperation.OP_NOP)]
-        [InlineData(ScriptOperation.OP_NOP1)]
-        [InlineData(ScriptOperation.OP_NOP2)]
-        [InlineData(ScriptOperation.OP_NOP3)]
-        [InlineData(ScriptOperation.OP_NOP4)]
-        [InlineData(ScriptOperation.OP_NOP5)]
-        [InlineData(ScriptOperation.OP_NOP6)]
-        [InlineData(ScriptOperation.OP_NOP7)]
-        [InlineData(ScriptOperation.OP_NOP8)]
-        [InlineData(ScriptOperation.OP_NOP9)]
-        [InlineData(ScriptOperation.OP_NOP10)]
-        public void NoopOnTrueStackShouldPass(ScriptOperation opcode)
+        [InlineData(ScriptOpcode.OP_NOP)]
+        [InlineData(ScriptOpcode.OP_NOP1)]
+        [InlineData(ScriptOpcode.OP_NOP2)]
+        [InlineData(ScriptOpcode.OP_NOP3)]
+        [InlineData(ScriptOpcode.OP_NOP4)]
+        [InlineData(ScriptOpcode.OP_NOP5)]
+        [InlineData(ScriptOpcode.OP_NOP6)]
+        [InlineData(ScriptOpcode.OP_NOP7)]
+        [InlineData(ScriptOpcode.OP_NOP8)]
+        [InlineData(ScriptOpcode.OP_NOP9)]
+        [InlineData(ScriptOpcode.OP_NOP10)]
+        public void NoopOnTrueStackShouldPass(ScriptOpcode opcode)
         {
             byte[] passingScriptData =
             {
-                (byte)ScriptOperation.OP_1,
+                (byte)ScriptOpcode.OP_1,
                 (byte)opcode
             };
 
@@ -33,22 +33,22 @@ namespace Evercoin.TransactionScript
         }
 
         [Theory]
-        [InlineData(ScriptOperation.OP_NOP)]
-        [InlineData(ScriptOperation.OP_NOP1)]
-        [InlineData(ScriptOperation.OP_NOP2)]
-        [InlineData(ScriptOperation.OP_NOP3)]
-        [InlineData(ScriptOperation.OP_NOP4)]
-        [InlineData(ScriptOperation.OP_NOP5)]
-        [InlineData(ScriptOperation.OP_NOP6)]
-        [InlineData(ScriptOperation.OP_NOP7)]
-        [InlineData(ScriptOperation.OP_NOP8)]
-        [InlineData(ScriptOperation.OP_NOP9)]
-        [InlineData(ScriptOperation.OP_NOP10)]
-        public void NoopOnFalseStackShouldFail(ScriptOperation opcode)
+        [InlineData(ScriptOpcode.OP_NOP)]
+        [InlineData(ScriptOpcode.OP_NOP1)]
+        [InlineData(ScriptOpcode.OP_NOP2)]
+        [InlineData(ScriptOpcode.OP_NOP3)]
+        [InlineData(ScriptOpcode.OP_NOP4)]
+        [InlineData(ScriptOpcode.OP_NOP5)]
+        [InlineData(ScriptOpcode.OP_NOP6)]
+        [InlineData(ScriptOpcode.OP_NOP7)]
+        [InlineData(ScriptOpcode.OP_NOP8)]
+        [InlineData(ScriptOpcode.OP_NOP9)]
+        [InlineData(ScriptOpcode.OP_NOP10)]
+        public void NoopOnFalseStackShouldFail(ScriptOpcode opcode)
         {
             byte[] failingScriptData =
             {
-                (byte)ScriptOperation.OP_0,
+                (byte)ScriptOpcode.OP_0,
                 (byte)opcode
             };
 

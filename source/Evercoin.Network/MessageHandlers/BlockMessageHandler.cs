@@ -9,6 +9,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Evercoin.ProtocolObjects;
 using Evercoin.Util;
 
 using NodaTime;
@@ -18,15 +19,17 @@ namespace Evercoin.Network.MessageHandlers
     public sealed class BlockMessageHandler : MessageHandlerBase
     {
         private readonly IHashAlgorithmStore hashAlgorithmStore;
+        private readonly ISignatureCheckerFactory signatureCheckerFactory;
 
         private readonly ITransactionScriptRunner scriptRunner;
         private static readonly byte[] RecognizedCommand = Encoding.ASCII.GetBytes("block");
 
         [ImportingConstructor]
-        public BlockMessageHandler(INetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore, ITransactionScriptRunner scriptRunner)
+        public BlockMessageHandler(INetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore, ITransactionScriptRunner scriptRunner, ISignatureCheckerFactory signatureCheckerFactory)
             : base(RecognizedCommand, network, chainStore)
         {
             this.hashAlgorithmStore = hashAlgorithmStore;
+            this.signatureCheckerFactory = signatureCheckerFactory;
             this.scriptRunner = scriptRunner;
         }
 
@@ -73,6 +76,8 @@ namespace Evercoin.Network.MessageHandlers
                     }
                 }
 
+                Dictionary<BigInteger, Task<ITransaction>> neededTransactionFetchers = neededTransactions.ToDictionary(x => x, x => this.ReadOnlyChainStore.GetTransactionAsync(x, token));
+
                 ImmutableList<byte> dataToHash = ImmutableList.CreateRange(BitConverter.GetBytes(version).LittleEndianToOrFromBitConverterEndianness())
                                                               .AddRange(prevBlockId.ToLittleEndianUInt256Array())
                                                               .AddRange(merkleRoot.ToLittleEndianUInt256Array())
@@ -91,48 +96,13 @@ namespace Evercoin.Network.MessageHandlers
                     return HandledNetworkMessageResult.ContextuallyInvalid;
                 }
 
-                Dictionary<BigInteger, Task<ITransaction>> neededTransactionFetchers = neededTransactions.ToDictionary(x => x, x => this.ReadOnlyChainStore.GetTransactionAsync(x, token));
-
                 foreach (ProtocolTransaction includedTransaction in includedTransactions)
                 {
                     includedTransaction.CalculateTxId(hashAlgorithm);
                 }
 
-                UselessSignatureChecker dummySignatureChecker = new UselessSignatureChecker();
                 Dictionary<BigInteger, ProtocolTransaction> ownTransactions = includedTransactions.ToDictionary(x => x.TxId);
                 Dictionary<BigInteger, ITransaction> foundTransactions = new Dictionary<BigInteger, ITransaction>(neededTransactionFetchers.Count);
-
-                foreach (ProtocolTransaction tx in includedTransactions)
-                {
-                    foreach (ProtocolTxIn input in tx.Inputs)
-                    {
-                        ImmutableList<byte> script = input.ScriptSig;
-                        if (!input.PrevOutTxId.IsZero)
-                        {
-                            ProtocolTransaction prevTransaction;
-                            if (ownTransactions.TryGetValue(input.PrevOutTxId, out prevTransaction))
-                            {
-                                script = script.AddRange(prevTransaction.Outputs[(int)input.PrevOutN].ScriptPubKey);
-                            }
-                            else
-                            {
-                                ITransaction t;
-                                if (!foundTransactions.TryGetValue(input.PrevOutTxId, out t))
-                                {
-                                    t = await neededTransactionFetchers[input.PrevOutTxId];
-                                    foundTransactions[input.PrevOutTxId] = t;
-                                }
-
-                                script = script.AddRange(t.Outputs[(int)input.PrevOutN].ScriptPublicKey);
-                            }
-                        }
-
-                        if (!this.scriptRunner.EvaluateScript(script, dummySignatureChecker))
-                        {
-                            return HandledNetworkMessageResult.ContextuallyInvalid;
-                        }
-                    }
-                }
 
                 NetworkBlock newBlock = new NetworkBlock
                                         {
@@ -156,8 +126,7 @@ namespace Evercoin.Network.MessageHandlers
                                                     OriginatingBlockIdentifier = blockIdentifier
                                                 };
                 newBlock.Coinbase = coinbase;
-                List<Task> thingPutters = new List<Task>();
-
+                Dictionary<ITransaction, List<Task<bool>>> tScriptTasks = new Dictionary<ITransaction, List<Task<bool>>>();
                 foreach (ProtocolTransaction newProtoTransaction in includedTransactions)
                 {
                     NetworkTransaction newTransaction = new NetworkTransaction
@@ -166,7 +135,8 @@ namespace Evercoin.Network.MessageHandlers
                                                             ContainingBlockIdentifier = blockIdentifier,
                                                             Inputs = ImmutableList<IValueSpender>.Empty,
                                                             Outputs = ImmutableList<ITransactionValueSource>.Empty,
-                                                            Version = version
+                                                            Version = version,
+                                                            LockTime = newProtoTransaction.LockTime
                                                         };
 
                     foreach (ProtocolTxIn txIn in newProtoTransaction.Inputs)
@@ -190,8 +160,14 @@ namespace Evercoin.Network.MessageHandlers
                             }
                             else
                             {
-                                ITransaction prevTransaction = foundTransactions[txIn.PrevOutTxId];
-                                source = prevTransaction.Outputs[(int)txIn.PrevOutN];
+                                ITransaction t;
+                                if (!foundTransactions.TryGetValue(txIn.PrevOutTxId, out t))
+                                {
+                                    t = await neededTransactionFetchers[txIn.PrevOutTxId];
+                                    foundTransactions[txIn.PrevOutTxId] = t;
+                                }
+
+                                source = t.Outputs[(int)txIn.PrevOutN];
                             }
                         }
 
@@ -200,7 +176,8 @@ namespace Evercoin.Network.MessageHandlers
                                                           ScriptSignature = txIn.ScriptSig,
                                                           SpendingTransactionIdentifier = txIn.PrevOutTxId,
                                                           SpendingTransactionInputIndex = txIn.PrevOutN,
-                                                          SpendingValueSource = source
+                                                          SpendingValueSource = source,
+                                                          SequenceNumber = txIn.Sequence
                                                       };
 
                         newTransaction.Inputs = newTransaction.Inputs.Add(spender);
@@ -220,14 +197,65 @@ namespace Evercoin.Network.MessageHandlers
                         newTransaction.Outputs = newTransaction.Outputs.Add(source);
                     }
 
-                    thingPutters.Add(this.ChainStore.PutTransactionAsync(newTransaction, token));
+                    List<Task<bool>> scriptTasks = new List<Task<bool>>();
+                    for (int i = 0; i < newTransaction.Inputs.Count; i++)
+                    {
+                        IValueSpender input = newTransaction.Inputs[i];
+                        if (input.SpendingTransactionIdentifier.IsZero)
+                        {
+                            continue;
+                        }
+
+                        ImmutableList<byte> scriptSig = input.ScriptSignature;
+                        ISignatureChecker signatureChecker = this.signatureCheckerFactory.CreateSignatureChecker(newTransaction, i);
+                        Task<bool> scriptTask = Task.Run(() =>
+                        {
+                            var result = this.scriptRunner.EvaluateScript(scriptSig, signatureChecker);
+                            if (!result)
+                            {
+                                return false;
+                            }
+
+                            ImmutableList<byte> scriptPubKey;
+                            ProtocolTransaction prevTransaction;
+                            if (ownTransactions.TryGetValue(input.SpendingTransactionIdentifier, out prevTransaction))
+                            {
+                                scriptPubKey = prevTransaction.Outputs[(int)input.SpendingTransactionInputIndex].ScriptPubKey;
+                            }
+                            else
+                            {
+                                scriptPubKey = foundTransactions[input.SpendingTransactionIdentifier].Outputs[(int)input.SpendingTransactionInputIndex].ScriptPublicKey;
+                            }
+
+                            return (bool)this.scriptRunner.EvaluateScript(scriptPubKey, signatureChecker, result.MainStack, result.AlternateStack);
+                        }, token);
+
+                        scriptTasks.Add(scriptTask);
+                    }
+
+                    tScriptTasks[newTransaction] = scriptTasks;
                 }
 
                 IBlock prevBlock = await prevBlockGetter;
                 newBlock.Height = prevBlock.Height + 1;
-                thingPutters.Add(this.ChainStore.PutBlockAsync(newBlock, token));
-                await Task.WhenAll(thingPutters);
                 Cheating.Add((int)newBlock.Height, blockIdentifier);
+                Task putBlockTask = this.ChainStore.PutBlockAsync(newBlock, token);
+
+                foreach (var kvp in tScriptTasks)
+                {
+                    ITransaction newTransaction = kvp.Key;
+                    List<Task<bool>> scriptTasks = kvp.Value;
+
+                    bool[] results = await Task.WhenAll(scriptTasks);
+                    if (results.Contains(false))
+                    {
+                        return HandledNetworkMessageResult.ContextuallyInvalid;
+                    }
+
+                    await this.ChainStore.PutTransactionAsync(newTransaction, token);
+                }
+
+                await putBlockTask;
             }
 
             return HandledNetworkMessageResult.Okay;
@@ -257,14 +285,6 @@ namespace Evercoin.Network.MessageHandlers
             }
 
             return result;
-        }
-
-        private sealed class UselessSignatureChecker : ISignatureChecker
-        {
-            public bool CheckSignature(IEnumerable<byte> signature, IEnumerable<byte> publicKey, IEnumerable<byte> scriptCode)
-            {
-                return true;
-            }
         }
     }
 }

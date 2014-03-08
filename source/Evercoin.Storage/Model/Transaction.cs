@@ -15,6 +15,7 @@ namespace Evercoin.Storage.Model
         private const string SerializationName_Version = "Version";
         private const string SerializationName_Inputs = "Inputs";
         private const string SerializationName_Outputs = "Outputs";
+        private const string SerializationName_LockTime = "LockTime";
 
         public Transaction()
         {
@@ -28,6 +29,7 @@ namespace Evercoin.Storage.Model
             this.Identifier = copyFrom.Identifier;
             this.ContainingBlockIdentifier = copyFrom.ContainingBlockIdentifier;
             this.Version = copyFrom.Version;
+            this.LockTime = copyFrom.LockTime;
             foreach (IValueSpender input in copyFrom.Inputs)
             {
                 this.TypedInputs.Add(new ValueSpender(input));
@@ -44,6 +46,7 @@ namespace Evercoin.Storage.Model
             this.Identifier = info.GetValue<BigInteger>(SerializationName_Identifier);
             this.ContainingBlockIdentifier = info.GetValue<BigInteger>(SerializationName_ContainingBlockIdentifier);
             this.Version = info.GetUInt32(SerializationName_Version);
+            this.LockTime = info.GetUInt32(SerializationName_LockTime);
             this.TypedInputs = info.GetValue<Collection<ValueSpender>>(SerializationName_Inputs);
             this.TypedOutputs = info.GetValue<Collection<TransactionValueSource>>(SerializationName_Outputs);
         }
@@ -66,7 +69,8 @@ namespace Evercoin.Storage.Model
                    this.Identifier == other.Identifier &&
                    this.TypedInputs.SequenceEqual(other.Inputs) &&
                    this.TypedOutputs.SequenceEqual(other.Outputs) &&
-                   this.Version == other.Version;
+                   this.Version == other.Version &&
+                   this.LockTime == other.LockTime;
         }
 
         /// <summary>
@@ -103,6 +107,8 @@ namespace Evercoin.Storage.Model
         /// </summary>
         public ImmutableList<ITransactionValueSource> Outputs { get { return this.TypedOutputs.ToImmutableList<ITransactionValueSource>(); } }
 
+        public uint LockTime { get; set; }
+
         /// <summary>
         /// Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo"/> with the data needed to serialize the target object.
         /// </summary>
@@ -114,6 +120,7 @@ namespace Evercoin.Storage.Model
             info.AddValue(SerializationName_Version, this.Version);
             info.AddValue(SerializationName_Inputs, this.TypedInputs);
             info.AddValue(SerializationName_Outputs, this.TypedOutputs);
+            info.AddValue(SerializationName_LockTime, this.LockTime);
         }
     }
 }

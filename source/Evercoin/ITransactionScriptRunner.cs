@@ -4,6 +4,10 @@ namespace Evercoin
 {
     public interface ITransactionScriptRunner
     {
-        bool EvaluateScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker);
+        ScriptEvaluationResult EvaluateScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker);
+
+        ScriptEvaluationResult EvaluateScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker, Stack<StackItem> mainStack);
+
+        ScriptEvaluationResult EvaluateScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker, Stack<StackItem> mainStack, Stack<StackItem> alternateStack);
     }
 }

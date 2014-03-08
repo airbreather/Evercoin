@@ -8,6 +8,6 @@ namespace Evercoin
     /// </summary>
     public interface ISignatureChecker
     {
-        bool CheckSignature(IEnumerable<byte> signature, IEnumerable<byte> publicKey, IEnumerable<byte> scriptCode);
+        bool CheckSignature(IEnumerable<byte> signature, IEnumerable<byte> publicKey, IEnumerable<TransactionScriptOperation> scriptCode);
     }
 }

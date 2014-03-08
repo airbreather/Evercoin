@@ -7,6 +7,8 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Evercoin.ProtocolObjects;
+
 namespace Evercoin.Network.MessageHandlers
 {
     public sealed class InventoryMessageHandler : MessageHandlerBase

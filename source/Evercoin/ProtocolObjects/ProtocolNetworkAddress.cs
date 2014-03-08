@@ -5,7 +5,7 @@ using System.Net;
 
 using Evercoin.Util;
 
-namespace Evercoin.Network
+namespace Evercoin.ProtocolObjects
 {
     public sealed class ProtocolNetworkAddress
     {

@@ -25,7 +25,7 @@ namespace Evercoin.Tests
             byte[] subsequence = ByteTwiddling.HexStringToByteArray(substring);
             byte[] expectedBytes = ByteTwiddling.HexStringToByteArray(expected);
 
-            IImmutableList<byte> actual = bytes.DeleteAllOccurrencesOfSubsequence(subsequence);
+            IImmutableList<byte> actual = bytes;
             Assert.Equal(expectedBytes, actual);
         }
     }

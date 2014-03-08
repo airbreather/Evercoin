@@ -30,7 +30,8 @@ namespace Evercoin.Network
                    this.Identifier == other.Identifier &&
                    this.Inputs.SequenceEqual(other.Inputs) &&
                    this.Outputs.SequenceEqual(other.Outputs) &&
-                   this.Version == other.Version;
+                   this.Version == other.Version &&
+                   this.LockTime == other.LockTime;
         }
 
         /// <summary>
@@ -59,5 +60,7 @@ namespace Evercoin.Network
         /// Gets the outputs of this transaction.
         /// </summary>
         public ImmutableList<ITransactionValueSource> Outputs { get; set; }
+
+        public uint LockTime { get; set; }
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 
-namespace Evercoin.Network
+namespace Evercoin.ProtocolObjects
 {
     public sealed class ProtocolTxOut
     {
