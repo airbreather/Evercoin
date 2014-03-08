@@ -86,7 +86,7 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\..\Secp256k1.NET\Secp256k1.NET.vcxproj">
+    <ProjectReference Include="..\..\external\Secp256k1.NET\Secp256k1.NET.vcxproj">
       <Project>{fc8f0bd7-6066-4e47-aa84-e48dd0beb46d}</Project>
       <Name>Secp256k1.NET</Name>
     </ProjectReference>
