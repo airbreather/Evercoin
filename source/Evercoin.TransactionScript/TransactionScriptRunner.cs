@@ -163,7 +163,10 @@ namespace Evercoin.TransactionScript
             if (!actuallyExecute &&
                 !ConditionalOpcodes.Contains(opcode))
             {
-                return !DisabledOpcodes.Contains(opcode);
+                bool opcodeIsDisabled = DisabledOpcodes.Contains(opcode) ||
+                                        (opcode >= ScriptOpcode.BEGIN_UNUSED &&
+                                         opcode <= ScriptOpcode.END_UNUSED);
+                return !opcodeIsDisabled;
             }
 
             int minStackDepth;
@@ -196,18 +199,12 @@ namespace Evercoin.TransactionScript
             switch (opcode)
             {
                 case ScriptOpcode.OP_PUSHDATA1:
-                    mainStack.Push(new StackItem(op.Data.Skip(1)));
-                    return true;
-
                 case ScriptOpcode.OP_PUSHDATA2:
-                    mainStack.Push(new StackItem(op.Data.Skip(2)));
-                    return true;
-
                 case ScriptOpcode.OP_PUSHDATA4:
-                    mainStack.Push(new StackItem(op.Data.Skip(4)));
+                    mainStack.Push(new StackItem(op.Data));
                     return true;
 
-                    #region NOOP
+                #region NOOP
 
                 case ScriptOpcode.OP_NOP:
                 case ScriptOpcode.OP_NOP1:
@@ -222,9 +219,9 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_NOP10:
                     return true;
 
-                    #endregion NOOP
+                #endregion NOOP
 
-                    #region Disabled
+                #region Disabled
 
                 // These are all disabled unconditionally.
                 case ScriptOpcode.OP_CAT:
@@ -245,7 +242,7 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_VERIF:
                 case ScriptOpcode.OP_VERNOTIF:
 
-                    // These are all disabled if they're in an executed branch:
+                // These are all disabled if they're in an executed branch:
                 case ScriptOpcode.OP_VER:
                 case ScriptOpcode.OP_RETURN:
                 case ScriptOpcode.OP_RESERVED:
@@ -253,9 +250,9 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_RESERVED2:
                     return false;
 
-                    #endregion Disabled
+                #endregion Disabled
 
-                    #region Push Value
+                #region Push Value
 
                 case ScriptOpcode.OP_1NEGATE:
                 case ScriptOpcode.OP_1:
@@ -280,9 +277,9 @@ namespace Evercoin.TransactionScript
                     return true;
                 }
 
-                    #endregion Push Value
+                #endregion Push Value
 
-                    #region Control Flow
+                #region Control Flow
 
                 case ScriptOpcode.OP_IF:
                 case ScriptOpcode.OP_NOTIF:
@@ -318,9 +315,9 @@ namespace Evercoin.TransactionScript
                     return true;
                 }
 
-                    #endregion Control Flow
+                #endregion Control Flow
 
-                    #region Stack Twiddling
+                #region Stack Twiddling
 
                 case ScriptOpcode.OP_TOALTSTACK:
                     return MoveItemFromStackToStack(mainStack, alternateStack);
@@ -522,9 +519,9 @@ namespace Evercoin.TransactionScript
                     return true;
                 }
 
-                    #endregion
+                #endregion Stack Twiddling
 
-                    #region Boolean
+                #region Boolean
 
                 case ScriptOpcode.OP_EQUAL:
                 case ScriptOpcode.OP_EQUALVERIFY:
@@ -541,9 +538,9 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_VERIFY:
                     return mainStack.Pop();
 
-                    #endregion Boolean
+                #endregion Boolean
 
-                    #region Arithmetic
+                #region Arithmetic
 
                 case ScriptOpcode.OP_1ADD:
                 {
@@ -696,9 +693,9 @@ namespace Evercoin.TransactionScript
                     return true;
                 }
 
-                    #endregion Arithmetic
+                #endregion Arithmetic
 
-                    #region Crypto
+                #region Crypto
 
                 case ScriptOpcode.OP_RIPEMD160:
                 case ScriptOpcode.OP_SHA1:
@@ -824,7 +821,7 @@ namespace Evercoin.TransactionScript
                            mainStack.Pop();
                 }
 
-                    #endregion Crypto
+                #endregion Crypto
 
                 default:
                     throw new InvalidOperationException("You should never see this at runtime!");

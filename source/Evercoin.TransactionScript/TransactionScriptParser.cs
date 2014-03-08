@@ -46,7 +46,7 @@ namespace Evercoin.TransactionScript
                         {
                             case ScriptOpcode.OP_PUSHDATA1:
                             {
-                                if (i > scriptBytes.Count)
+                                if (i + 1 > scriptBytes.Count)
                                 {
                                     yield return TransactionScriptOperation.Invalid;
                                     yield break;
@@ -60,7 +60,7 @@ namespace Evercoin.TransactionScript
 
                             case ScriptOpcode.OP_PUSHDATA2:
                             {
-                                if (i + 1 > scriptBytes.Count)
+                                if (i + 2 > scriptBytes.Count)
                                 {
                                     yield return TransactionScriptOperation.Invalid;
                                     yield break;
@@ -74,7 +74,7 @@ namespace Evercoin.TransactionScript
 
                             case ScriptOpcode.OP_PUSHDATA4:
                             {
-                                if (i + 3 > scriptBytes.Count)
+                                if (i + 4 > scriptBytes.Count)
                                 {
                                     yield return TransactionScriptOperation.Invalid;
                                     yield break;

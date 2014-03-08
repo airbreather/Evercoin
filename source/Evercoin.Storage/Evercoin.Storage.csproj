@@ -31,6 +31,9 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Ionic.Zip">
+      <HintPath>..\packages\DotNetZip.1.9.2\lib\net20\Ionic.Zip.dll</HintPath>
+    </Reference>
     <Reference Include="NodaTime, Version=1.2.0.0, Culture=neutral, PublicKeyToken=4226afe0d9b296d1, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NodaTime.1.2.0\lib\net35-Client\NodaTime.dll</HintPath>
@@ -39,9 +42,6 @@
     <Reference Include="System.Collections.Immutable, Version=1.0.30.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\Microsoft.Bcl.Immutable.1.0.30\lib\portable-net45+win8+wp8\System.Collections.Immutable.dll</HintPath>
-    </Reference>
-    <Reference Include="LevelDB">
-      <HintPath>..\..\external\LevelDB\$(Configuration)\LevelDBTest.exe</HintPath>
     </Reference>
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
@@ -68,7 +68,7 @@
     <Compile Include="Model\TransactionValueSource.cs" />
     <Compile Include="Model\ValueSource.cs" />
     <Compile Include="Model\ValueSpender.cs" />
-    <Compile Include="LevelDBChainStore.cs" />
+    <Compile Include="ZipFileChainStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="TransactionCache.cs" />
   </ItemGroup>

@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 
 using Evercoin.ProtocolObjects;
-using Evercoin.Util;
 
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.Sec;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Signers;
-using Org.BouncyCastle.Math.EC;
 
 namespace Evercoin.Algorithms
 {
