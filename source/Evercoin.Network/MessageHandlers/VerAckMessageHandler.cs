@@ -13,10 +13,10 @@ namespace Evercoin.Network.MessageHandlers
         private readonly GetAddressesMessageBuilder getAddressesMessageBuilder;
 
         [ImportingConstructor]
-        public VerAckMessageHandler(INetwork network)
+        public VerAckMessageHandler(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
             : base(RecognizedCommand, network)
         {
-            this.getAddressesMessageBuilder = new GetAddressesMessageBuilder(network);
+            this.getAddressesMessageBuilder = new GetAddressesMessageBuilder(network, hashAlgorithmStore);
         }
 
         protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message, CancellationToken token)

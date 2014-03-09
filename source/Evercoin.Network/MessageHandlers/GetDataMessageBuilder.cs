@@ -15,7 +15,9 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly Network network;
 
-        public GetDataMessageBuilder(INetwork network)
+        private readonly IHashAlgorithmStore hashAlgorithmStore;
+
+        public GetDataMessageBuilder(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
         {
             if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(GetDataText))
             {
@@ -29,12 +31,13 @@ namespace Evercoin.Network.MessageHandlers
             }
 
             this.network = realNetwork;
+            this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
         public INetworkMessage BuildGetDataMessage(Guid clientId,
                                                    IEnumerable<ProtocolInventoryVector> dataToRequest)
         {
-            Message message = new Message(this.network.Parameters, clientId);
+            Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, clientId);
 
             byte[] commandBytes = new byte[this.network.Parameters.CommandLengthInBytes];
             byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(GetDataText);

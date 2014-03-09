@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+using System;
 using System.Collections.Immutable;
 using System.Net;
 
@@ -7,7 +7,7 @@ namespace Evercoin
     /// <summary>
     /// Represents the parameters for the messages on a cryptocurrency network.
     /// </summary>
-    public interface INetworkParameters
+    public interface INetworkParameters : IEquatable<INetworkParameters>
     {
         /// <summary>
         /// Gets the version of the protocol being used here.
@@ -15,15 +15,26 @@ namespace Evercoin
         int ProtocolVersion { get; }
 
         /// <summary>
-        /// Gets the <see cref="IHashAlgorithm"/> used to verify that the
-        /// payload content was received successfully.
+        /// Gets the protocol version before it is negotiated.
         /// </summary>
-        IHashAlgorithm PayloadChecksumAlgorithm { get; }
+        /// <remarks>
+        /// For Bitcoin, this is 209 except for really old clients.
+        /// This affects the version message, because network addresses for
+        /// Bitcoin include a "timestamp" field in protocol versions newer
+        /// than this version.
+        /// </remarks>
+        int ProtocolVersionBeforeNegotiation { get; }
+
+        /// <summary>
+        /// Gets the identifier of the <see cref="IHashAlgorithm"/> used to
+        /// verify that the payload content was received successfully.
+        /// </summary>
+        Guid PayloadChecksumAlgorithmIdentifier { get; }
 
         /// <summary>
         /// Gets the number of bytes from the head of
-        /// <see cref="PayloadChecksumAlgorithm"/>'s result to add to the
-        /// message header.
+        /// <see cref="PayloadChecksumAlgorithmIdentifier"/>'s result to add to
+        /// the message header.
         /// </summary>
         /// <remarks>
         /// Looks like this is going to be 4 for everything that exists today.
@@ -45,7 +56,7 @@ namespace Evercoin
         /// <remarks>
         /// Looks like this is going to be 16 for everything that exists today:
         /// 4 bytes for the <see cref="StaticMessagePrefixData"/>.
-        /// Remaining 12 bytes are the ASCII-encoded command.
+        /// 12 bytes for <see cref="CommandLengthInBytes"/>.
         /// </remarks>
         int MessagePrefixLengthInBytes { get; }
 
@@ -67,28 +78,6 @@ namespace Evercoin
         /// It is expected that the network's protocol provides messages
         /// that allow a node to request which other 
         /// </remarks>
-        ISet<DnsEndPoint> Seeds { get; }
-
-        /// <summary>
-        /// Gets the protocol version before it is negotiated.
-        /// </summary>
-        /// <remarks>
-        /// For Bitcoin, this is 209 except for really old clients.
-        /// This affects the version message.
-        /// </remarks>
-        int ProtocolVersionBeforeNegotiation { get; }
-
-        /// <summary>
-        /// Determines whether or not a handler for our parameters can handle
-        /// messages for another <see cref="INetworkParameters"/> object.
-        /// </summary>
-        /// <param name="other">
-        /// The other <see cref="INetworkParameters"/>.
-        /// </param>
-        /// <returns>
-        /// A value indicating whether this is compatible
-        /// with <paramref name="other"/>.
-        /// </returns>
-        bool IsCompatibleWith(INetworkParameters other);
+        ImmutableHashSet<DnsEndPoint> Seeds { get; }
     }
 }

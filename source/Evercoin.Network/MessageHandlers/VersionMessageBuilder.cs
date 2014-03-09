@@ -5,7 +5,6 @@ using System.Net.Sockets;
 using System.Text;
 
 using Evercoin.ProtocolObjects;
-using Evercoin.Util;
 
 using NodaTime;
 
@@ -18,7 +17,9 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly Network network;
 
-        public VersionMessageBuilder(INetwork network)
+        private readonly IHashAlgorithmStore hashAlgorithmStore;
+
+        public VersionMessageBuilder(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
         {
             if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(VersionText))
             {
@@ -32,6 +33,7 @@ namespace Evercoin.Network.MessageHandlers
             }
 
             this.network = realNetwork;
+            this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
         public INetworkMessage BuildVersionMessage(Guid clientId,
@@ -42,7 +44,7 @@ namespace Evercoin.Network.MessageHandlers
                                                    int lastBlockReceived,
                                                    bool pleaseRelayTransactionsToMe)
         {
-            Message message = new Message(this.network.Parameters, clientId);
+            Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, clientId);
             TcpClient client;
             this.network.ClientLookup.TryGetValue(clientId, out client);
             IPEndPoint localEndPoint = (IPEndPoint)client.Client.LocalEndPoint;

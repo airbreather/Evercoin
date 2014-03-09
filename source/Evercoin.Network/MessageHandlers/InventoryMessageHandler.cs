@@ -17,11 +17,17 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly GetDataMessageBuilder messageBuilder;
 
+        private readonly IReadOnlyChainStore chainStore;
+
+        private readonly IHashAlgorithmStore hashAlgorithmStore;
+
         [ImportingConstructor]
-        public InventoryMessageHandler(INetwork network, IReadOnlyChainStore chainStore)
-            : base(RecognizedCommand, network, chainStore)
+        public InventoryMessageHandler(INetwork network, IReadOnlyChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore)
+            : base(RecognizedCommand, network)
         {
-            this.messageBuilder = new GetDataMessageBuilder(network);
+            this.messageBuilder = new GetDataMessageBuilder(network, hashAlgorithmStore);
+            this.chainStore = chainStore;
+            this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
         protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message, CancellationToken token)
@@ -30,7 +36,7 @@ namespace Evercoin.Network.MessageHandlers
 
             ImmutableList<ProtocolInventoryVector> dataNeeded = ImmutableList<ProtocolInventoryVector>.Empty;
             using (MemoryStream payloadStream = new MemoryStream(message.Payload.ToArray()))
-            using (ProtocolStreamReader streamReader = new ProtocolStreamReader(payloadStream, leaveOpen: true))
+            using (ProtocolStreamReader streamReader = new ProtocolStreamReader(payloadStream, true, this.hashAlgorithmStore))
             {
                 ulong neededItemCount = await streamReader.ReadCompactSizeAsync(token);
                 if (neededItemCount > 50000)
@@ -46,11 +52,11 @@ namespace Evercoin.Network.MessageHandlers
                     switch (vector.Type)
                     {
                         case ProtocolInventoryVector.InventoryType.Block:
-                            skip = await this.ReadOnlyChainStore.ContainsBlockAsync(vector.Hash, token);
+                            skip = await this.chainStore.ContainsBlockAsync(vector.Hash, token);
                             break;
 
                         case ProtocolInventoryVector.InventoryType.Transaction:
-                            skip = await this.ReadOnlyChainStore.ContainsTransactionAsync(vector.Hash, token);
+                            skip = await this.chainStore.ContainsTransactionAsync(vector.Hash, token);
                             break;
                     }
 

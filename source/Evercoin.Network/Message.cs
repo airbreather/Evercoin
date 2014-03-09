@@ -3,8 +3,6 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Diagnostics;
 
-using Evercoin.Util;
-
 namespace Evercoin.Network
 {
     [DebuggerDisplay("{System.Text.Encoding.ASCII.GetString(System.Linq.Enumerable.ToArray(CommandBytes))}, {Evercoin.Util.ByteTwiddling.ByteArrayToHexString(Payload)}")]
@@ -12,15 +10,18 @@ namespace Evercoin.Network
     {
         private readonly INetworkParameters networkParameters;
 
+        private readonly IHashAlgorithmStore hashAlgorithmStore;
+
         private readonly Guid remoteClientId;
 
         private ImmutableList<byte> payloadSize;
 
         private ImmutableList<byte> payloadChecksum;
 
-        public Message(INetworkParameters networkParameters, Guid remoteClientId)
+        public Message(INetworkParameters networkParameters, IHashAlgorithmStore hashAlgorithmStore, Guid remoteClientId)
         {
             this.networkParameters = networkParameters;
+            this.hashAlgorithmStore = hashAlgorithmStore;
             this.remoteClientId = remoteClientId;
         }
 
@@ -29,10 +30,10 @@ namespace Evercoin.Network
             get
             {
                 return this.networkParameters.StaticMessagePrefixData
-                           .AddRange(this.CommandBytes)
-                           .AddRange(this.payloadSize)
-                           .AddRange(this.payloadChecksum)
-                           .AddRange(this.Payload);
+                                             .AddRange(this.CommandBytes)
+                                             .AddRange(this.payloadSize)
+                                             .AddRange(this.payloadChecksum)
+                                             .AddRange(this.Payload);
             }
         }
 
@@ -64,7 +65,7 @@ namespace Evercoin.Network
                                            .LittleEndianToOrFromBitConverterEndianness()
                                            .ToImmutableList();
 
-            IHashAlgorithm checksumAlgorithm = this.networkParameters.PayloadChecksumAlgorithm;
+            IHashAlgorithm checksumAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(this.networkParameters.PayloadChecksumAlgorithmIdentifier);
             int checksumLengthInBytes = this.networkParameters.PayloadChecksumLengthInBytes;
 
             ImmutableList<byte> checksum = checksumAlgorithm.CalculateHash(this.Payload);

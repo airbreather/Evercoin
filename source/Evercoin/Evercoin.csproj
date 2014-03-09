@@ -76,14 +76,18 @@
     <Reference Include="System.XML" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BaseImplementations\ChainParameters.cs" />
     <Compile Include="BaseImplementations\ChainStoreBase.cs" />
+    <Compile Include="BaseImplementations\CurrencyParameters.cs" />
     <Compile Include="BaseImplementations\ReadOnlyChainStoreBase.cs" />
     <Compile Include="BaseImplementations\HashAlgorithmStoreBase.cs" />
     <Compile Include="BaseImplementations\ReadWriteChainStoreBase.cs" />
     <Compile Include="BaseImplementations\TransactionScriptRunnerBase.cs" />
     <Compile Include="DisposableObject.cs" />
+    <Compile Include="Extensions.cs" />
     <Compile Include="HandledNetworkMessageResult.cs" />
     <Compile Include="ICoinbaseValueSource.cs" />
+    <Compile Include="ICurrencyParameters.cs" />
     <Compile Include="IMerkleTreeNode.cs" />
     <Compile Include="INetworkMessage.cs" />
     <Compile Include="INetworkMessageHandler.cs" />
@@ -97,6 +101,7 @@
     <Compile Include="IHashAlgorithm.cs" />
     <Compile Include="IHashAlgorithmStore.cs" />
     <Compile Include="IReadOnlyChainStore.cs" />
+    <Compile Include="LegacyBehavior.cs" />
     <Compile Include="ProtocolObjects\ProtocolCompactSize.cs" />
     <Compile Include="ProtocolObjects\ProtocolInventoryVector.cs" />
     <Compile Include="ProtocolObjects\ProtocolNetworkAddress.cs" />

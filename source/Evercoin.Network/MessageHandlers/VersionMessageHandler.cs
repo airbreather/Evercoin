@@ -13,10 +13,10 @@ namespace Evercoin.Network.MessageHandlers
         private readonly VerAckMessageBuilder verAckMessageBuilder;
 
         [ImportingConstructor]
-        public VersionMessageHandler(INetwork network)
+        public VersionMessageHandler(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
             : base(RecognizedCommand, network)
         {
-            this.verAckMessageBuilder = new VerAckMessageBuilder(network);
+            this.verAckMessageBuilder = new VerAckMessageBuilder(network, hashAlgorithmStore);
         }
 
         protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message, CancellationToken token)

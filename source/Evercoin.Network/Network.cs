@@ -22,18 +22,25 @@ namespace Evercoin.Network
     public sealed class Network : INetwork
     {
         private readonly INetworkParameters networkParameters;
+        private readonly IHashAlgorithmStore hashAlgorithmStore;
         private readonly ConcurrentDictionary<Guid, TcpClient> clientLookup = new ConcurrentDictionary<Guid, TcpClient>();
         private readonly Subject<IObservable<INetworkMessage>> messageObservables = new Subject<IObservable<INetworkMessage>>();
-
+        
         [ImportingConstructor]
-        public Network(INetworkParameters networkParameters)
+        public Network(INetworkParameters networkParameters, IHashAlgorithmStore hashAlgorithmStore)
         {
             if (networkParameters == null)
             {
                 throw new ArgumentNullException("networkParameters");
             }
 
+            if (hashAlgorithmStore == null)
+            {
+                throw new ArgumentNullException("hashAlgorithmStore");
+            }
+
             this.networkParameters = networkParameters;
+            this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
         /// <summary>
@@ -163,7 +170,7 @@ namespace Evercoin.Network
             this.clientLookup.TryAdd(clientId, client);
 
             await connectionCallback(client);
-            ProtocolStreamReader streamReader = new ProtocolStreamReader(client.GetStream(), leaveOpen: true);
+            ProtocolStreamReader streamReader = new ProtocolStreamReader(client.GetStream(), true, this.hashAlgorithmStore);
             IObservable<INetworkMessage> messageStream = Observable.FromAsync(ct => streamReader.ReadNetworkMessageAsync(this.networkParameters, clientId, ct))
                                                                    .DoWhile(() => client.Connected)
                                                                    .TakeWhile(msg => msg != null && !token.IsCancellationRequested)
@@ -171,7 +178,7 @@ namespace Evercoin.Network
 
             await Task.Run(() => this.messageObservables.OnNext(messageStream), token);
 
-            VersionMessageBuilder builder = new VersionMessageBuilder(this);
+            VersionMessageBuilder builder = new VersionMessageBuilder(this, this.hashAlgorithmStore);
 
             INetworkMessage mm = builder.BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 500, "/Evercoin:0.0.0/VS:0.0.0/", 1, pleaseRelayTransactionsToMe: false);
             await this.SendMessageToClientAsync(clientId, mm, token);
@@ -193,7 +200,7 @@ namespace Evercoin.Network
         public async Task AskForMoreBlocks()
         {
             await Task.Delay(500);
-            GetBlocksMessageBuilder b = new GetBlocksMessageBuilder(this);
+            GetBlocksMessageBuilder b = new GetBlocksMessageBuilder(this, this.hashAlgorithmStore);
             var message = b.BuildGetDataMessage(Guid.NewGuid(), FetchBlockLocator().ToList(), BigInteger.Zero);
             await this.BroadcastMessageAsync(message);
         }

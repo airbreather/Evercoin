@@ -11,7 +11,9 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly Network network;
 
-        public GetAddressesMessageBuilder(INetwork network)
+        private readonly IHashAlgorithmStore hashAlgorithmStore;
+
+        public GetAddressesMessageBuilder(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
         {
             if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(GetAddressesText))
             {
@@ -25,11 +27,12 @@ namespace Evercoin.Network.MessageHandlers
             }
 
             this.network = realNetwork;
+            this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
         public INetworkMessage BuildGetAddressesMessage(Guid clientId)
         {
-            Message message = new Message(this.network.Parameters, clientId);
+            Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, clientId);
             byte[] commandBytes = new byte[this.network.Parameters.CommandLengthInBytes];
             byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(GetAddressesText);
             Array.Copy(unpaddedCommandBytes, commandBytes, unpaddedCommandBytes.Length);

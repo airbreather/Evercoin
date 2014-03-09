@@ -13,9 +13,6 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly ImmutableList<byte> commandRecognized;
 
-        private readonly IReadOnlyChainStore readOnlyChainStore;
-        private readonly IChainStore chainStore;
-
         protected MessageHandlerBase(IEnumerable<byte> commandRecognized, INetwork network)
         {
             int commandLengthInBytes = network.Parameters.CommandLengthInBytes;
@@ -29,25 +26,9 @@ namespace Evercoin.Network.MessageHandlers
             this.network = network;
         }
 
-        protected MessageHandlerBase(IEnumerable<byte> commandRecognized, INetwork network, IReadOnlyChainStore chainStore)
-            : this(commandRecognized, network)
-        {
-            this.readOnlyChainStore = chainStore;
-        }
-
-        protected MessageHandlerBase(IEnumerable<byte> commandRecognized, INetwork network, IChainStore chainStore)
-            : this(commandRecognized, network, (IReadOnlyChainStore)chainStore)
-        {
-            this.chainStore = chainStore;
-        }
-
         INetworkParameters INetworkMessageHandler.Parameters { get { return this.network.Parameters; } }
 
         protected INetwork Network { get { return this.network; } }
-
-        protected IChainStore ChainStore { get { return this.chainStore; } }
-
-        protected IReadOnlyChainStore ReadOnlyChainStore { get { return this.readOnlyChainStore; } }
 
         /// <summary>
         /// Indicates whether or not this handler recognizes a given
@@ -62,7 +43,7 @@ namespace Evercoin.Network.MessageHandlers
         /// </returns>
         public bool RecognizesMessage(INetworkMessage message)
         {
-            return this.network.Parameters.IsCompatibleWith(message.NetworkParameters) &&
+            return this.network.Parameters.Equals(message.NetworkParameters) &&
                    this.commandRecognized.SequenceEqual(message.CommandBytes);
         }
 

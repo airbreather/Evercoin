@@ -1,4 +1,6 @@
-﻿namespace Evercoin.TransactionScript
+﻿using System;
+
+namespace Evercoin.TransactionScript
 {
     /// <summary>
     /// Enumerates the values used as operations in transaction scripts.
@@ -635,33 +637,33 @@
 
         /// <summary>
         /// Pops an item off the top of the stack, and pushes
-        /// ripemd160(item) onto the stack.
+        /// hash1(item) onto the stack.
         /// </summary>
-        OP_RIPEMD160 = 0xa6,
+        OP_HASHALGORITHM1 = 0xa6,
 
         /// <summary>
         /// Pops an item off the top of the stack, and pushes
-        /// sha1(item) onto the stack.
+        /// hash2(item) onto the stack.
         /// </summary>
-        OP_SHA1 = 0xa7,
+        OP_HASHALGORITHM2 = 0xa7,
 
         /// <summary>
         /// Pops an item off the top of the stack, and pushes
-        /// sha256(item) onto the stack.
+        /// hash3(item) onto the stack.
         /// </summary>
-        OP_SHA256 = 0xa8,
+        OP_HASHALGORITHM3 = 0xa8,
 
         /// <summary>
         /// Pops an item off the top of the stack, and pushes
-        /// ripemd160(sha256(item)) onto the stack.
+        /// hash4(item) onto the stack.
         /// </summary>
-        OP_HASH160 = 0xa9,
+        OP_HASHALGORITHM4 = 0xa9,
 
         /// <summary>
         /// Pops an item off the top of the stack, and pushes
-        /// sha256(sha256(item)) onto the stack.
+        /// hash5(item) onto the stack.
         /// </summary>
-        OP_HASH256 = 0xaa,
+        OP_HASHALGORITHM5 = 0xaa,
 
         /// <summary>
         /// Does nothing.
@@ -758,6 +760,42 @@
         /// <summary>
         /// Marks the end (inclusive) of a range of opcodes that are unused.
         /// </summary>
-        END_UNUSED = 0xff
+        END_UNUSED = 0xff,
+        
+        /// <summary>
+        /// OP_RIPEMD160 is the canonical name of OP_HASHALGORITHM1,
+        /// because that's what Bitcoin uses.
+        /// </summary>
+        [Obsolete("Use OP_HASHALGORITHM1 instead.")]
+        OP_RIPEMD160 = OP_HASHALGORITHM1,
+
+        /// <summary>
+        /// OP_SHA1 is the canonical name of OP_HASHALGORITHM2,
+        /// because that's what Bitcoin uses.
+        /// </summary>
+        [Obsolete("Use OP_HASHALGORITHM2 instead.")]
+        OP_SHA1 = OP_HASHALGORITHM2,
+
+        /// <summary>
+        /// OP_SHA256 is the canonical name of OP_HASHALGORITHM3,
+        /// because that's what Bitcoin uses.
+        /// </summary>
+        [Obsolete("Use OP_HASHALGORITHM3 instead.")]
+        OP_SHA256 = OP_HASHALGORITHM3,
+
+        /// <summary>
+        /// OP_HASH160 is the canonical name of OP_HASHALGORITHM4,
+        /// because that's what Bitcoin uses.
+        /// </summary>
+        [Obsolete("Use OP_HASHALGORITHM4 instead.")]
+        OP_HASH160 = OP_HASHALGORITHM4,
+
+        /// <summary>
+        /// OP_HASH256 is the canonical name of OP_HASHALGORITHM5,
+        /// because that's what Bitcoin uses.
+        /// </summary>
+        [Obsolete("Use OP_HASHALGORITHM5 instead.")]
+        OP_HASH256 = OP_HASHALGORITHM5,
+
     }
 }

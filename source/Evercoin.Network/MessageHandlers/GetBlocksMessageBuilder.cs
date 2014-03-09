@@ -6,7 +6,6 @@ using System.Numerics;
 using System.Text;
 
 using Evercoin.ProtocolObjects;
-using Evercoin.Util;
 
 namespace Evercoin.Network.MessageHandlers
 {
@@ -17,7 +16,9 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly Network network;
 
-        public GetBlocksMessageBuilder(INetwork network)
+        private readonly IHashAlgorithmStore hashAlgorithmStore;
+
+        public GetBlocksMessageBuilder(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
         {
             if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(GetBlocksText))
             {
@@ -31,13 +32,14 @@ namespace Evercoin.Network.MessageHandlers
             }
 
             this.network = realNetwork;
+            this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
         public INetworkMessage BuildGetDataMessage(Guid clientId,
                                                    IEnumerable<BigInteger> knownHashes,
                                                    BigInteger lastKnownHash)
         {
-            Message message = new Message(this.network.Parameters, clientId);
+            Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, clientId);
 
             byte[] commandBytes = new byte[this.network.Parameters.CommandLengthInBytes];
             byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(GetBlocksText);

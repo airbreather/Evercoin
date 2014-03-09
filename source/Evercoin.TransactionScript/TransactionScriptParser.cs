@@ -4,8 +4,6 @@ using System.Collections.Immutable;
 using System.ComponentModel.Composition;
 using System.Linq;
 
-using Evercoin.Util;
-
 namespace Evercoin.TransactionScript
 {
     [Export(typeof(ITransactionScriptParser))]

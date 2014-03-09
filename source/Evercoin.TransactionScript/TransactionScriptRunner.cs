@@ -6,7 +6,6 @@ using System.Linq;
 using System.Numerics;
 
 using Evercoin.BaseImplementations;
-using Evercoin.Util;
 
 namespace Evercoin.TransactionScript
 {
@@ -95,11 +94,11 @@ namespace Evercoin.TransactionScript
                                                                                                           { ScriptOpcode.OP_MIN, 2 },
                                                                                                           { ScriptOpcode.OP_MAX, 2 },
                                                                                                           { ScriptOpcode.OP_WITHIN, 3 },
-                                                                                                          { ScriptOpcode.OP_RIPEMD160, 1 },
-                                                                                                          { ScriptOpcode.OP_SHA1, 1 },
-                                                                                                          { ScriptOpcode.OP_SHA256, 1 },
-                                                                                                          { ScriptOpcode.OP_HASH160, 1 },
-                                                                                                          { ScriptOpcode.OP_HASH256, 1 },
+                                                                                                          { ScriptOpcode.OP_HASHALGORITHM1, 1 },
+                                                                                                          { ScriptOpcode.OP_HASHALGORITHM2, 1 },
+                                                                                                          { ScriptOpcode.OP_HASHALGORITHM3, 1 },
+                                                                                                          { ScriptOpcode.OP_HASHALGORITHM4, 1 },
+                                                                                                          { ScriptOpcode.OP_HASHALGORITHM5, 1 },
                                                                                                           { ScriptOpcode.OP_CHECKSIG, 2 },
                                                                                                           { ScriptOpcode.OP_CHECKSIGVERIFY, 2 },
                                                                                                           { ScriptOpcode.OP_CHECKMULTISIG, 1 },
@@ -705,29 +704,29 @@ namespace Evercoin.TransactionScript
 
                 #region Crypto
 
-                case ScriptOpcode.OP_RIPEMD160:
-                case ScriptOpcode.OP_SHA1:
-                case ScriptOpcode.OP_SHA256:
-                case ScriptOpcode.OP_HASH160:
-                case ScriptOpcode.OP_HASH256:
+                case ScriptOpcode.OP_HASHALGORITHM1:
+                case ScriptOpcode.OP_HASHALGORITHM2:
+                case ScriptOpcode.OP_HASHALGORITHM3:
+                case ScriptOpcode.OP_HASHALGORITHM4:
+                case ScriptOpcode.OP_HASHALGORITHM5:
                 {
 
                     Guid hashAlgorithmIdentifier = Guid.Empty;
                     switch (opcode)
                     {
-                        case ScriptOpcode.OP_RIPEMD160:
+                        case ScriptOpcode.OP_HASHALGORITHM1:
                             hashAlgorithmIdentifier = HashAlgorithmIdentifiers.RipeMd160;
                             break;
-                        case ScriptOpcode.OP_SHA1:
+                        case ScriptOpcode.OP_HASHALGORITHM2:
                             hashAlgorithmIdentifier = HashAlgorithmIdentifiers.SHA1;
                             break;
-                        case ScriptOpcode.OP_SHA256:
+                        case ScriptOpcode.OP_HASHALGORITHM3:
                             hashAlgorithmIdentifier = HashAlgorithmIdentifiers.SHA256;
                             break;
-                        case ScriptOpcode.OP_HASH160:
+                        case ScriptOpcode.OP_HASHALGORITHM4:
                             hashAlgorithmIdentifier = HashAlgorithmIdentifiers.SHA256ThenRipeMd160;
                             break;
-                        case ScriptOpcode.OP_HASH256:
+                        case ScriptOpcode.OP_HASHALGORITHM5:
                             hashAlgorithmIdentifier = HashAlgorithmIdentifiers.DoubleSHA256;
                             break;
                     }

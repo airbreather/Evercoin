@@ -1,16 +1,17 @@
-﻿using System.Collections.Generic;
+﻿using System;
 using System.Collections.Immutable;
 using System.ComponentModel.Composition;
+using System.Linq;
 using System.Net;
 
-using Evercoin.Algorithms;
+using Evercoin.Util;
 
 namespace Evercoin.App
 {
     [Export(typeof(INetworkParameters))]
     internal sealed class SomeNetworkParams : INetworkParameters
     {
-        private readonly HashSet<DnsEndPoint> seeds = new HashSet<DnsEndPoint>();
+        private readonly ImmutableHashSet<DnsEndPoint> seeds = ImmutableHashSet<DnsEndPoint>.Empty;
 
         /// <summary>
         /// Gets the version of the protocol being used here.
@@ -30,12 +31,12 @@ namespace Evercoin.App
         /// Gets the <see cref="IHashAlgorithm"/> used to verify that the
         /// payload content was received successfully.
         /// </summary>
-        public IHashAlgorithm PayloadChecksumAlgorithm { get { return new BuiltinHashAlgorithmStore().GetHashAlgorithm(HashAlgorithmIdentifiers.DoubleSHA256); } }
+        public Guid PayloadChecksumAlgorithmIdentifier { get { return HashAlgorithmIdentifiers.DoubleSHA256; } }
 
         /// <summary>
         /// Gets the number of bytes from the head of
-        /// <see cref="INetworkParameters.PayloadChecksumAlgorithm"/>'s result to add to the
-        /// message header.
+        /// <see cref="PayloadChecksumAlgorithmIdentifier"/>'s result to add to
+        /// the message header.
         /// </summary>
         /// <remarks>
         /// Looks like this is going to be 4 for everything that exists today.
@@ -79,22 +80,61 @@ namespace Evercoin.App
         /// It is expected that the network's protocol provides messages
         /// that allow a node to request which other 
         /// </remarks>
-        public ISet<DnsEndPoint> Seeds { get { return this.seeds; } }
+        public ImmutableHashSet<DnsEndPoint> Seeds { get { return this.seeds; } }
 
         /// <summary>
-        /// Determines whether or not a handler for our parameters can handle
-        /// messages for another <see cref="INetworkParameters"/> object.
+        /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
-        /// <param name="other">
-        /// The other <see cref="INetworkParameters"/>.
-        /// </param>
         /// <returns>
-        /// A value indicating whether this is compatible
-        /// with <paramref name="other"/>.
+        /// true if the current object is equal to the <paramref name="other"/> parameter; otherwise, false.
         /// </returns>
-        public bool IsCompatibleWith(INetworkParameters other)
+        /// <param name="other">An object to compare with this object.</param>
+        public bool Equals(INetworkParameters other)
         {
-            return true;
+            if (ReferenceEquals(this, other))
+            {
+                return true;
+            }
+
+            return other != null &&
+                   this.ProtocolVersion == other.ProtocolVersion &&
+                   this.ProtocolVersionBeforeNegotiation == other.ProtocolVersionBeforeNegotiation &&
+                   this.PayloadChecksumAlgorithmIdentifier == other.PayloadChecksumAlgorithmIdentifier &&
+                   this.PayloadChecksumLengthInBytes == other.PayloadChecksumLengthInBytes &&
+                   this.CommandLengthInBytes == other.CommandLengthInBytes &&
+                   this.MessagePrefixLengthInBytes == other.MessagePrefixLengthInBytes &&
+                   this.StaticMessagePrefixData.SequenceEqual(other.StaticMessagePrefixData) &&
+                   this.Seeds.SetEquals(other.Seeds);
+        }
+
+        /// <summary>
+        /// Determines whether the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>.
+        /// </summary>
+        /// <returns>
+        /// true if the specified object  is equal to the current object; otherwise, false.
+        /// </returns>
+        /// <param name="obj">The object to compare with the current object. </param>
+        public override bool Equals(object obj)
+        {
+            return this.Equals(obj as INetworkParameters);
+        }
+
+        /// <summary>
+        /// Serves as a hash function for a particular type. 
+        /// </summary>
+        /// <returns>
+        /// A hash code for the current <see cref="T:System.Object"/>.
+        /// </returns>
+        public override int GetHashCode()
+        {
+            HashCodeBuilder builder = new HashCodeBuilder()
+                .HashWith(this.ProtocolVersion)
+                .HashWith(this.ProtocolVersionBeforeNegotiation)
+                .HashWith(this.PayloadChecksumAlgorithmIdentifier)
+                .HashWith(this.PayloadChecksumLengthInBytes)
+                .HashWith(this.CommandLengthInBytes);
+            builder = this.StaticMessagePrefixData.Aggregate(builder, (prevBuilder, nextByte) => prevBuilder.HashWith(nextByte));
+            return this.Seeds.Aggregate(builder, (prevBuilder, nextSeed) => prevBuilder.HashWith(nextSeed));
         }
     }
 }

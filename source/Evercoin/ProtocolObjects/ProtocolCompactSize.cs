@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Immutable;
 
-using Evercoin.Util;
-
 namespace Evercoin.ProtocolObjects
 {
     public sealed class ProtocolCompactSize

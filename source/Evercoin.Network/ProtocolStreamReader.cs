@@ -18,13 +18,16 @@ namespace Evercoin.Network
     {
         private readonly CancellationTokenSource cts = new CancellationTokenSource();
 
+        private readonly IHashAlgorithmStore hashAlgorithmStore;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ProtocolStreamReader"/> class based on the specified stream and using UTF-8 encoding.
         /// </summary>
         /// <param name="input">The input stream. </param><exception cref="T:System.ArgumentException">The stream does not support reading, is null, or is already closed. </exception>
-        public ProtocolStreamReader(Stream input, bool leaveOpen)
+        public ProtocolStreamReader(Stream input, bool leaveOpen, IHashAlgorithmStore hashAlgorithmStore)
             : base(input, Encoding.UTF8, leaveOpen)
         {
+            this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
         public int ProtocolVersion { get; set; }
@@ -184,7 +187,7 @@ namespace Evercoin.Network
             uint payloadLengthInBytes = BitConverter.ToUInt32(payloadSize.ToArray().LittleEndianToOrFromBitConverterEndianness(), 0);
             ImmutableList<byte> payload = await this.ReadBytesAsync(payloadLengthInBytes, token);
 
-            IHashAlgorithm checksumAlgorithm = networkParameters.PayloadChecksumAlgorithm;
+            IHashAlgorithm checksumAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(networkParameters.PayloadChecksumAlgorithmIdentifier);
             ImmutableList<byte> actualChecksum = await Task.Run(() => checksumAlgorithm.CalculateHash(payload), token);
             if (!payloadChecksum.SequenceEqual(actualChecksum.GetRange(0, payloadChecksumLengthInBytes)))
             {
@@ -196,7 +199,7 @@ namespace Evercoin.Network
                 throw new InvalidOperationException(exceptionMessage);
             }
 
-            Message message = new Message(networkParameters, clientId);
+            Message message = new Message(networkParameters, this.hashAlgorithmStore, clientId);
             message.CreateFrom(commandBytes, payload);
             return message;
         }

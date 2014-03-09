@@ -20,14 +20,16 @@ namespace Evercoin.Network.MessageHandlers
     {
         private readonly IHashAlgorithmStore hashAlgorithmStore;
         private readonly ISignatureCheckerFactory signatureCheckerFactory;
+        private readonly IChainStore chainStore;
 
         private readonly ITransactionScriptRunner scriptRunner;
         private static readonly byte[] RecognizedCommand = Encoding.ASCII.GetBytes("block");
 
         [ImportingConstructor]
         public BlockMessageHandler(INetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore, ITransactionScriptRunner scriptRunner, ISignatureCheckerFactory signatureCheckerFactory)
-            : base(RecognizedCommand, network, chainStore)
+            : base(RecognizedCommand, network)
         {
+            this.chainStore = chainStore;
             this.hashAlgorithmStore = hashAlgorithmStore;
             this.signatureCheckerFactory = signatureCheckerFactory;
             this.scriptRunner = scriptRunner;
@@ -46,11 +48,11 @@ namespace Evercoin.Network.MessageHandlers
             HashSet<BigInteger> neededTransactions = new HashSet<BigInteger>();
 
             using (MemoryStream payloadStream = new MemoryStream(message.Payload.ToArray()))
-            using (ProtocolStreamReader streamReader = new ProtocolStreamReader(payloadStream, leaveOpen: true))
+            using (ProtocolStreamReader streamReader = new ProtocolStreamReader(payloadStream, true, this.hashAlgorithmStore))
             {
                 version = await streamReader.ReadUInt32Async(token);
                 prevBlockId = await streamReader.ReadUInt256Async(token);
-                prevBlockGetter = this.ReadOnlyChainStore.GetBlockAsync(prevBlockId, token);
+                prevBlockGetter = this.chainStore.GetBlockAsync(prevBlockId, token);
                 merkleRoot = await streamReader.ReadUInt256Async(token);
                 timestamp = await streamReader.ReadUInt32Async(token);
                 bits = await streamReader.ReadUInt32Async(token);
@@ -85,7 +87,7 @@ namespace Evercoin.Network.MessageHandlers
                 }
             }
 
-            Dictionary<BigInteger, Task<ITransaction>> neededTransactionFetchers = neededTransactions.ToDictionary(x => x, x => this.ReadOnlyChainStore.GetTransactionAsync(x, token));
+            Dictionary<BigInteger, Task<ITransaction>> neededTransactionFetchers = neededTransactions.ToDictionary(x => x, x => this.chainStore.GetTransactionAsync(x, token));
 
             ImmutableList<byte> dataToHash = ImmutableList.CreateRange(BitConverter.GetBytes(version).LittleEndianToOrFromBitConverterEndianness())
                 .AddRange(prevBlockId.ToLittleEndianUInt256Array())
@@ -263,13 +265,13 @@ namespace Evercoin.Network.MessageHandlers
                     return HandledNetworkMessageResult.ContextuallyInvalid;
                 }
 
-                await this.ChainStore.PutTransactionAsync(newTransaction, token);
+                await this.chainStore.PutTransactionAsync(newTransaction, token);
             }
 
             IBlock prevBlock = await prevBlockGetter;
             newBlock.Height = prevBlock.Height + 1;
             Cheating.Add((int)newBlock.Height, blockIdentifier);
-            await this.ChainStore.PutBlockAsync(newBlock, token);
+            await this.chainStore.PutBlockAsync(newBlock, token);
 
             return HandledNetworkMessageResult.Okay;
         }

@@ -4,7 +4,6 @@ using System.Collections.Immutable;
 using System.Linq;
 
 using Evercoin.ProtocolObjects;
-using Evercoin.Util;
 
 using Secp256k1;
 

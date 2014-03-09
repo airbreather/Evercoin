@@ -2,8 +2,6 @@
 using System.Collections.Immutable;
 using System.Numerics;
 
-using Evercoin.Util;
-
 namespace Evercoin.ProtocolObjects
 {
     public sealed class ProtocolInventoryVector
