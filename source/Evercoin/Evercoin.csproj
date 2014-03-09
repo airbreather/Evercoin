@@ -103,6 +103,7 @@
     <Compile Include="ProtocolObjects\ProtocolInventoryVector.cs" />
     <Compile Include="ProtocolObjects\ProtocolNetworkAddress.cs" />
     <Compile Include="ProtocolObjects\ProtocolString.cs" />
+    <Compile Include="ProtocolObjects\ProtocolBlock.cs" />
     <Compile Include="ProtocolObjects\ProtocolTransaction.cs" />
     <Compile Include="ProtocolObjects\ProtocolTxIn.cs" />
     <Compile Include="ProtocolObjects\ProtocolTxOut.cs" />
@@ -115,7 +116,7 @@
     <Compile Include="ITransactionScriptRunner.cs" />
     <Compile Include="ITransactionValueSource.cs" />
     <Compile Include="IValueSource.cs" />
-    <Compile Include="INetwork.cs" />
+    <Compile Include="IRawNetwork.cs" />
     <Compile Include="INetworkParameters.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SecurityMechanism.cs" />

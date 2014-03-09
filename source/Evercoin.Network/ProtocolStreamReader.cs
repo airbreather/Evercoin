@@ -104,6 +104,14 @@ namespace Evercoin.Network
             }
         }
 
+        public async Task<ProtocolBlock> ReadBlockAsync(CancellationToken token)
+        {
+            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
+            {
+                return await this.ReadBlockAsyncCore(linkedCancellationTokenSource.Token);
+            }
+        }
+
         private async Task<byte> ReadByteAsync(CancellationToken token)
         {
             byte[] bytes = await this.ReadBytesAsyncWithIntParam(1, token);
@@ -295,6 +303,28 @@ namespace Evercoin.Network
             byte[] scriptPubKey = await this.ReadBytesAsync(scriptPubKeyLength, token);
 
             return new ProtocolTxOut(valueInSatoshis, scriptPubKey);
+        }
+
+        private async Task<ProtocolBlock> ReadBlockAsyncCore(CancellationToken token)
+        {
+            uint version = await this.ReadUInt32AsyncCore(token);
+            BigInteger prevBlockId = await this.ReadUInt256AsyncCore(token);
+            BigInteger merkleRoot = await this.ReadUInt256AsyncCore(token);
+            uint timestamp = await this.ReadUInt32AsyncCore(token);
+            uint bits = await this.ReadUInt32AsyncCore(token);
+            uint nonce = await this.ReadUInt32AsyncCore(token);
+
+            ulong transactionCount = await this.ReadCompactSizeAsyncCore(token);
+            ProtocolTransaction[] includedTransactions = new ProtocolTransaction[transactionCount];
+
+            int transactionIndex = 0;
+            while (transactionCount-- > 0)
+            {
+                ProtocolTransaction nextTransaction = await this.ReadTransactionAsyncCore(token);
+                includedTransactions[transactionIndex++] = nextTransaction;
+            }
+
+            return new ProtocolBlock(version, prevBlockId, merkleRoot, timestamp, bits, nonce, includedTransactions);
         }
 
         private async Task<ProtocolTransaction> ReadTransactionAsyncCore(CancellationToken token)

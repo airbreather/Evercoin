@@ -1,15 +1,10 @@
 ﻿using System;
 using System.IO;
-using System.Linq;
-using System.Reactive;
-using System.Reactive.Linq;
-using System.Reactive.Threading.Tasks;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Evercoin.ProtocolObjects;
-using Evercoin.Util;
 
 namespace Evercoin.Network.MessageHandlers
 {
@@ -23,7 +18,7 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
-        public InventoryMessageHandler(INetwork network, IReadOnlyChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore)
+        public InventoryMessageHandler(IRawNetwork network, IReadOnlyChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore)
             : base(RecognizedCommand, network)
         {
             this.messageBuilder = new GetDataMessageBuilder(network, hashAlgorithmStore);
@@ -77,7 +72,7 @@ namespace Evercoin.Network.MessageHandlers
 
             // Respond to an "inv" with a "getdata".
             INetworkMessage response = this.messageBuilder.BuildGetDataMessage(clientId, dataNeeded);
-            await this.Network.SendMessageToClientAsync(clientId, response, token);
+            await this.RawNetwork.SendMessageToClientAsync(clientId, response, token);
 
             return HandledNetworkMessageResult.Okay;
         }

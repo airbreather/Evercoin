@@ -15,18 +15,18 @@ namespace Evercoin.Network.MessageHandlers
         private const string VersionText = "version";
         private static readonly Encoding CommandEncoding = Encoding.ASCII;
 
-        private readonly Network network;
+        private readonly RawNetwork network;
 
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
-        public VersionMessageBuilder(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
+        public VersionMessageBuilder(IRawNetwork network, IHashAlgorithmStore hashAlgorithmStore)
         {
             if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(VersionText))
             {
                 throw new ArgumentException("Command length is too short for the \"version\" command.", "network");
             }
 
-            Network realNetwork = network as Network;
+            RawNetwork realNetwork = network as RawNetwork;
             if (realNetwork == null)
             {
                 throw new NotSupportedException("Other things not supported yet because lol");

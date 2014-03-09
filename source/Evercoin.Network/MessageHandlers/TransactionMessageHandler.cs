@@ -12,7 +12,7 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly IChainStore chainStore;
 
-        public TransactionMessageHandler(INetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore)
+        public TransactionMessageHandler(IRawNetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore)
             : base(RecognizedCommand, network)
         {
             this.builder = new GetDataMessageBuilder(network, hashAlgorithmStore);

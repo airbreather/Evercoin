@@ -11,7 +11,7 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly VerAckMessageBuilder verAckMessageBuilder;
 
-        public VersionMessageHandler(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
+        public VersionMessageHandler(IRawNetwork network, IHashAlgorithmStore hashAlgorithmStore)
             : base(RecognizedCommand, network)
         {
             this.verAckMessageBuilder = new VerAckMessageBuilder(network, hashAlgorithmStore);
@@ -23,7 +23,7 @@ namespace Evercoin.Network.MessageHandlers
 
             // Respond to a "version" with a "verack".
             INetworkMessage verAckMessage = this.verAckMessageBuilder.BuildVerAckMessage(clientId);
-            await this.Network.SendMessageToClientAsync(clientId, verAckMessage, token);
+            await this.RawNetwork.SendMessageToClientAsync(clientId, verAckMessage, token);
             return HandledNetworkMessageResult.Okay;
         }
     }

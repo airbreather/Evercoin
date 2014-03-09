@@ -5,16 +5,10 @@ namespace Evercoin
 {
     /// <summary>
     /// A handler for <see cref="INetworkMessage"/> objects received
-    /// over an <see cref="INetwork"/>.
+    /// over an <see cref="IRawNetwork"/>.
     /// </summary>
     public interface INetworkMessageHandler
     {
-        /// <summary>
-        /// Gets the <see cref="INetworkParameters"/> that encapsulate the
-        /// parameters of the network this knows how to handle messages for.
-        /// </summary>
-        INetworkParameters Parameters { get; }
-
         /// <summary>
         /// Indicates whether or not this handler recognizes a given
         /// <see cref="INetworkMessage"/> as something it can handle.

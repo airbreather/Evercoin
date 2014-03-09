@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -11,7 +10,6 @@ using System.Threading.Tasks;
 using Evercoin.BaseImplementations;
 using Evercoin.Storage.Model;
 using Evercoin.Util;
-
 
 namespace Evercoin.Storage
 {

@@ -17,14 +17,14 @@ using NodaTime;
 
 namespace Evercoin.Network
 {
-    public sealed class Network : INetwork
+    public sealed class RawNetwork : IRawNetwork
     {
         private readonly INetworkParameters networkParameters;
         private readonly IHashAlgorithmStore hashAlgorithmStore;
         private readonly ConcurrentDictionary<Guid, TcpClient> clientLookup = new ConcurrentDictionary<Guid, TcpClient>();
         private readonly Subject<IObservable<INetworkMessage>> messageObservables = new Subject<IObservable<INetworkMessage>>();
 
-        public Network(INetworkParameters networkParameters, IHashAlgorithmStore hashAlgorithmStore)
+        public RawNetwork(INetworkParameters networkParameters, IHashAlgorithmStore hashAlgorithmStore)
         {
             if (networkParameters == null)
             {

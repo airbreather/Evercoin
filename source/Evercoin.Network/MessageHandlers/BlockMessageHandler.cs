@@ -23,7 +23,7 @@ namespace Evercoin.Network.MessageHandlers
         private readonly ITransactionScriptRunner scriptRunner;
         private static readonly byte[] RecognizedCommand = Encoding.ASCII.GetBytes("block");
 
-        public BlockMessageHandler(INetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore, ITransactionScriptRunner scriptRunner, ISignatureCheckerFactory signatureCheckerFactory)
+        public BlockMessageHandler(IRawNetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore, ITransactionScriptRunner scriptRunner, ISignatureCheckerFactory signatureCheckerFactory)
             : base(RecognizedCommand, network)
         {
             this.chainStore = chainStore;
@@ -34,70 +34,39 @@ namespace Evercoin.Network.MessageHandlers
 
         protected override async Task<HandledNetworkMessageResult> HandleMessageAsyncCore(INetworkMessage message, CancellationToken token)
         {
-            uint version;
-            BigInteger prevBlockId;
-            Task<IBlock> prevBlockGetter;
-            BigInteger merkleRoot;
-            uint timestamp;
-            uint bits;
-            uint nonce;
-            List<ProtocolTransaction> includedTransactions = new List<ProtocolTransaction>();
-            HashSet<BigInteger> neededTransactions = new HashSet<BigInteger>();
-
+            ProtocolBlock block;
             using (MemoryStream payloadStream = new MemoryStream(message.Payload))
             using (ProtocolStreamReader streamReader = new ProtocolStreamReader(payloadStream, true, this.hashAlgorithmStore))
             {
-                version = await streamReader.ReadUInt32Async(token);
-                prevBlockId = await streamReader.ReadUInt256Async(token);
-                prevBlockGetter = this.chainStore.GetBlockAsync(prevBlockId, token);
-                merkleRoot = await streamReader.ReadUInt256Async(token);
-                timestamp = await streamReader.ReadUInt32Async(token);
-                bits = await streamReader.ReadUInt32Async(token);
-                nonce = await streamReader.ReadUInt32Async(token);
+                block = await streamReader.ReadBlockAsync(token);
+            }
 
-                bool checkedCoinbase = false;
-                ulong transactionCount = await streamReader.ReadCompactSizeAsync(token);
-                while (transactionCount-- > 0)
+            Task<IBlock> prevBlockGetter = this.chainStore.GetBlockAsync(block.PrevBlockId, token);
+
+            // This is important to do now -- for some reason, the Satoshi client gives us recent blocks even when we're building from the genesis block!
+            // So, one thing we REALLY don't want to do is to fetch all the old transactions!
+            ProtocolTxIn cb = block.IncludedTransactions[0].Inputs[0];
+            if (block.Version > 1 && cb.ScriptSig[0] == 3)
+            {
+                byte[] serializedHeight = cb.ScriptSig.Skip(1).Take(3).GetArray();
+                Array.Resize(ref serializedHeight, 4);
+
+                uint probableHeight = BitConverter.ToUInt32(serializedHeight.LittleEndianToOrFromBitConverterEndianness(), 0);
+                if (probableHeight - Cheating.GetBlockIdentifierCount() > 1000)
                 {
-                    ProtocolTransaction nextTransaction = await streamReader.ReadTransactionAsync(token);
-                    if (!checkedCoinbase)
-                    {
-                        checkedCoinbase = true;
-
-                        // This is important to do now -- for some reason, the Satoshi client gives us recent blocks even when we're building from the genesis block!
-                        // So, one thing we REALLY don't want to do is to fetch all the old transactions!
-                        ProtocolTxIn cb = nextTransaction.Inputs[0];
-                        if (version > 1 && cb.ScriptSig[0] == 3)
-                        {
-                            byte[] serializedHeight = cb.ScriptSig.Skip(1).Take(3).GetArray();
-                            Array.Resize(ref serializedHeight, 4);
-
-                            uint probableHeight = BitConverter.ToUInt32(serializedHeight.LittleEndianToOrFromBitConverterEndianness(), 0);
-                            if (probableHeight - Cheating.GetBlockIdentifierCount() > 1000)
-                            {
-                                // So we've got a block message from a recent block.
-                                // Don't waste any more time on it than we have.
-                                return HandledNetworkMessageResult.ContextuallyInvalid;
-                            }
-                        }
-                    }
-
-                    includedTransactions.Add(nextTransaction);
-                    foreach (BigInteger prevTxId in nextTransaction.Inputs.Select(x => x.PrevOutTxId).Where(x => !x.IsZero))
-                    {
-                        neededTransactions.Add(prevTxId);
-                    }
+                    // So we've got a block message from a recent block.
+                    // Don't waste any more time on it than we have.
+                    return HandledNetworkMessageResult.ContextuallyInvalid;
                 }
             }
 
-            byte[] versionBytes = BitConverter.GetBytes(version).LittleEndianToOrFromBitConverterEndianness();
-            byte[] prevBlockIdBytes = prevBlockId.ToLittleEndianUInt256Array();
-            byte[] merkleRootBytes = merkleRoot.ToLittleEndianUInt256Array();
-            byte[] timestampBytes = BitConverter.GetBytes(timestamp).LittleEndianToOrFromBitConverterEndianness();
-            byte[] packedTargetBytes = BitConverter.GetBytes(bits).LittleEndianToOrFromBitConverterEndianness();
-            byte[] nonceBytes = BitConverter.GetBytes(nonce).LittleEndianToOrFromBitConverterEndianness();
+            HashSet<BigInteger> neededTransactionIdentifiers = new HashSet<BigInteger>();
+            foreach (BigInteger prevTxId in block.IncludedTransactions.SelectMany(x => x.Inputs).Select(x => x.PrevOutTxId).Where(x => !x.IsZero))
+            {
+                neededTransactionIdentifiers.Add(prevTxId);
+            }
 
-            byte[] dataToHash = ByteTwiddling.ConcatenateData(versionBytes, prevBlockIdBytes, merkleRootBytes, timestampBytes, packedTargetBytes, nonceBytes);
+            byte[] dataToHash = block.HeaderData;
 
             // TODO: This should definitely be done somewhere else, because the POW algorithm is chain-specific,
             // TODO: which is part of why I'm so hesitant to have the ID on IBlock.
@@ -105,33 +74,33 @@ namespace Evercoin.Network.MessageHandlers
             byte[] blockHash = hashAlgorithm.CalculateHash(dataToHash);
             BigInteger blockIdentifier = new BigInteger(blockHash);
 
-            Dictionary<BigInteger, Task<ITransaction>> neededTransactionFetchers = neededTransactions.ToDictionary(x => x, x => this.chainStore.GetTransactionAsync(x, token));
+            Dictionary<BigInteger, Task<ITransaction>> neededTransactionFetchers = neededTransactionIdentifiers.ToDictionary(x => x, x => this.chainStore.GetTransactionAsync(x, token));
 
-            BigInteger target = TargetFromBits(bits);
+            BigInteger target = TargetFromBits(block.Bits);
             if (blockIdentifier >= target)
             {
                 return HandledNetworkMessageResult.ContextuallyInvalid;
             }
 
-            foreach (ProtocolTransaction includedTransaction in includedTransactions)
+            foreach (ProtocolTransaction includedTransaction in block.IncludedTransactions)
             {
                 includedTransaction.CalculateTxId(hashAlgorithm);
             }
 
-            Dictionary<BigInteger, ProtocolTransaction> ownTransactions = includedTransactions.ToDictionary(x => x.TxId);
+            Dictionary<BigInteger, ProtocolTransaction> ownTransactions = block.IncludedTransactions.ToDictionary(x => x.TxId);
             Dictionary<BigInteger, ITransaction> foundTransactions = new Dictionary<BigInteger, ITransaction>(neededTransactionFetchers.Count);
 
             NetworkBlock newBlock = new NetworkBlock
                                     {
                                         DifficultyTarget = target,
                                         Identifier = blockIdentifier,
-                                        Nonce = nonce,
-                                        PreviousBlockIdentifier = prevBlockId,
-                                        Timestamp = Instant.FromSecondsSinceUnixEpoch(timestamp),
-                                        Version = version,
-                                        TransactionIdentifiers = includedTransactions.Select(x => x.TxId.ToLittleEndianUInt256Array()).ToMerkleTree(hashAlgorithm),
+                                        Nonce = block.Nonce,
+                                        PreviousBlockIdentifier = block.PrevBlockId,
+                                        Timestamp = Instant.FromSecondsSinceUnixEpoch(block.Timestamp),
+                                        Version = block.Version,
+                                        TransactionIdentifiers = block.IncludedTransactions.Select(x => x.TxId.ToLittleEndianUInt256Array()).ToMerkleTree(hashAlgorithm),
                                     };
-            if (!newBlock.TransactionIdentifiers.Data.SequenceEqual(merkleRoot.ToLittleEndianUInt256Array()))
+            if (!newBlock.TransactionIdentifiers.Data.SequenceEqual(block.MerkleRoot.ToLittleEndianUInt256Array()))
             {
                 return HandledNetworkMessageResult.ContextuallyInvalid;
             }
@@ -139,17 +108,17 @@ namespace Evercoin.Network.MessageHandlers
             ICoinbaseValueSource coinbase = new NetworkCoinbaseValueSource
                                             {
                                                 // For now, assume that the coinbase outputs are valid.
-                                                AvailableValue = includedTransactions[0].Outputs.Sum(x => x.ValueInSatoshis),
+                                                AvailableValue = block.IncludedTransactions[0].Outputs.Sum(x => x.ValueInSatoshis),
                                                 OriginatingBlockIdentifier = blockIdentifier
                                             };
             newBlock.Coinbase = coinbase;
-            foreach (ProtocolTransaction newProtoTransaction in includedTransactions)
+            foreach (ProtocolTransaction newProtoTransaction in block.IncludedTransactions)
             {
                 NetworkTransaction newTransaction = new NetworkTransaction
                                                     {
                                                         Identifier = newProtoTransaction.TxId,
                                                         ContainingBlockIdentifier = blockIdentifier,
-                                                        Version = version,
+                                                        Version = newProtoTransaction.Version,
                                                         Inputs = new IValueSpender[newProtoTransaction.Inputs.Length],
                                                         Outputs = new ITransactionValueSource[newProtoTransaction.Outputs.Length],
                                                         LockTime = newProtoTransaction.LockTime
@@ -199,7 +168,6 @@ namespace Evercoin.Network.MessageHandlers
 
                     newTransaction.Inputs[inputIndex++] = spender;
                 }
-
 
                 for (int outputIndex = 0; outputIndex < newProtoTransaction.Outputs.Length; outputIndex++)
                 {

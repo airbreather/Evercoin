@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
-using System.Reactive.Concurrency;
-using System.Reactive.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,11 +15,11 @@ namespace Evercoin.App
 {
     public sealed class NetworkRunner
     {
-        private readonly INetwork network;
+        private readonly IRawNetwork network;
 
         private readonly Collection<INetworkMessageHandler> messageHandlers = new Collection<INetworkMessageHandler>();
 
-        public NetworkRunner(INetwork network,
+        public NetworkRunner(IRawNetwork network,
                              BlockMessageHandler blockMessageHandler,
                              InventoryMessageHandler inventoryMessageHandler,
                              TransactionMessageHandler transactionMessageHandler,
@@ -73,6 +71,7 @@ namespace Evercoin.App
                         }
                         catch (OperationCanceledException)
                         {
+                            return;
                         }
                     }
 

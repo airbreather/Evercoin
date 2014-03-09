@@ -1,6 +1,4 @@
-﻿using System.Collections.Generic;
-
-namespace Evercoin
+﻿namespace Evercoin
 {
     /// <summary>
     /// Represents a hash tree.

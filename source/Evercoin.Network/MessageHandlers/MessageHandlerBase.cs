@@ -8,25 +8,23 @@ namespace Evercoin.Network.MessageHandlers
 {
     public abstract class MessageHandlerBase : INetworkMessageHandler
     {
-        private readonly INetwork network;
+        private readonly IRawNetwork rawNetwork;
 
         private readonly byte[] commandRecognized;
 
-        protected MessageHandlerBase(IEnumerable<byte> commandRecognized, INetwork network)
+        protected MessageHandlerBase(IEnumerable<byte> commandRecognized, IRawNetwork rawNetwork)
         {
-            int commandLengthInBytes = network.Parameters.CommandLengthInBytes;
+            int commandLengthInBytes = rawNetwork.Parameters.CommandLengthInBytes;
 
             this.commandRecognized = new byte[commandLengthInBytes];
             byte[] unpaddedArray = commandRecognized.GetArray();
 
             Array.Copy(unpaddedArray, this.commandRecognized, Math.Min(commandLengthInBytes, unpaddedArray.Length));
 
-            this.network = network;
+            this.rawNetwork = rawNetwork;
         }
 
-        INetworkParameters INetworkMessageHandler.Parameters { get { return this.network.Parameters; } }
-
-        protected INetwork Network { get { return this.network; } }
+        protected IRawNetwork RawNetwork { get { return this.rawNetwork; } }
 
         /// <summary>
         /// Indicates whether or not this handler recognizes a given
@@ -41,7 +39,7 @@ namespace Evercoin.Network.MessageHandlers
         /// </returns>
         public bool RecognizesMessage(INetworkMessage message)
         {
-            return this.network.Parameters.Equals(message.NetworkParameters) &&
+            return this.rawNetwork.Parameters.Equals(message.NetworkParameters) &&
                    this.commandRecognized.SequenceEqual(message.CommandBytes);
         }
 

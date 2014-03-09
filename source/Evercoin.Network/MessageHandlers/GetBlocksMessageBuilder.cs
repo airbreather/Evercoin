@@ -14,11 +14,11 @@ namespace Evercoin.Network.MessageHandlers
         private const string GetBlocksText = "getblocks";
         private static readonly Encoding CommandEncoding = Encoding.ASCII;
 
-        private readonly INetwork network;
+        private readonly IRawNetwork network;
 
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
-        public GetBlocksMessageBuilder(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
+        public GetBlocksMessageBuilder(IRawNetwork network, IHashAlgorithmStore hashAlgorithmStore)
         {
             if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(GetBlocksText))
             {

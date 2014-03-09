@@ -102,7 +102,9 @@ namespace Evercoin.Storage
 
         protected override void PutTransactionCore(ITransaction transaction)
         {
-            this.transactions.Add(transaction.Identifier, transaction);
+            // TODO: coinbases can have duplicate transaction IDs before version 2.
+            // TODO: Figure that shiz out!
+            this.transactions[transaction.Identifier] = transaction;
         }
     }
 }

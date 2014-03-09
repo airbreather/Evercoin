@@ -1,4 +1,5 @@
 ﻿using Evercoin.Algorithms;
+using Evercoin.Network;
 using Evercoin.TransactionScript;
 
 using Ninject.Modules;
@@ -24,7 +25,7 @@ namespace Evercoin.App
         {
             this.Bind<IReadOnlyChainStore>().ToConstant(this.underlyingChainStorage);
             this.Bind<IChainStore>().ToConstant(this.underlyingChainStorage);
-            this.Bind<INetwork>().To<Network.Network>().InSingletonScope();
+            this.Bind<IRawNetwork>().To<RawNetwork>().InSingletonScope();
             this.Bind<IHashAlgorithmStore>().ToConstant(this.hashAlgorithmStore);
             this.Bind<ITransactionScriptParser>().To<TransactionScriptParser>();
             this.Bind<ITransactionScriptRunner>().To<TransactionScriptRunner>();

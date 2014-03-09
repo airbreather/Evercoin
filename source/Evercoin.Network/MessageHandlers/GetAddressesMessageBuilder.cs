@@ -9,11 +9,11 @@ namespace Evercoin.Network.MessageHandlers
         private const string GetAddressesText = "getaddr";
         private static readonly Encoding CommandEncoding = Encoding.ASCII;
 
-        private readonly INetwork network;
+        private readonly IRawNetwork network;
 
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
-        public GetAddressesMessageBuilder(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
+        public GetAddressesMessageBuilder(IRawNetwork network, IHashAlgorithmStore hashAlgorithmStore)
         {
             if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(GetAddressesText))
             {

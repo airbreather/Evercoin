@@ -11,7 +11,7 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly GetAddressesMessageBuilder getAddressesMessageBuilder;
 
-        public VerAckMessageHandler(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
+        public VerAckMessageHandler(IRawNetwork network, IHashAlgorithmStore hashAlgorithmStore)
             : base(RecognizedCommand, network)
         {
             this.getAddressesMessageBuilder = new GetAddressesMessageBuilder(network, hashAlgorithmStore);
