@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
 using System.Text;
 
 using Evercoin.ProtocolObjects;
+using Evercoin.Util;
 
 namespace Evercoin.Network.MessageHandlers
 {
@@ -40,15 +40,17 @@ namespace Evercoin.Network.MessageHandlers
             Array.Copy(unpaddedCommandBytes, commandBytes, unpaddedCommandBytes.Length);
 
             uint protocolVersion = (uint)this.network.Parameters.ProtocolVersion;
-            ImmutableList<BigInteger> knownHashList = knownHashes.ToImmutableList();
-            ProtocolCompactSize knownHashCount = (ulong)knownHashList.Count;
+            BigInteger[] knownHashList = knownHashes.GetArray();
+            ProtocolCompactSize knownHashCount = (ulong)knownHashList.Length;
 
-            ImmutableList<byte> payload = ImmutableList.CreateRange(BitConverter.GetBytes(protocolVersion).LittleEndianToOrFromBitConverterEndianness())
-                                                       .AddRange(knownHashCount.Data);
-            payload = knownHashList.Aggregate(payload, (prevPayload, nextHash) => prevPayload.AddRange(nextHash.ToLittleEndianUInt256Array()));
+            byte[] protocolVersionBytes = BitConverter.GetBytes(protocolVersion).LittleEndianToOrFromBitConverterEndianness();
+            byte[] knownHashCountBytes = knownHashCount.Data;
+            IEnumerable<byte[]> knownHashByteSources = knownHashList.Select(x => x.ToLittleEndianUInt256Array());
+            byte[] lastKnownHashBytes = lastKnownHash.ToLittleEndianUInt256Array();
 
-            payload = payload.AddRange(lastKnownHash.ToLittleEndianUInt256Array());
+            byte[] knownHashBytes = ByteTwiddling.ConcatenateData(knownHashByteSources);
 
+            byte[] payload = ByteTwiddling.ConcatenateData(protocolVersionBytes, knownHashCountBytes, knownHashBytes, lastKnownHashBytes);
             message.CreateFrom(commandBytes, payload);
             return message;
         }

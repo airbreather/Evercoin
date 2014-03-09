@@ -1,5 +1,6 @@
-﻿using System.Collections.Immutable;
-using System.Text;
+﻿using System.Text;
+
+using Evercoin.Util;
 
 namespace Evercoin.ProtocolObjects
 {
@@ -15,15 +16,17 @@ namespace Evercoin.ProtocolObjects
             this.encoding = encoding;
         }
 
-        public ImmutableList<byte> Data
+        public byte[] Data
         {
             get
             {
                 byte[] data = this.encoding.GetBytes(this.value);
+
                 ulong length = (ulong)data.Length;
                 ProtocolCompactSize lengthVarInt = new ProtocolCompactSize(length);
-                return ImmutableList.CreateRange(lengthVarInt.Data)
-                                    .AddRange(data);
+                byte[] lengthBytes = lengthVarInt.Data;
+
+                return ByteTwiddling.ConcatenateData(lengthBytes, data);
             }
         }
     }

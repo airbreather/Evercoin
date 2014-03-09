@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Concurrent;
-using System.Collections.Immutable;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
@@ -28,7 +27,7 @@ namespace Evercoin.Storage
 
         public FileSystemChainStore()
         {
-            BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").AsEnumerable().Reverse().ToArray());
+            BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").AsEnumerable().Reverse().GetArray());
             if (!this.ContainsBlock(genesisBlockIdentifier))
             {
                 Block genesisBlock = new Block
@@ -39,7 +38,7 @@ namespace Evercoin.Storage
                         AvailableValue = 50,
                         OriginatingBlockIdentifier = genesisBlockIdentifier
                     },
-                    TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").AsEnumerable().Reverse().ToImmutableList() }
+                    TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").AsEnumerable().Reverse().GetArray() }
                 };
                 this.PutBlock(genesisBlock);
             }

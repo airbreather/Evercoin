@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 
 using Moq;
@@ -36,12 +35,11 @@ namespace Evercoin.TransactionScript
             byte[] dataArray = new byte[numberOfBytesToProvide];
 
             random.NextBytes(dataArray);
-            ImmutableList<byte> data = dataArray.ToImmutableList();
 
-            ImmutableList<TransactionScriptOperation> script = ImmutableList.Create
-            (
-                new TransactionScriptOperation((byte)opcode, data)
-            );
+            TransactionScriptOperation[] script =
+            {
+                new TransactionScriptOperation((byte)opcode, dataArray)
+            };
 
             byte[] scriptBytes = Guid.NewGuid().ToByteArray();
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
@@ -51,7 +49,7 @@ namespace Evercoin.TransactionScript
 
             Stack<StackItem> mainStack = result.MainStack;
             Assert.Equal(1, mainStack.Count);
-            Assert.Equal<byte>(data, (ImmutableList<byte>)mainStack.Pop());
+            Assert.Equal<byte>(dataArray, (byte[])mainStack.Pop());
         }
     }
 }

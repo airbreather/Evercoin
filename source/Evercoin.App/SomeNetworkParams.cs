@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
@@ -11,7 +11,7 @@ namespace Evercoin.App
     [Export(typeof(INetworkParameters))]
     internal sealed class SomeNetworkParams : INetworkParameters
     {
-        private readonly ImmutableHashSet<DnsEndPoint> seeds = ImmutableHashSet<DnsEndPoint>.Empty;
+        private readonly HashSet<DnsEndPoint> seeds = new HashSet<DnsEndPoint>();
 
         /// <summary>
         /// Gets the version of the protocol being used here.
@@ -70,7 +70,7 @@ namespace Evercoin.App
         /// This is usually a sequence of 4 bytes that are uncommon
         /// in typical data streams.
         /// </remarks>
-        public ImmutableList<byte> StaticMessagePrefixData { get { return ImmutableList.Create<byte>(0xF9, 0xBE, 0xB4, 0xD9); } }
+        public byte[] StaticMessagePrefixData { get { return new byte[] { 0xF9, 0xBE, 0xB4, 0xD9 }; } }
 
         /// <summary>
         /// A set of <see cref="DnsEndPoint"/> objects that may be used
@@ -80,7 +80,7 @@ namespace Evercoin.App
         /// It is expected that the network's protocol provides messages
         /// that allow a node to request which other 
         /// </remarks>
-        public ImmutableHashSet<DnsEndPoint> Seeds { get { return this.seeds; } }
+        public ISet<DnsEndPoint> Seeds { get { return this.seeds; } }
 
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.

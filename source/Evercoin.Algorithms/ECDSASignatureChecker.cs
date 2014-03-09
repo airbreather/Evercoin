@@ -1,9 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 
 using Evercoin.ProtocolObjects;
+using Evercoin.Util;
 
 using Secp256k1;
 
@@ -26,47 +26,47 @@ namespace Evercoin.Algorithms
 
         public bool CheckSignature(IEnumerable<byte> signature, IEnumerable<byte> publicKey, IEnumerable<TransactionScriptOperation> script)
         {
-            ImmutableList<byte> signatureBytes = signature.ToImmutableList();
-            byte hashType = signatureBytes[signatureBytes.Count - 1];
-            signatureBytes = signatureBytes.GetRange(0, signatureBytes.Count - 1);
+            byte[] signatureBytes = signature.GetArray();
+            byte hashType = signatureBytes.Last();
+            Array.Resize(ref signatureBytes, signatureBytes.Length - 1);
 
             byte[] hashTypeBytes = { hashType, 0, 0, 0 };
 
-            ImmutableList<ProtocolTxIn> inputs = ImmutableList.CreateRange(this.transaction.Inputs.Select((input, n) => new ProtocolTxIn(input.SpendingTransactionIdentifier, input.SpendingTransactionInputIndex, n == this.outputIndex ? script.Aggregate(ImmutableList<byte>.Empty, (prevData, nextOp) => prevData.AddRange(ScriptOpToBytes(nextOp))) : ImmutableList<byte>.Empty, input.SequenceNumber)));
-            ImmutableList<ProtocolTxOut> outputs = ImmutableList.CreateRange(this.transaction.Outputs.Select(x => new ProtocolTxOut((long)x.AvailableValue, x.ScriptPublicKey)));
+            ProtocolTxIn[] inputs = this.transaction.Inputs.Select((input, n) => new ProtocolTxIn(input.SpendingTransactionIdentifier, input.SpendingTransactionInputIndex, n == this.outputIndex ? ByteTwiddling.ConcatenateData(script.Select(ScriptOpToBytes)) : Enumerable.Empty<byte>(), input.SequenceNumber)).GetArray();
+            ProtocolTxOut[] outputs = this.transaction.Outputs.Select(x => new ProtocolTxOut((long)x.AvailableValue, x.ScriptPublicKey)).GetArray();
             ProtocolTransaction tx = new ProtocolTransaction(this.transaction.Version, inputs, outputs, this.transaction.LockTime);
 
-            var dataToHash = tx.Data.Concat(hashTypeBytes);
+            var dataToHash = ByteTwiddling.ConcatenateData(tx.Data, hashTypeBytes);
             var hashedData = this.hashAlgorithm.CalculateHash(dataToHash);
-            return Signatures.Verify(hashedData.ToArray(), signatureBytes.ToArray(), publicKey.ToArray()) == Signatures.VerifyResult.Verified;
+            return Signatures.Verify(hashedData, signatureBytes, publicKey.GetArray()) == Signatures.VerifyResult.Verified;
         }
 
-        private static ImmutableList<byte> ScriptOpToBytes(TransactionScriptOperation op)
+        private static byte[] ScriptOpToBytes(TransactionScriptOperation op)
         {
+            byte[] opcodeBytes = { op.Opcode };
+            byte[] sizeBytes = new byte[0];
             switch (op.Opcode)
             {
                 case (0x4c):
                 {
-                    return ImmutableList.Create(op.Opcode).Add((byte)op.Data.Count).AddRange(op.Data);
+                    sizeBytes = new[] { (byte)op.Data.Length };
+                    break;
                 }
 
                 case (0x4d):
                 {
-                    byte[] size = BitConverter.GetBytes((ushort)op.Data.Count).LittleEndianToOrFromBitConverterEndianness();
-                    return ImmutableList.Create(op.Opcode).AddRange(size).AddRange(op.Data);
+                    sizeBytes = BitConverter.GetBytes((ushort)op.Data.Length).LittleEndianToOrFromBitConverterEndianness();
+                    break;
                 }
 
                 case (0x4e):
                 {
-                    byte[] size = BitConverter.GetBytes((uint)op.Data.Count).LittleEndianToOrFromBitConverterEndianness();
-                    return ImmutableList.Create(op.Opcode).AddRange(size).AddRange(op.Data);
-                }
-
-                default:
-                {
-                    return ImmutableList.Create(op.Opcode).AddRange(op.Data);
+                    sizeBytes = BitConverter.GetBytes((uint)op.Data.Length).LittleEndianToOrFromBitConverterEndianness();
+                    break;
                 }
             }
+
+            return ByteTwiddling.ConcatenateData(opcodeBytes, sizeBytes, op.Data);
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Immutable;
+﻿using System.Collections.Generic;
 
 namespace Evercoin
 {
@@ -10,7 +10,7 @@ namespace Evercoin
         /// <summary>
         /// Gets the data stored in this node.
         /// </summary>
-        ImmutableList<byte> Data { get; }
+        byte[] Data { get; }
 
         /// <summary>
         /// Gets the left subtree.

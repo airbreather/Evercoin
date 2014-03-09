@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.Numerics;
 
 namespace Evercoin
@@ -34,7 +33,7 @@ namespace Evercoin
         /// <remarks>
         /// For the coinbase found in blocks, this is usually just a data push.
         /// </remarks>
-        ImmutableList<byte> ScriptSignature { get; }
+        byte[] ScriptSignature { get; }
 
         uint SequenceNumber { get; }
     }

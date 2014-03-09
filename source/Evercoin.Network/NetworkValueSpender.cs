@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Linq;
+﻿using System.Linq;
 using System.Numerics;
 
 namespace Evercoin.Network
@@ -53,7 +52,7 @@ namespace Evercoin.Network
         /// <remarks>
         /// For the coinbase found in blocks, this is usually just a data push.
         /// </remarks>
-        public ImmutableList<byte> ScriptSignature { get; set; }
+        public byte[] ScriptSignature { get; set; }
 
         public uint SequenceNumber { get; set; }
     }

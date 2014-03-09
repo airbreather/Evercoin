@@ -1,6 +1,7 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.Numerics;
+
+using Evercoin.Util;
 
 namespace Evercoin.ProtocolObjects
 {
@@ -16,12 +17,15 @@ namespace Evercoin.ProtocolObjects
 
         public BigInteger Hash { get; private set; }
 
-        public ImmutableList<byte> Data
+        public byte[] Data
         {
             get
             {
-                return ImmutableList.CreateRange(BitConverter.GetBytes((uint)this.Type).LittleEndianToOrFromBitConverterEndianness())
-                                    .AddRange(this.Hash.ToLittleEndianUInt256Array());
+                byte[] typeBytes = BitConverter.GetBytes((uint)this.Type)
+                                               .LittleEndianToOrFromBitConverterEndianness();
+                byte[] hashBytes = this.Hash.ToLittleEndianUInt256Array();
+
+                return ByteTwiddling.ConcatenateData(typeBytes, hashBytes);
             }
         }
 

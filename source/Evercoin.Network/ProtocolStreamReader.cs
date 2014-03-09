@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
@@ -106,7 +106,7 @@ namespace Evercoin.Network
 
         private async Task<byte> ReadByteAsync(CancellationToken token)
         {
-            ImmutableList<byte> bytes = await this.ReadBytesAsyncWithIntParam(1, token);
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(1, token);
             return bytes[0];
         }
 
@@ -153,9 +153,9 @@ namespace Evercoin.Network
 
             uint services = await this.ReadUInt32AsyncCore(token);
 
-            ImmutableList<byte> addressBytes = await this.ReadBytesAsyncWithIntParam(16, token);
-            var v6Address = new IPAddress(addressBytes.ToArray());
-            var v4Address = new IPAddress(addressBytes.GetRange(12, 4).ToArray());
+            byte[] addressBytes = await this.ReadBytesAsyncWithIntParam(16, token);
+            var v6Address = new IPAddress(addressBytes);
+            var v4Address = new IPAddress(addressBytes.GetRange(12, 4).GetArray());
 
             ushort port = await this.ReadUInt16Async(token, littleEndian: false);
             return new ProtocolNetworkAddress(time, services, v4Address, port);
@@ -163,9 +163,9 @@ namespace Evercoin.Network
 
         private async Task<INetworkMessage> ReadNetworkMessageAsyncCore(INetworkParameters networkParameters, Guid clientId, CancellationToken token)
         {
-            ImmutableList<byte> data = await this.ReadBytesAsyncWithIntParam(networkParameters.MessagePrefixLengthInBytes, token);
-            ImmutableList<byte> expectedStaticPrefix = networkParameters.StaticMessagePrefixData;
-            ImmutableList<byte> actualStaticPrefix = data.GetRange(0, expectedStaticPrefix.Count);
+            byte[] data = await this.ReadBytesAsyncWithIntParam(networkParameters.MessagePrefixLengthInBytes, token);
+            byte[] expectedStaticPrefix = networkParameters.StaticMessagePrefixData;
+            IReadOnlyList<byte> actualStaticPrefix = data.GetRange(0, expectedStaticPrefix.Length);
             if (!expectedStaticPrefix.SequenceEqual(actualStaticPrefix))
             {
                 string exceptionMessage = String.Format(CultureInfo.InvariantCulture,
@@ -176,19 +176,19 @@ namespace Evercoin.Network
                 throw new InvalidOperationException(exceptionMessage);
             }
 
-            ImmutableList<byte> commandBytes = data.GetRange(expectedStaticPrefix.Count, data.Count - expectedStaticPrefix.Count);
+            IReadOnlyList<byte> commandBytes = data.GetRange(expectedStaticPrefix.Length, data.Length - expectedStaticPrefix.Length);
 
             int payloadChecksumLengthInBytes = networkParameters.PayloadChecksumLengthInBytes;
             data = await this.ReadBytesAsyncWithIntParam(payloadChecksumLengthInBytes + 4, token);
 
-            ImmutableList<byte> payloadSize = data.GetRange(0, 4);
-            ImmutableList<byte> payloadChecksum = data.GetRange(4, payloadChecksumLengthInBytes);
+            IReadOnlyList<byte> payloadSize = data.GetRange(0, 4);
+            IReadOnlyList<byte> payloadChecksum = data.GetRange(4, payloadChecksumLengthInBytes);
 
-            uint payloadLengthInBytes = BitConverter.ToUInt32(payloadSize.ToArray().LittleEndianToOrFromBitConverterEndianness(), 0);
-            ImmutableList<byte> payload = await this.ReadBytesAsync(payloadLengthInBytes, token);
+            uint payloadLengthInBytes = BitConverter.ToUInt32(payloadSize.GetArray().LittleEndianToOrFromBitConverterEndianness(), 0);
+            byte[] payload = await this.ReadBytesAsync(payloadLengthInBytes, token);
 
             IHashAlgorithm checksumAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(networkParameters.PayloadChecksumAlgorithmIdentifier);
-            ImmutableList<byte> actualChecksum = await Task.Run(() => checksumAlgorithm.CalculateHash(payload), token);
+            byte[] actualChecksum = await Task.Run(() => checksumAlgorithm.CalculateHash(payload), token);
             if (!payloadChecksum.SequenceEqual(actualChecksum.GetRange(0, payloadChecksumLengthInBytes)))
             {
                 string exceptionMessage = String.Format(CultureInfo.InvariantCulture,
@@ -206,7 +206,7 @@ namespace Evercoin.Network
 
         private async Task<ushort> ReadUInt16Async(CancellationToken token, bool littleEndian = true)
         {
-            byte[] bytes = (await this.ReadBytesAsyncWithIntParam(2, token)).ToArray().LittleEndianToOrFromBitConverterEndianness();
+            byte[] bytes = (await this.ReadBytesAsyncWithIntParam(2, token)).LittleEndianToOrFromBitConverterEndianness();
             if (!littleEndian)
             {
                 Array.Reverse(bytes);
@@ -217,45 +217,45 @@ namespace Evercoin.Network
 
         private async Task<uint> ReadUInt32AsyncCore(CancellationToken token)
         {
-            byte[] bytes = (await this.ReadBytesAsyncWithIntParam(4, token)).ToArray();
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(4, token);
             return BitConverter.ToUInt32(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
         }
 
         private async Task<ulong> ReadUInt64Async(CancellationToken token)
         {
-            byte[] bytes = (await this.ReadBytesAsyncWithIntParam(8, token)).ToArray();
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(8, token);
             return BitConverter.ToUInt64(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
         }
 
         private async Task<long> ReadInt64Async(CancellationToken token)
         {
-            byte[] bytes = (await this.ReadBytesAsyncWithIntParam(8, token)).ToArray();
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(8, token);
             return BitConverter.ToInt64(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
         }
 
         private async Task<BigInteger> ReadUInt256AsyncCore(CancellationToken token)
         {
-            byte[] bytes = (await this.ReadBytesAsyncWithIntParam(32, token)).ToArray();
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(32, token);
             return new BigInteger(bytes.LittleEndianToOrFromBitConverterEndianness());
         }
 
-        private async Task<ImmutableList<byte>> ReadBytesAsync(ulong numberOfBytesToRead, CancellationToken token)
+        private async Task<byte[]> ReadBytesAsync(ulong numberOfBytesToRead, CancellationToken token)
         {
             ulong bytesRead = 0;
-            ImmutableList<byte> bytes = ImmutableList<byte>.Empty;
+            List<byte[]> sequencesRead = new List<byte[]>();
 
             while (bytesRead < numberOfBytesToRead)
             {
                 int numberOfBytesToReadThisOuterLoop = (int)Math.Min(Int32.MaxValue, numberOfBytesToRead - bytesRead);
-                ImmutableList<byte> bytesReadThisOuterLoop = await this.ReadBytesAsyncWithIntParam(numberOfBytesToReadThisOuterLoop, token);
-                bytes = bytes.AddRange(bytesReadThisOuterLoop);
-                bytesRead += (ulong)bytesReadThisOuterLoop.Count;
+                byte[] bytesReadThisOuterLoop = await this.ReadBytesAsyncWithIntParam(numberOfBytesToReadThisOuterLoop, token);
+                sequencesRead.Add(bytesReadThisOuterLoop);
+                bytesRead += (ulong)bytesReadThisOuterLoop.Length;
             }
 
-            return bytes;
+            return ByteTwiddling.ConcatenateData(sequencesRead);
         }
 
-        private async Task<ImmutableList<byte>> ReadBytesAsyncWithIntParam(int numberOfBytesToRead, CancellationToken token)
+        private async Task<byte[]> ReadBytesAsyncWithIntParam(int numberOfBytesToRead, CancellationToken token)
         {
             int numberOfBytesRead = 0;
             byte[] data = new byte[numberOfBytesToRead];
@@ -270,7 +270,7 @@ namespace Evercoin.Network
                 numberOfBytesRead += bytesReadThisLoop;
             }
 
-            return data.ToImmutableList();
+            return data;
         }
 
         private async Task<ProtocolTxIn> ReadTxInAsyncCore(CancellationToken token)
@@ -280,7 +280,7 @@ namespace Evercoin.Network
             uint prevOutIndex = await this.ReadUInt32AsyncCore(token);
 
             ulong scriptSigLength = await this.ReadCompactSizeAsyncCore(token);
-            ImmutableList<byte> scriptSig = await this.ReadBytesAsync(scriptSigLength, token);
+            byte[] scriptSig = await this.ReadBytesAsync(scriptSigLength, token);
 
             uint seq = await this.ReadUInt32AsyncCore(token);
 
@@ -292,7 +292,7 @@ namespace Evercoin.Network
             long valueInSatoshis = await this.ReadInt64Async(token);
             
             ulong scriptPubKeyLength = await this.ReadCompactSizeAsyncCore(token);
-            ImmutableList<byte> scriptPubKey = await this.ReadBytesAsync(scriptPubKeyLength, token);
+            byte[] scriptPubKey = await this.ReadBytesAsync(scriptPubKeyLength, token);
 
             return new ProtocolTxOut(valueInSatoshis, scriptPubKey);
         }
@@ -302,21 +302,21 @@ namespace Evercoin.Network
             uint version = await this.ReadUInt32AsyncCore(token);
             
             ulong inputCount = await this.ReadCompactSizeAsyncCore(token);
-            ImmutableList<ProtocolTxIn> inputs = ImmutableList<ProtocolTxIn>.Empty;
+            List<ProtocolTxIn> inputs = new List<ProtocolTxIn>();
 
             while (inputCount-- > 0)
             {
                 ProtocolTxIn nextInput = await this.ReadTxInAsyncCore(token);
-                inputs = inputs.Add(nextInput);
+                inputs.Add(nextInput);
             }
 
             ulong outputCount = await this.ReadCompactSizeAsyncCore(token);
-            ImmutableList<ProtocolTxOut> outputs = ImmutableList<ProtocolTxOut>.Empty;
+            List<ProtocolTxOut> outputs = new List<ProtocolTxOut>();
 
             while (outputCount-- > 0)
             {
                 ProtocolTxOut nextOutput = await this.ReadTxOutAsyncCore(token);
-                outputs = outputs.Add(nextOutput);
+                outputs.Add(nextOutput);
             }
 
             uint lockTime = await this.ReadUInt32AsyncCore(token);

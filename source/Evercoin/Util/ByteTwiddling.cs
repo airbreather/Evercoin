@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace Evercoin.Util
 {
@@ -75,6 +76,27 @@ namespace Evercoin.Util
                     // The new 2-char string is a number in base-16.
                     result[i] = Convert.ToByte(hexByte, 16);
                 }
+            }
+
+            return result;
+        }
+
+        public static byte[] ConcatenateData(params IEnumerable<byte>[] sources)
+        {
+            return ConcatenateData(sources.AsEnumerable());
+        }
+
+        public static byte[] ConcatenateData(IEnumerable<IEnumerable<byte>> sources)
+        {
+            byte[][] sourceArrays = sources.Select(Extensions.GetArray).GetArray();
+            int length = sourceArrays.Sum(x => x.Length);
+            byte[] result = new byte[length];
+
+            int index = 0;
+            foreach (byte[] sourceArray in sourceArrays)
+            {
+                Buffer.BlockCopy(sourceArray, 0, result, index, sourceArray.Length);
+                index += sourceArray.Length;
             }
 
             return result;

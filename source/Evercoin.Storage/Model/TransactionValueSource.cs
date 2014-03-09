@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.Serialization;
@@ -30,7 +29,7 @@ namespace Evercoin.Storage.Model
         {
             this.OriginatingTransactionIdentifier = info.GetValue<BigInteger>(SerializationName_OriginatingTransactionIdentifier);
             this.OriginatingTransactionOutputIndex = info.GetUInt32(SerializationName_OriginatingTransactionOutputIndex);
-            this.ScriptPublicKey = info.GetValue<byte[]>(SerializationName_ScriptPublicKey).ToImmutableList();
+            this.ScriptPublicKey = info.GetValue<byte[]>(SerializationName_ScriptPublicKey);
         }
 
         /// <summary>
@@ -59,7 +58,7 @@ namespace Evercoin.Storage.Model
         /// The serialized script that dictates how the value
         /// from this source can be spent.
         /// </summary>
-        public ImmutableList<byte> ScriptPublicKey { get; set; }
+        public byte[] ScriptPublicKey { get; set; }
 
         /// <summary>
         /// Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo"/> with the data needed to serialize the target object.
@@ -70,7 +69,7 @@ namespace Evercoin.Storage.Model
             base.GetObjectData(info, context);
             info.AddValue(SerializationName_OriginatingTransactionIdentifier, this.OriginatingTransactionIdentifier);
             info.AddValue(SerializationName_OriginatingTransactionOutputIndex, this.OriginatingTransactionOutputIndex);
-            info.AddValue(SerializationName_ScriptPublicKey, this.ScriptPublicKey.ToArray());
+            info.AddValue(SerializationName_ScriptPublicKey, this.ScriptPublicKey);
         }
     }
 }

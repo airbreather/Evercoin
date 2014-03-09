@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 
 using Moq;
@@ -15,7 +14,7 @@ namespace Evercoin.TransactionScript
         public TransactionScriptRunnerBuilder()
         {
             this.transactionScriptParser.Setup(x => x.Parse(It.IsAny<IEnumerable<byte>>()))
-                                        .Returns(ImmutableList<TransactionScriptOperation>.Empty);
+                                        .Returns(new TransactionScriptOperation[0]);
         }
 
         public static implicit operator TransactionScriptRunner(TransactionScriptRunnerBuilder builder)
@@ -32,7 +31,7 @@ namespace Evercoin.TransactionScript
             return this;
         }
 
-        public TransactionScriptRunnerBuilder WithParsedScript(IEnumerable<byte> scriptBytes, ImmutableList<TransactionScriptOperation> parsedScript)
+        public TransactionScriptRunnerBuilder WithParsedScript(IEnumerable<byte> scriptBytes, TransactionScriptOperation[] parsedScript)
         {
             this.transactionScriptParser.Setup(x => x.Parse(It.Is<IEnumerable<byte>>(s => scriptBytes.SequenceEqual(s))))
                                         .Returns(parsedScript);

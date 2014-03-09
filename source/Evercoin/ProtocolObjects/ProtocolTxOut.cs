@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Collections.Immutable;
 
 namespace Evercoin.ProtocolObjects
 {
@@ -8,11 +7,11 @@ namespace Evercoin.ProtocolObjects
         public ProtocolTxOut(long valueInSatoshis, IEnumerable<byte> scriptPubKey)
         {
             this.ValueInSatoshis = valueInSatoshis;
-            this.ScriptPubKey = scriptPubKey.ToImmutableList();
+            this.ScriptPubKey = scriptPubKey.GetArray();
         }
 
         public long ValueInSatoshis { get; private set; }
 
-        public ImmutableList<byte> ScriptPubKey { get; private set; }
+        public byte[] ScriptPubKey { get; private set; }
     }
 }

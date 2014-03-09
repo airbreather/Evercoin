@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Immutable;
 
 namespace Evercoin.ProtocolObjects
 {
@@ -22,34 +21,50 @@ namespace Evercoin.ProtocolObjects
             return new ProtocolCompactSize(value);
         }
 
-        public ImmutableList<byte> Data
+        public byte[] Data
         {
             get
             {
+                byte[] result;
                 if (this.Value < 0xfd)
                 {
-                    return ImmutableList.Create((byte)this.Value);
-                }
+                    result = new byte[1];
 
-                if (this.Value <= 0xffff)
+                    result[0] = (byte)this.Value;
+                }
+                else if (this.Value <= 0xffff)
                 {
+                    result = new byte[3];
+
                     ushort shortValue = (ushort)this.Value;
-                    return ImmutableList.Create((byte)0xfd)
-                                        .AddRange(BitConverter.GetBytes(shortValue)
-                                                              .LittleEndianToOrFromBitConverterEndianness());
-                }
+                    byte[] shortValueBytes = BitConverter.GetBytes(shortValue)
+                                                         .LittleEndianToOrFromBitConverterEndianness();
 
-                if (this.Value <= 0xffffffff)
+                    result[0] = 0xfd;
+                    Buffer.BlockCopy(shortValueBytes, 0, result, 1, 2);
+                }
+                else if (this.Value <= 0xffffffff)
                 {
+                    result = new byte[5];
+
                     uint intValue = (uint)this.Value;
-                    return ImmutableList.Create((byte)0xfe)
-                                        .AddRange(BitConverter.GetBytes(intValue)
-                                                              .LittleEndianToOrFromBitConverterEndianness());
+                    byte[] intValueBytes = BitConverter.GetBytes(intValue)
+                                                       .LittleEndianToOrFromBitConverterEndianness();
+
+                    result[0] = 0xfe;
+                    Buffer.BlockCopy(intValueBytes, 0, result, 1, 4);
+                }
+                else
+                {
+                    result = new byte[9];
+                    byte[] longValueBytes = BitConverter.GetBytes(this.Value)
+                                                        .LittleEndianToOrFromBitConverterEndianness();
+
+                    result[0] = 0xff;
+                    Buffer.BlockCopy(longValueBytes, 0, result, 1, 8);
                 }
 
-                return ImmutableList.Create((byte)0xff)
-                                    .AddRange(BitConverter.GetBytes(this.Value)
-                                                          .LittleEndianToOrFromBitConverterEndianness());
+                return result;
             }
         }
     }

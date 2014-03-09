@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
 
@@ -11,7 +10,7 @@ namespace Evercoin.Util
         private static int maxIndex = 0;
         private static readonly object syncLock = new object();
 
-        private static BigInteger[] BlockIdentifiers = { new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").Reverse().ToArray()) };
+        private static BigInteger[] BlockIdentifiers = { new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").Reverse().GetArray()) };
 
         public static void Add(int height, BigInteger blockIdentifier)
         {
@@ -19,7 +18,7 @@ namespace Evercoin.Util
             {
                 if (BlockIdentifiers.Length < height + 1)
                 {
-                    Array.Resize(ref BlockIdentifiers, height + 30000);
+                    Array.Resize(ref BlockIdentifiers, height + 300000);
                 }
 
                 BlockIdentifiers[height] = blockIdentifier;
@@ -35,9 +34,14 @@ namespace Evercoin.Util
             }
         }
 
-        public static IMerkleTreeNode ToMerkleTree(this IEnumerable<ImmutableList<byte>> inputs, IHashAlgorithm hashAlgorithm)
+        public static int GetBlockIdentifierCount()
         {
-            List<MerkleTreeNode> leaves = inputs.Select(x => new MerkleTreeNode { Data = x }).ToList();
+            return maxIndex + 1;
+        }
+
+        public static IMerkleTreeNode ToMerkleTree(this IEnumerable<IEnumerable<byte>> inputs, IHashAlgorithm hashAlgorithm)
+        {
+            List<MerkleTreeNode> leaves = inputs.Select(x => new MerkleTreeNode { Data = x.GetArray() }).ToList();
             if (leaves.Count == 0)
             {
                 throw new ArgumentException("Must at least one!", "inputs");
@@ -80,7 +84,7 @@ namespace Evercoin.Util
             /// <summary>
             /// Gets the data stored in this node.
             /// </summary>
-            public ImmutableList<byte> Data { get; set; }
+            public byte[] Data { get; set; }
 
             /// <summary>
             /// Gets the left subtree.

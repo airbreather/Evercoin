@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
 
@@ -115,7 +114,7 @@ namespace Evercoin
             IMerkleTreeNode secondNode = node.RightChild ?? node.LeftChild;
             IEnumerable<byte> dataToHash = firstNode.Data.Concat(secondNode.Data);
 
-            ImmutableList<byte> hashResult = hashAlgorithm.CalculateHash(dataToHash);
+            byte[] hashResult = hashAlgorithm.CalculateHash(dataToHash);
             return hashResult.SequenceEqual(node.Data);
         }
 
@@ -131,6 +130,21 @@ namespace Evercoin
             ILookup<T, T> secondLookup = secondEnumerable.ToLookup(x => x, comparer);
             return firstLookup.Count == secondLookup.Count &&
                    firstLookup.All(x => x.Count() == secondLookup[x.Key].Count());
+        }
+
+        public static T[] GetArray<T>(this IEnumerable<T> source)
+        {
+            return source as T[] ?? source.ToArray();
+        }
+
+        public static ArraySegment<T> GetRange<T>(this T[] source, int offset, int count)
+        {
+            return new ArraySegment<T>(source, offset, count);
+        }
+
+        public static IEnumerable<T> ExceptWhere<T>(this IEnumerable<T> source, Func<T, bool> predicate)
+        {
+            return source.Where(x => !predicate(x));
         }
     }
 }

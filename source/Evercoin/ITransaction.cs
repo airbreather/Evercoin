@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.Numerics;
 
 namespace Evercoin
@@ -32,12 +31,12 @@ namespace Evercoin
         /// <summary>
         /// Gets the inputs spent by this transaction.
         /// </summary>
-        ImmutableList<IValueSpender> Inputs { get; }
+        IValueSpender[] Inputs { get; }
 
         /// <summary>
         /// Gets the outputs of this transaction.
         /// </summary>
-        ImmutableList<ITransactionValueSource> Outputs { get; }
+        ITransactionValueSource[] Outputs { get; }
 
         uint LockTime { get; }
     }

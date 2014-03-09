@@ -190,7 +190,7 @@ namespace Evercoin.Network
                 throw new InvalidOperationException("The client is not connected.");
             }
 
-            byte[] messageBytes = messageToSend.FullData.ToArray();
+            byte[] messageBytes = messageToSend.FullData;
             await client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length, token);
         }
 

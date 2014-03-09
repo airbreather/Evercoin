@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Runtime.Serialization;
 
@@ -44,7 +43,7 @@ namespace Evercoin.Storage.Model
 
         private MerkleTreeNode(SerializationInfo info, StreamingContext context)
         {
-            this.Data = info.GetValue<byte[]>(SerializationName_Data).ToImmutableList();
+            this.Data = info.GetValue<byte[]>(SerializationName_Data);
             this.LeftChild = info.GetValue<MerkleTreeNode>(SerializationName_LeftChild);
             this.RightChild = info.GetValue<MerkleTreeNode>(SerializationName_RightChild);
         }
@@ -52,7 +51,7 @@ namespace Evercoin.Storage.Model
         /// <summary>
         /// Gets the data stored in this node.
         /// </summary>
-        public ImmutableList<byte> Data { get; set; }
+        public byte[] Data { get; set; }
 
         /// <summary>
         /// Gets the left subtree.
@@ -74,7 +73,7 @@ namespace Evercoin.Storage.Model
         /// <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> to populate with data. </param><param name="context">The destination (see <see cref="T:System.Runtime.Serialization.StreamingContext"/>) for this serialization. </param><exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
         public void GetObjectData(SerializationInfo info, StreamingContext context)
         {
-            info.AddValue(SerializationName_Data, this.Data.ToArray());
+            info.AddValue(SerializationName_Data, this.Data);
             info.AddValue(SerializationName_LeftChild, this.LeftChild);
             info.AddValue(SerializationName_RightChild, this.RightChild);
         }

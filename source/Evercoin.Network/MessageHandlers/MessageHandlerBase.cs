@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,17 +10,16 @@ namespace Evercoin.Network.MessageHandlers
     {
         private readonly INetwork network;
 
-        private readonly ImmutableList<byte> commandRecognized;
+        private readonly byte[] commandRecognized;
 
         protected MessageHandlerBase(IEnumerable<byte> commandRecognized, INetwork network)
         {
             int commandLengthInBytes = network.Parameters.CommandLengthInBytes;
 
-            byte[] paddedArray = new byte[commandLengthInBytes];
-            byte[] unpaddedArray = commandRecognized.ToArray();
+            this.commandRecognized = new byte[commandLengthInBytes];
+            byte[] unpaddedArray = commandRecognized.GetArray();
 
-            Array.Copy(unpaddedArray, paddedArray, unpaddedArray.Length);
-            this.commandRecognized = paddedArray.ToImmutableList();
+            Array.Copy(unpaddedArray, this.commandRecognized, Math.Min(commandLengthInBytes, unpaddedArray.Length));
 
             this.network = network;
         }

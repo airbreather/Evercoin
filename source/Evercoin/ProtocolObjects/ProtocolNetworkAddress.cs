@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Immutable;
-using System.Linq;
 using System.Net;
+
+using Evercoin.Util;
 
 namespace Evercoin.ProtocolObjects
 {
@@ -25,7 +25,7 @@ namespace Evercoin.ProtocolObjects
 
         public ushort Port { get; private set; }
 
-        public ImmutableList<byte> Data
+        public byte[] Data
         {
             get
             {
@@ -33,10 +33,15 @@ namespace Evercoin.ProtocolObjects
                                    BitConverter.GetBytes(this.Time).LittleEndianToOrFromBitConverterEndianness() :
                                    new byte[0];
 
-                return ImmutableList.CreateRange(timeBytes)
-                                    .AddRange(BitConverter.GetBytes(this.Services).LittleEndianToOrFromBitConverterEndianness())
-                                    .AddRange(this.Address.MapToIPv6().GetAddressBytes())
-                                    .AddRange(BitConverter.GetBytes(this.Port).LittleEndianToOrFromBitConverterEndianness().Reverse());
+                byte[] servicesBytes = BitConverter.GetBytes(this.Services).LittleEndianToOrFromBitConverterEndianness();
+                byte[] addressBytes = this.Address.MapToIPv6().GetAddressBytes();
+
+                byte[] portBytes = BitConverter.GetBytes(this.Port).LittleEndianToOrFromBitConverterEndianness();
+
+                // BIG-ENDIAN!!
+                Array.Reverse(portBytes);
+
+                return ByteTwiddling.ConcatenateData(timeBytes, servicesBytes, addressBytes, portBytes);
             }
         }
     }

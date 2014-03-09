@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Numerics;
+
+using Evercoin.Util;
 
 namespace Evercoin.ProtocolObjects
 {
@@ -11,16 +13,16 @@ namespace Evercoin.ProtocolObjects
         public ProtocolTransaction(uint version, IEnumerable<ProtocolTxIn> inputs, IEnumerable<ProtocolTxOut> outputs, uint lockTime)
         {
             this.Version = version;
-            this.Inputs = inputs.ToImmutableList();
-            this.Outputs = outputs.ToImmutableList();
+            this.Inputs = inputs.GetArray();
+            this.Outputs = outputs.GetArray();
             this.LockTime = lockTime;
         }
 
         public uint Version { get; private set; }
 
-        public ImmutableList<ProtocolTxIn> Inputs { get; private set; }
+        public ProtocolTxIn[] Inputs { get; private set; }
 
-        public ImmutableList<ProtocolTxOut> Outputs { get; private set; }
+        public ProtocolTxOut[] Outputs { get; private set; }
 
         public uint LockTime { get; private set; }
 
@@ -28,28 +30,41 @@ namespace Evercoin.ProtocolObjects
 
         public void CalculateTxId(IHashAlgorithm alg)
         {
-            ImmutableList<byte> dataToHash = this.Data;
-            ImmutableList<byte> hashResult = alg.CalculateHash(dataToHash);
-            this.TxId = new BigInteger(hashResult.ToArray());
+            byte[] dataToHash = this.Data;
+            byte[] hashResult = alg.CalculateHash(dataToHash);
+            this.TxId = new BigInteger(hashResult);
         }
 
-        public ImmutableList<byte> Data
+        public byte[] Data
         {
             get
             {
-                return ImmutableList.CreateRange(BitConverter.GetBytes(this.Version).LittleEndianToOrFromBitConverterEndianness())
-                                    .AddRange(((ProtocolCompactSize)(ulong)this.Inputs.Count).Data)
-                                    .AddRange(this.Inputs.SelectMany(x => x.PrevOutTxId.ToLittleEndianUInt256Array()
-                                                                                       .Concat(BitConverter.GetBytes(x.PrevOutN).LittleEndianToOrFromBitConverterEndianness())
-                                                                                       .Concat(((ProtocolCompactSize)(ulong)x.ScriptSig.Count).Data)
-                                                                                       .Concat(x.ScriptSig)
-                                                                                       .Concat(BitConverter.GetBytes(x.Sequence).LittleEndianToOrFromBitConverterEndianness())))
-                                    .AddRange(((ProtocolCompactSize)(ulong)this.Outputs.Count).Data)
-                                    .AddRange(this.Outputs.SelectMany(x => BitConverter.GetBytes(x.ValueInSatoshis).LittleEndianToOrFromBitConverterEndianness()
-                                                                                                                   .Concat(((ProtocolCompactSize)(ulong)x.ScriptPubKey.Count).Data)
-                                                                                                                   .Concat(x.ScriptPubKey)))
-                                    .AddRange(BitConverter.GetBytes(this.LockTime).LittleEndianToOrFromBitConverterEndianness())
-                                    .ToImmutableList();
+                // Version
+                byte[] versionBytes = BitConverter.GetBytes(this.Version).LittleEndianToOrFromBitConverterEndianness();
+
+                // Inputs
+                byte[] inputCountBytes = ((ProtocolCompactSize)(ulong)this.Inputs.Length).Data;
+                IEnumerable<byte[]> inputByteSources = this.Inputs.Select(x => x.PrevOutTxId.ToLittleEndianUInt256Array()
+                                                                                 .Concat(BitConverter.GetBytes(x.PrevOutN).LittleEndianToOrFromBitConverterEndianness())
+                                                                                 .Concat(((ProtocolCompactSize)(ulong)x.ScriptSig.Length).Data)
+                                                                                 .Concat(x.ScriptSig)
+                                                                                 .Concat(BitConverter.GetBytes(x.Sequence).LittleEndianToOrFromBitConverterEndianness())
+                                                                                 .GetArray());
+
+                // Outputs
+                byte[] outputCountBytes = ((ProtocolCompactSize)(ulong)this.Outputs.Length).Data;
+                IEnumerable<byte[]> outputByteSources = this.Outputs.Select(x => BitConverter.GetBytes(x.ValueInSatoshis).LittleEndianToOrFromBitConverterEndianness()
+                                                                                                              .Concat(((ProtocolCompactSize)(ulong)x.ScriptPubKey.Length).Data)
+                                                                                                              .Concat(x.ScriptPubKey)
+                                                                                                              .GetArray());
+
+                // Lock time
+                byte[] lockTimeBytes = BitConverter.GetBytes(this.LockTime).LittleEndianToOrFromBitConverterEndianness();
+
+                byte[] inputBytes = ByteTwiddling.ConcatenateData(inputByteSources);
+                byte[] outputBytes = ByteTwiddling.ConcatenateData(outputByteSources);
+
+                return ByteTwiddling.ConcatenateData(versionBytes, inputCountBytes, inputBytes, outputCountBytes, outputBytes, lockTimeBytes);
             }
         }
     }

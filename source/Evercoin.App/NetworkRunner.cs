@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 using System.Reactive.Concurrency;
@@ -61,7 +60,7 @@ namespace Evercoin.App
 
             ConcurrentDictionary<Guid, int> readableIdMapping = new ConcurrentDictionary<Guid, int>();
 
-            this.network.ReceivedMessages.SubscribeOn(TaskPoolScheduler.Default).ObserveOn(TaskPoolScheduler.Default).Subscribe(
+            this.network.ReceivedMessages.Subscribe(
                 msg =>
                 {
                     INetworkMessageHandler correctHandler = this.messageHandlers.FirstOrDefault(handler => handler.RecognizesMessage(msg));
@@ -90,10 +89,10 @@ namespace Evercoin.App
                     }
 
                     Console.Write("\r({3}) ({1}) {2} >> {0}",
-                        Encoding.ASCII.GetString(msg.CommandBytes.ToArray()),
+                        Encoding.ASCII.GetString(msg.CommandBytes),
                         quickGlanceChar,
                         readableId,
-                        Cheating.GetBlockIdentifiers().Count);
+                        Cheating.GetBlockIdentifierCount());
                 });
 
             Dictionary<IPEndPoint, Task<Guid>> connectionTasks = endPoints.ToDictionary(endPoint => endPoint, endPoint => this.network.ConnectToClientAsync(endPoint, token));
@@ -136,15 +135,15 @@ namespace Evercoin.App
             try
             {
                 await Task.Delay(1000, token);
-                int startingCount = Cheating.GetBlockIdentifiers().Count;
+                int startingCount = Cheating.GetBlockIdentifierCount();
                 int prev = -1;
                 while (!token.IsCancellationRequested)
                 {
-                    var blid = Cheating.GetBlockIdentifiers();
-                    if ((blid.Count - startingCount) % 500 == 0 &&
-                        blid.Count != prev)
+                    var blidCount = Cheating.GetBlockIdentifierCount();
+                    if ((blidCount - startingCount) % 500 == 0 &&
+                        blidCount != prev)
                     {
-                        prev = blid.Count;
+                        prev = blidCount;
                         await this.network.AskForMoreBlocks();
                     }
 

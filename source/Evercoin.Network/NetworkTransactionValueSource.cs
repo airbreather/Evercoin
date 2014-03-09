@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Linq;
+﻿using System.Linq;
 using System.Numerics;
 
 namespace Evercoin.Network
@@ -37,6 +36,6 @@ namespace Evercoin.Network
         /// The serialized script that dictates how the value
         /// from this source can be spent.
         /// </summary>
-        public ImmutableList<byte> ScriptPublicKey { get; set; }
+        public byte[] ScriptPublicKey { get; set; }
     }
 }

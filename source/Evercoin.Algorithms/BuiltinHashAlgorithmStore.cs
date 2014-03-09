@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel.Composition;
 
 using Evercoin.BaseImplementations;
@@ -19,7 +20,7 @@ namespace Evercoin.Algorithms
         /// <summary>
         /// Backing store for the algorithms we use.
         /// </summary>
-        private readonly ImmutableDictionary<Guid, IHashAlgorithm> algorithms;
+        private readonly ReadOnlyDictionary<Guid, IHashAlgorithm> algorithms;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="BuiltinHashAlgorithmStore"/> class.
@@ -30,14 +31,16 @@ namespace Evercoin.Algorithms
             DigestBasedHashAlgorithm sha256 = new DigestBasedHashAlgorithm(new Sha256Digest());
             DigestBasedHashAlgorithm ripemd160 = new DigestBasedHashAlgorithm(new RipeMD160Digest());
 
-            var algorithmBuilder = ImmutableDictionary.CreateBuilder<Guid, IHashAlgorithm>();
-            algorithmBuilder.Add(HashAlgorithmIdentifiers.SHA1, sha1);
-            algorithmBuilder.Add(HashAlgorithmIdentifiers.SHA256, sha256);
-            algorithmBuilder.Add(HashAlgorithmIdentifiers.RipeMd160, ripemd160);
-            algorithmBuilder.Add(HashAlgorithmIdentifiers.DoubleSHA256, new ChainedHashAlgorithm(sha256, sha256));
-            algorithmBuilder.Add(HashAlgorithmIdentifiers.SHA256ThenRipeMd160, new ChainedHashAlgorithm(sha256, ripemd160));
-            algorithmBuilder.Add(HashAlgorithmIdentifiers.LitecoinSCrypt, new LitecoinSCryptHashAlgorithm());
-            this.algorithms = algorithmBuilder.ToImmutable();
+            var algorithmBuilder = new Dictionary<Guid, IHashAlgorithm>
+                                   {
+                                       { HashAlgorithmIdentifiers.SHA1, sha1 },
+                                       { HashAlgorithmIdentifiers.SHA256, sha256 },
+                                       { HashAlgorithmIdentifiers.RipeMd160, ripemd160 },
+                                       { HashAlgorithmIdentifiers.DoubleSHA256, new ChainedHashAlgorithm(sha256, sha256) },
+                                       { HashAlgorithmIdentifiers.SHA256ThenRipeMd160, new ChainedHashAlgorithm(sha256, ripemd160) },
+                                       { HashAlgorithmIdentifiers.LitecoinSCrypt, new LitecoinSCryptHashAlgorithm() },
+                                   };
+            this.algorithms = new ReadOnlyDictionary<Guid, IHashAlgorithm>(algorithmBuilder);
         }
 
         public override bool TryGetHashAlgorithm(Guid identifier, out IHashAlgorithm algorithm)

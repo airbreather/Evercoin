@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
+
+using Evercoin.Util;
 
 namespace Evercoin.Network
 {
-    [DebuggerDisplay("{System.Text.Encoding.ASCII.GetString(System.Linq.Enumerable.ToArray(CommandBytes))}, {Evercoin.Util.ByteTwiddling.ByteArrayToHexString(Payload)}")]
+    [DebuggerDisplay("{System.Text.Encoding.ASCII.GetString(CommandBytes)}, {Evercoin.Util.ByteTwiddling.ByteArrayToHexString(Payload)}")]
     internal sealed class Message : INetworkMessage
     {
         private readonly INetworkParameters networkParameters;
@@ -14,9 +15,9 @@ namespace Evercoin.Network
 
         private readonly Guid remoteClientId;
 
-        private ImmutableList<byte> payloadSize;
+        private byte[] payloadSize;
 
-        private ImmutableList<byte> payloadChecksum;
+        private byte[] payloadChecksum;
 
         public Message(INetworkParameters networkParameters, IHashAlgorithmStore hashAlgorithmStore, Guid remoteClientId)
         {
@@ -25,24 +26,20 @@ namespace Evercoin.Network
             this.remoteClientId = remoteClientId;
         }
 
-        public ImmutableList<byte> FullData
+        public byte[] FullData
         {
             get
             {
-                return this.networkParameters.StaticMessagePrefixData
-                                             .AddRange(this.CommandBytes)
-                                             .AddRange(this.payloadSize)
-                                             .AddRange(this.payloadChecksum)
-                                             .AddRange(this.Payload);
+                return ByteTwiddling.ConcatenateData(this.networkParameters.StaticMessagePrefixData, this.CommandBytes, this.payloadSize, this.payloadChecksum, this.Payload);
             }
         }
 
         /// <summary>
         /// Gets the command of this message.
         /// </summary>
-        public ImmutableList<byte> CommandBytes { get; private set; }
+        public byte[] CommandBytes { get; private set; }
 
-        public ImmutableList<byte> Payload { get; private set; }
+        public byte[] Payload { get; private set; }
 
         /// <summary>
         /// Gets the network parameters for this message.
@@ -56,20 +53,20 @@ namespace Evercoin.Network
 
         public void CreateFrom(IEnumerable<byte> command, IEnumerable<byte> payload)
         {
-            this.CommandBytes = command.ToImmutableList();
-            this.Payload = payload.ToImmutableList();
+            this.CommandBytes = command.GetArray();
+            this.Payload = payload.GetArray();
 
-            uint payloadSizeInBytes = (uint)this.Payload.Count;
+            uint payloadSizeInBytes = (uint)this.Payload.Length;
 
             this.payloadSize = BitConverter.GetBytes(payloadSizeInBytes)
-                                           .LittleEndianToOrFromBitConverterEndianness()
-                                           .ToImmutableList();
+                .LittleEndianToOrFromBitConverterEndianness();
 
             IHashAlgorithm checksumAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(this.networkParameters.PayloadChecksumAlgorithmIdentifier);
             int checksumLengthInBytes = this.networkParameters.PayloadChecksumLengthInBytes;
 
-            ImmutableList<byte> checksum = checksumAlgorithm.CalculateHash(this.Payload);
-            this.payloadChecksum = checksum.GetRange(0, checksumLengthInBytes);
+            byte[] checksum = checksumAlgorithm.CalculateHash(this.Payload);
+            Array.Resize(ref checksum, checksumLengthInBytes);
+            this.payloadChecksum = checksum;
         }
     }
 }

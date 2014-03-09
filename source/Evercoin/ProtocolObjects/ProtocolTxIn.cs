@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.Collections.Immutable;
+using System.Linq;
 using System.Numerics;
 
 namespace Evercoin.ProtocolObjects
@@ -10,7 +10,7 @@ namespace Evercoin.ProtocolObjects
         {
             this.PrevOutTxId = prevOutTxId;
             this.PrevOutN = prevOutIndex;
-            this.ScriptSig = scriptSig.ToImmutableList();
+            this.ScriptSig = scriptSig.GetArray();
             this.Sequence = seq;
         }
 
@@ -18,7 +18,7 @@ namespace Evercoin.ProtocolObjects
 
         public uint PrevOutN { get; private set; }
 
-        public ImmutableList<byte> ScriptSig { get; private set; }
+        public byte[] ScriptSig { get; private set; }
 
         public uint Sequence { get; private set; }
     }

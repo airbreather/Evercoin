@@ -1,5 +1,5 @@
 using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
 using System.Net;
 
 namespace Evercoin
@@ -68,7 +68,7 @@ namespace Evercoin
         /// This is usually a sequence of 4 bytes that are uncommon
         /// in typical data streams.
         /// </remarks>
-        ImmutableList<byte> StaticMessagePrefixData { get; }
+        byte[] StaticMessagePrefixData { get; }
 
         /// <summary>
         /// Gets a set of <see cref="DnsEndPoint"/> objects that may be used
@@ -78,6 +78,6 @@ namespace Evercoin
         /// It is expected that the network's protocol provides messages
         /// that allow a node to request which other 
         /// </remarks>
-        ImmutableHashSet<DnsEndPoint> Seeds { get; }
+        ISet<DnsEndPoint> Seeds { get; }
     }
 }

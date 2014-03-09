@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 
 using Moq;
@@ -94,12 +93,12 @@ namespace Evercoin.TransactionScript
             stack.Push(true);
             stack.Push(false);
 
-            ImmutableList<TransactionScriptOperation> script = ImmutableList.Create<TransactionScriptOperation>
-            (
+            TransactionScriptOperation[] script =
+            {
                 (byte)ScriptOpcode.OP_IF,
                 (byte)disabledOpcode,
                 (byte)ScriptOpcode.OP_ENDIF
-            );
+            };
 
             byte[] scriptBytes = Guid.NewGuid().ToByteArray();
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
@@ -119,10 +118,10 @@ namespace Evercoin.TransactionScript
             Stack<StackItem> stack = new Stack<StackItem>();
             stack.Push(true);
 
-            ImmutableList<TransactionScriptOperation> script = ImmutableList.Create<TransactionScriptOperation>
-            (
+            TransactionScriptOperation[] script =
+            {
                 (byte)reservedOpcode
-            );
+            };
 
             byte[] scriptBytes = Guid.NewGuid().ToByteArray();
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
@@ -144,12 +143,12 @@ namespace Evercoin.TransactionScript
             stack.Push(true);
             stack.Push(false);
 
-            ImmutableList<TransactionScriptOperation> script = ImmutableList.Create<TransactionScriptOperation>
-            (
+            TransactionScriptOperation[] script =
+            {
                 (byte)ScriptOpcode.OP_IF,
                 (byte)reservedOpcode,
                 (byte)ScriptOpcode.OP_ENDIF
-            );
+            };
 
             byte[] scriptBytes = Guid.NewGuid().ToByteArray();
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
@@ -218,10 +217,10 @@ namespace Evercoin.TransactionScript
                 stack.Push(true);
             }
 
-            ImmutableList<TransactionScriptOperation> script = ImmutableList.Create<TransactionScriptOperation>
-            (
+            TransactionScriptOperation[] script =
+            {
                 (byte)opcode
-            );
+            };
 
             byte[] scriptBytes = Guid.NewGuid().ToByteArray();
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()

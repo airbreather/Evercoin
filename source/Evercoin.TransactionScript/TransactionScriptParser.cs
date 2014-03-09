@@ -1,22 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
 
 namespace Evercoin.TransactionScript
 {
     public sealed class TransactionScriptParser : ITransactionScriptParser
     {
-        public ImmutableList<TransactionScriptOperation> Parse(IEnumerable<byte> bytes)
+        public TransactionScriptOperation[] Parse(IEnumerable<byte> bytes)
         {
-            return this.ParseCore(bytes).ToImmutableList();
+            return ParseCore(bytes).GetArray();
         }
 
-        private IEnumerable<TransactionScriptOperation> ParseCore(IEnumerable<byte> bytes)
+        private static IEnumerable<TransactionScriptOperation> ParseCore(IEnumerable<byte> bytes)
         {
-            ImmutableList<byte> scriptBytes = bytes.ToImmutableList();
+            byte[] scriptBytes = bytes.GetArray();
 
-            for (int i = 0; i < scriptBytes.Count;)
+            for (int i = 0; i < scriptBytes.Length;)
             {
                 byte opcodeByte = scriptBytes[i++];
                 ScriptOpcode opcode = (ScriptOpcode)opcodeByte;
@@ -25,14 +23,14 @@ namespace Evercoin.TransactionScript
                     opcode >= ScriptOpcode.BEGIN_OP_DATA)
                 {
                     byte dataSize = (byte)unchecked(opcodeByte - ScriptOpcode.BEGIN_OP_DATA);
-                    if (i + dataSize > scriptBytes.Count)
+                    if (i + dataSize > scriptBytes.Length)
                     {
                         yield return TransactionScriptOperation.Invalid;
                         yield break;
                     }
 
                     // Next {n} bytes contain the data to push.
-                    ImmutableList<byte> data = scriptBytes.GetRange(i, dataSize);
+                    IReadOnlyList<byte> data = scriptBytes.GetRange(i, dataSize);
                     yield return new TransactionScriptOperation(opcodeByte, data);
                     i += dataSize;
                     continue;
@@ -49,13 +47,13 @@ namespace Evercoin.TransactionScript
                         {
                             case ScriptOpcode.OP_PUSHDATA1:
                             {
-                                if (i + 1 > scriptBytes.Count)
+                                if (i + 1 > scriptBytes.Length)
                                 {
                                     yield return TransactionScriptOperation.Invalid;
                                     yield break;
                                 }
 
-                                ImmutableList<byte> dataSizeBytes = scriptBytes.GetRange(i, 1);
+                                IReadOnlyList<byte> dataSizeBytes = scriptBytes.GetRange(i, 1);
                                 dataSize = dataSizeBytes[0];
                                 i += 1;
                                 break;
@@ -63,41 +61,41 @@ namespace Evercoin.TransactionScript
 
                             case ScriptOpcode.OP_PUSHDATA2:
                             {
-                                if (i + 2 > scriptBytes.Count)
+                                if (i + 2 > scriptBytes.Length)
                                 {
                                     yield return TransactionScriptOperation.Invalid;
                                     yield break;
                                 }
 
-                                ImmutableList<byte> dataSizeBytes = scriptBytes.GetRange(i, 2);
-                                dataSize = BitConverter.ToUInt16(dataSizeBytes.ToArray().LittleEndianToOrFromBitConverterEndianness(), 0);
+                                IReadOnlyList<byte> dataSizeBytes = scriptBytes.GetRange(i, 2);
+                                dataSize = BitConverter.ToUInt16(dataSizeBytes.GetArray().LittleEndianToOrFromBitConverterEndianness(), 0);
                                 i += 2;
                                 break;
                             }
 
                             case ScriptOpcode.OP_PUSHDATA4:
                             {
-                                if (i + 4 > scriptBytes.Count)
+                                if (i + 4 > scriptBytes.Length)
                                 {
                                     yield return TransactionScriptOperation.Invalid;
                                     yield break;
                                 }
 
-                                ImmutableList<byte> dataSizeBytes = scriptBytes.GetRange(i, 4);
-                                dataSize = BitConverter.ToUInt32(dataSizeBytes.ToArray().LittleEndianToOrFromBitConverterEndianness(), 0);
+                                IReadOnlyList<byte> dataSizeBytes = scriptBytes.GetRange(i, 4);
+                                dataSize = BitConverter.ToUInt32(dataSizeBytes.GetArray().LittleEndianToOrFromBitConverterEndianness(), 0);
                                 i += 4;
                                 break;
                             }
                         }
 
                         int intDataSize = (int)dataSize;
-                        if (i + intDataSize > scriptBytes.Count)
+                        if (i + intDataSize > scriptBytes.Length)
                         {
                             yield return TransactionScriptOperation.Invalid;
                             yield break;
                         }
 
-                        ImmutableList<byte> data = scriptBytes.GetRange(i, intDataSize);
+                        IReadOnlyList<byte> data = scriptBytes.GetRange(i, intDataSize);
                         yield return new TransactionScriptOperation(opcodeByte, data);
 
                         i += intDataSize;

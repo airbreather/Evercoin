@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Diagnostics;
 using System.Linq;
 
@@ -16,7 +15,7 @@ namespace Evercoin
 
         private readonly byte opcode;
 
-        private readonly ImmutableList<byte> data;
+        private readonly byte[] data;
 
         public TransactionScriptOperation(byte opcode)
             : this(opcode, Enumerable.Empty<byte>())
@@ -28,7 +27,7 @@ namespace Evercoin
         {
             this.isValid = true;
             this.opcode = opcode;
-            this.data = data.ToImmutableList();
+            this.data = data.GetArray();
         }
 
         public bool IsValid { get { return this.isValid; } }
@@ -42,7 +41,7 @@ namespace Evercoin
             }
         }
 
-        public ImmutableList<byte> Data
+        public byte[] Data
         {
             get
             {

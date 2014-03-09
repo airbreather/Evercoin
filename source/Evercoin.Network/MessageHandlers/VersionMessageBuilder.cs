@@ -1,10 +1,10 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
 
 using Evercoin.ProtocolObjects;
+using Evercoin.Util;
 
 using NodaTime;
 
@@ -53,15 +53,17 @@ namespace Evercoin.Network.MessageHandlers
             ProtocolNetworkAddress destinationAddress = new ProtocolNetworkAddress(null, services, localEndPoint.Address, (ushort)localEndPoint.Port);
             ProtocolNetworkAddress sourceAddress = new ProtocolNetworkAddress(null, services, remoteEndPoint.Address, (ushort)remoteEndPoint.Port);
 
-            ImmutableList<byte> payload = ImmutableList.CreateRange(BitConverter.GetBytes(this.network.Parameters.ProtocolVersion).LittleEndianToOrFromBitConverterEndianness())
-                                                       .AddRange(BitConverter.GetBytes(services).LittleEndianToOrFromBitConverterEndianness())
-                                                       .AddRange(BitConverter.GetBytes(timestamp.Ticks).LittleEndianToOrFromBitConverterEndianness())
-                                                       .AddRange(destinationAddress.Data)
-                                                       .AddRange(sourceAddress.Data)
-                                                       .AddRange(BitConverter.GetBytes(nonce).LittleEndianToOrFromBitConverterEndianness())
-                                                       .AddRange(new ProtocolString(userAgent, Encoding.ASCII).Data)
-                                                       .AddRange(BitConverter.GetBytes(lastBlockReceived).LittleEndianToOrFromBitConverterEndianness())
-                                                       .Add(pleaseRelayTransactionsToMe ? (byte)1 : (byte)0);
+            byte[] versionBytes = BitConverter.GetBytes(this.network.Parameters.ProtocolVersion).LittleEndianToOrFromBitConverterEndianness();
+            byte[] servicesBytes = BitConverter.GetBytes(services).LittleEndianToOrFromBitConverterEndianness();
+            byte[] timestampBytes = BitConverter.GetBytes(timestamp.Ticks).LittleEndianToOrFromBitConverterEndianness();
+            byte[] destinationAddressBytes = destinationAddress.Data;
+            byte[] sourceAddressBytes = sourceAddress.Data;
+            byte[] nonceBytes = BitConverter.GetBytes(nonce).LittleEndianToOrFromBitConverterEndianness();
+            byte[] userAgentBytes = new ProtocolString(userAgent, Encoding.ASCII).Data;
+            byte[] lastBlockReceivedBytes = BitConverter.GetBytes(lastBlockReceived).LittleEndianToOrFromBitConverterEndianness();
+            byte[] relayTransactionsBytes = { pleaseRelayTransactionsToMe ? (byte)1 : (byte)0 };
+
+            byte[] payload = ByteTwiddling.ConcatenateData(versionBytes, servicesBytes, timestampBytes, destinationAddressBytes, sourceAddressBytes, nonceBytes, userAgentBytes, lastBlockReceivedBytes, relayTransactionsBytes);
 
             byte[] commandBytes = new byte[this.network.Parameters.CommandLengthInBytes];
             byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(VersionText);

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
+using System.Collections.ObjectModel;
 using System.Linq;
 using System.Numerics;
 
@@ -26,9 +26,9 @@ namespace Evercoin.BaseImplementations
 
         private readonly Guid scriptHashAlgorithmIdentifier5;
 
-        private readonly ImmutableHashSet<SecurityMechanism> securityMechanisms;
+        private readonly HashSet<SecurityMechanism> securityMechanisms;
 
-        private readonly ImmutableDictionary<LegacyBehavior, long> legacyBehaviorsToEmulate;
+        private readonly Dictionary<LegacyBehavior, long> legacyBehaviorsToEmulate;
 
         private readonly Duration desiredTimeBetweenBlocks;
 
@@ -41,7 +41,7 @@ namespace Evercoin.BaseImplementations
         private readonly ulong blocksAtEachSubsidyLevel;
 
         private readonly BigInteger maximumDifficultyTarget;
-        
+
         /// <summary>
         /// Initializes a new instance of the <see cref="ChainParameters"/> class.
         /// </summary>
@@ -113,14 +113,14 @@ namespace Evercoin.BaseImplementations
             this.scriptHashAlgorithmIdentifier3 = scriptHashAlgorithmIdentifier3;
             this.scriptHashAlgorithmIdentifier4 = scriptHashAlgorithmIdentifier4;
             this.scriptHashAlgorithmIdentifier5 = scriptHashAlgorithmIdentifier5;
-            this.securityMechanisms = securityMechanisms.ToImmutableHashSet();
+            this.securityMechanisms = new HashSet<SecurityMechanism>(securityMechanisms);
             this.desiredTimeBetweenBlocks = desiredTimeBetweenBlocks;
             this.blocksPerDifficultyRetarget = blocksPerDifficultyRetarget;
             this.initialSubsidyLevel = initialSubsidyLevel;
             this.subsidyLevelMultiplier = subsidyLevelMultiplier;
             this.blocksAtEachSubsidyLevel = blocksAtEachSubsidyLevel;
             this.maximumDifficultyTarget = maximumDifficultyTarget;
-            this.legacyBehaviorsToEmulate = legacyBehaviorsToEmulate.ToImmutableDictionary();
+            this.legacyBehaviorsToEmulate = legacyBehaviorsToEmulate.ToDictionary(x => x.Key, x => x.Value);
         }
 
         /// <summary>
@@ -198,7 +198,7 @@ namespace Evercoin.BaseImplementations
         /// Currently, only <see cref="SecurityMechanism.ProofOfWork"/> is
         /// supported in Evercoin.
         /// </remarks>
-        public ImmutableHashSet<SecurityMechanism> SecurityMechanisms { get { return this.securityMechanisms; } }
+        public ISet<SecurityMechanism> SecurityMechanisms { get { return new HashSet<SecurityMechanism>(this.securityMechanisms); } }
 
         /// <summary>
         /// Gets the desired <see cref="Duration"/> of time between block.
@@ -271,7 +271,7 @@ namespace Evercoin.BaseImplementations
         /// versions of the reference implementations that need to be
         /// emulated in order for any client to be compatible.
         /// </remarks>
-        public ImmutableDictionary<LegacyBehavior, long> LegacyBehaviorsToEmulate { get { return this.legacyBehaviorsToEmulate; } }
+        public ReadOnlyDictionary<LegacyBehavior, long> LegacyBehaviorsToEmulate { get { return new ReadOnlyDictionary<LegacyBehavior, long>(this.legacyBehaviorsToEmulate); } }
 
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.

@@ -1,12 +1,15 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.IO;
 using System.Linq;
+using System.Reactive;
+using System.Reactive.Linq;
+using System.Reactive.Threading.Tasks;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Evercoin.ProtocolObjects;
+using Evercoin.Util;
 
 namespace Evercoin.Network.MessageHandlers
 {
@@ -32,8 +35,8 @@ namespace Evercoin.Network.MessageHandlers
         {
             Guid clientId = message.RemoteClient;
 
-            ImmutableList<ProtocolInventoryVector> dataNeeded = ImmutableList<ProtocolInventoryVector>.Empty;
-            using (MemoryStream payloadStream = new MemoryStream(message.Payload.ToArray()))
+            ProtocolInventoryVector[] dataNeeded;
+            using (MemoryStream payloadStream = new MemoryStream(message.Payload))
             using (ProtocolStreamReader streamReader = new ProtocolStreamReader(payloadStream, true, this.hashAlgorithmStore))
             {
                 ulong neededItemCount = await streamReader.ReadCompactSizeAsync(token);
@@ -42,6 +45,9 @@ namespace Evercoin.Network.MessageHandlers
                     return HandledNetworkMessageResult.MessageInvalid;
                 }
 
+                dataNeeded = new ProtocolInventoryVector[neededItemCount];
+
+                int itemIndex = 0;
                 while (neededItemCount-- > 0)
                 {
                     ProtocolInventoryVector vector = await streamReader.ReadInventoryVectorAsync(token);
@@ -60,14 +66,19 @@ namespace Evercoin.Network.MessageHandlers
 
                     if (!skip)
                     {
-                        dataNeeded = dataNeeded.Add(vector);
+                        dataNeeded[itemIndex++] = vector;
                     }
                 }
+
+                Array.Resize(ref dataNeeded, itemIndex);
             }
+
+            Task t = Task.Run(delegate { }, token);
 
             // Respond to an "inv" with a "getdata".
             INetworkMessage response = this.messageBuilder.BuildGetDataMessage(clientId, dataNeeded);
             await this.Network.SendMessageToClientAsync(clientId, response, token);
+
             return HandledNetworkMessageResult.Okay;
         }
     }

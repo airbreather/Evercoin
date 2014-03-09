@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
 using System.Numerics;
 
 namespace Evercoin
@@ -14,7 +12,7 @@ namespace Evercoin
         /// <summary>
         /// The underlying data item being stored on the stack.
         /// </summary>
-        private ImmutableList<byte> data;
+        private byte[] data;
 
         /// <summary>
         /// The underlying data item being stored on the stack.
@@ -30,12 +28,12 @@ namespace Evercoin
         public StackItem(IEnumerable<byte> data)
             : this()
         {
-            this.data = data.ToImmutableList();
+            this.data = data.GetArray();
         }
 
         public static implicit operator BigInteger(StackItem item)
         {
-            return item.value ?? (item.value = new BigInteger(item.data.ToArray())).Value;
+            return item.value ?? (item.value = new BigInteger(item.data)).Value;
         }
 
         public static implicit operator bool(StackItem item)
@@ -43,9 +41,9 @@ namespace Evercoin
             return !((BigInteger)item).IsZero;
         }
 
-        public static implicit operator ImmutableList<byte>(StackItem item)
+        public static implicit operator byte[](StackItem item)
         {
-            return item.data ?? (item.data = item.value.Value.ToLittleEndianUInt256Array().ToImmutableList());
+            return item.data ?? (item.data = item.value.Value.ToLittleEndianUInt256Array());
         }
 
         public static implicit operator StackItem(BigInteger data)

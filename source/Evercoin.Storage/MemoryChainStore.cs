@@ -1,6 +1,5 @@
 ﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Numerics;
@@ -24,7 +23,7 @@ namespace Evercoin.Storage
 
         public MemoryChainStore()
         {
-            BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").Reverse().ToArray());
+            BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").Reverse().GetArray());
             Block genesisBlock = new Block
             {
                 Identifier = genesisBlockIdentifier,
@@ -33,7 +32,7 @@ namespace Evercoin.Storage
                     AvailableValue = 50,
                     OriginatingBlockIdentifier = genesisBlockIdentifier
                 },
-                TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").Reverse().ToImmutableList() }
+                TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").Reverse().GetArray() }
             };
             this.PutBlock(genesisBlock);
         }
@@ -47,7 +46,7 @@ namespace Evercoin.Storage
             }
 
             ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, _ => new ManualResetEventSlim());
-            if (mres.Wait(10000) &&
+            if (mres.Wait(100) &&
                 this.blockWaiters.TryRemove(blockIdentifier, out mres))
             {
                 mres.Dispose();
@@ -66,7 +65,7 @@ namespace Evercoin.Storage
             }
 
             ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, _ => new ManualResetEventSlim());
-            if (mres.Wait(10000) &&
+            if (mres.Wait(100) &&
                 this.txWaiters.TryRemove(transactionIdentifier, out mres))
             {
                 mres.Dispose();

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 
 namespace Evercoin
 {
@@ -22,6 +21,6 @@ namespace Evercoin
         /// <exception cref="ArgumentNullException">
         /// <paramref name="inputData"/> is <c>null</c>.
         /// </exception>
-        ImmutableList<byte> CalculateHash(IEnumerable<byte> inputData);
+        byte[] CalculateHash(IEnumerable<byte> inputData);
     }
 }

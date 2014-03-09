@@ -1,5 +1,6 @@
 ﻿using System;
-using System.Collections.Immutable;
+using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.Numerics;
 
 using NodaTime;
@@ -87,7 +88,7 @@ namespace Evercoin
         /// Currently, only <see cref="SecurityMechanism.ProofOfWork"/> is
         /// supported in Evercoin.
         /// </remarks>
-        ImmutableHashSet<SecurityMechanism> SecurityMechanisms { get; }
+        ISet<SecurityMechanism> SecurityMechanisms { get; }
 
         /// <summary>
         /// Gets the desired <see cref="Duration"/> of time between block.
@@ -160,6 +161,6 @@ namespace Evercoin
         /// versions of the reference implementations that need to be
         /// emulated in order for any client to be compatible.
         /// </remarks>
-        ImmutableDictionary<LegacyBehavior, long> LegacyBehaviorsToEmulate { get; }
+        ReadOnlyDictionary<LegacyBehavior, long> LegacyBehaviorsToEmulate { get; }
     }
 }

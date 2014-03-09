@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 
 using Moq;
 
@@ -33,10 +32,10 @@ namespace Evercoin.TransactionScript
             stack.Push(data2);
             stack.Push(data1);
 
-            ImmutableList<TransactionScriptOperation> script = ImmutableList.Create<TransactionScriptOperation>
-            (
+            TransactionScriptOperation[] script =
+            {
                 (byte)opcode
-            );
+            };
 
             byte[] scriptBytes = Guid.NewGuid().ToByteArray();
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
@@ -45,9 +44,9 @@ namespace Evercoin.TransactionScript
             ScriptEvaluationResult result = sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>(), stack);
 
             Assert.Equal(3, stack.Count);
-            Assert.Equal(data1, (ImmutableList<byte>)stack.Pop());
-            Assert.Equal(data2, (ImmutableList<byte>)stack.Pop());
-            Assert.Equal(data3, (ImmutableList<byte>)stack.Pop());
+            Assert.Equal<byte>(data1, (byte[])stack.Pop());
+            Assert.Equal<byte>(data2, (byte[])stack.Pop());
+            Assert.Equal<byte>(data3, (byte[])stack.Pop());
 
             Assert.Equal(0, result.AlternateStack.Count);
         }

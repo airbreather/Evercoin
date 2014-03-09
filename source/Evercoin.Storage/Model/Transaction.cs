@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Immutable;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Numerics;
@@ -95,7 +94,7 @@ namespace Evercoin.Storage.Model
         /// </summary>
         public Collection<ValueSpender> TypedInputs { get; private set; }
 
-        public ImmutableList<IValueSpender> Inputs { get { return this.TypedInputs.ToImmutableList<IValueSpender>(); } }
+        public IValueSpender[] Inputs { get { return this.TypedInputs.GetArray<IValueSpender>(); } }
 
         /// <summary>
         /// Gets the outputs of this transaction.
@@ -105,7 +104,7 @@ namespace Evercoin.Storage.Model
         /// <summary>
         /// Gets the outputs of this transaction.
         /// </summary>
-        public ImmutableList<ITransactionValueSource> Outputs { get { return this.TypedOutputs.ToImmutableList<ITransactionValueSource>(); } }
+        public ITransactionValueSource[] Outputs { get { return this.TypedOutputs.GetArray<ITransactionValueSource>(); } }
 
         public uint LockTime { get; set; }
 

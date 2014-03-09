@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Immutable;
+using System.Linq;
 using System.Text;
 
 namespace Evercoin.Network.MessageHandlers
@@ -31,7 +31,7 @@ namespace Evercoin.Network.MessageHandlers
             byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(GetAddressesText);
             Array.Copy(unpaddedCommandBytes, commandBytes, unpaddedCommandBytes.Length);
 
-            message.CreateFrom(commandBytes, ImmutableList<byte>.Empty);
+            message.CreateFrom(commandBytes, Enumerable.Empty<byte>());
 
             return message;
         }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 
 namespace Evercoin.Algorithms
@@ -14,7 +13,7 @@ namespace Evercoin.Algorithms
         /// <summary>
         /// The <see cref="IHashAlgorithm"/>s to use, in order.
         /// </summary>
-        private readonly IImmutableList<IHashAlgorithm> algorithms;
+        private readonly IHashAlgorithm[] algorithms;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="IHashAlgorithm"/> class.
@@ -23,8 +22,18 @@ namespace Evercoin.Algorithms
         /// The <see cref="IHashAlgorithm"/> objects to use, in sequence.
         /// </param>
         public ChainedHashAlgorithm(params IHashAlgorithm[] algorithms)
-            : this(algorithms.ToImmutableList())
         {
+            if (algorithms == null)
+            {
+                throw new ArgumentNullException("algorithms");
+            }
+
+            if (algorithms.Length == 0)
+            {
+                throw new ArgumentException("Must provide at least one algorithm", "algorithms");
+            }
+
+            this.algorithms = algorithms;
         }
 
         /// <summary>
@@ -33,19 +42,9 @@ namespace Evercoin.Algorithms
         /// <param name="algorithms">
         /// The <see cref="IHashAlgorithm"/> objects to use, in sequence.
         /// </param>
-        public ChainedHashAlgorithm(IImmutableList<IHashAlgorithm> algorithms)
+        public ChainedHashAlgorithm(IEnumerable<IHashAlgorithm> algorithms)
+            : this(algorithms.GetArray())
         {
-            if (algorithms == null)
-            {
-                throw new ArgumentNullException("algorithms");
-            }
-
-            if (algorithms.Count == 0)
-            {
-                throw new ArgumentException("Must provide at least one algorithm", "algorithms");
-            }
-
-            this.algorithms = algorithms;
         }
 
         /// <summary>
@@ -60,14 +59,14 @@ namespace Evercoin.Algorithms
         /// <exception cref="ArgumentNullException">
         /// <paramref name="inputData"/> is <c>null</c>.
         /// </exception>
-        public ImmutableList<byte> CalculateHash(IEnumerable<byte> inputData)
+        public byte[] CalculateHash(IEnumerable<byte> inputData)
         {
             if (inputData == null)
             {
                 throw new ArgumentNullException("inputData");
             }
 
-            return (ImmutableList<byte>)this.algorithms.Aggregate(inputData, (lastResult, algorithm) => algorithm.CalculateHash(lastResult));
+            return (byte[])this.algorithms.Aggregate(inputData, (lastResult, algorithm) => algorithm.CalculateHash(lastResult));
         }
     }
 }

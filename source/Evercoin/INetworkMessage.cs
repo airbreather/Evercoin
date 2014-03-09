@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Immutable;
 
 namespace Evercoin
 {
@@ -21,12 +20,12 @@ namespace Evercoin
         /// <summary>
         /// Gets the command of this message.
         /// </summary>
-        ImmutableList<byte> CommandBytes { get; }
+        byte[] CommandBytes { get; }
 
         /// <summary>
         /// Gets the payload of this message.
         /// </summary>
-        ImmutableList<byte> Payload { get; }
+        byte[] Payload { get; }
 
         /// <summary>
         /// Gets the full content of this message.
@@ -41,6 +40,6 @@ namespace Evercoin
         /// where the size of each field is dictated
         /// by <see cref="NetworkParameters"/>.
         /// </remarks>
-        ImmutableList<byte> FullData { get; }
+        byte[] FullData { get; }
     }
 }

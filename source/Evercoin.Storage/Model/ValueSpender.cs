@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.Serialization;
@@ -32,7 +31,7 @@ namespace Evercoin.Storage.Model
             this.SpendingTransactionIdentifier = info.GetValue<BigInteger>(SerializationName_SpendingTransactionIdentifier);
             this.SpendingTransactionInputIndex = info.GetUInt32(SerializationName_SpendingTransactionInputIndex);
             this.SequenceNumber = info.GetUInt32(SerializationName_SequenceNumber);
-            this.ScriptSignature = info.GetValue<List<byte>>(SerializationName_ScriptSignature).ToImmutableList();
+            this.ScriptSignature = info.GetValue<byte[]>(SerializationName_ScriptSignature);
         }
 
         /// <summary>
@@ -84,7 +83,7 @@ namespace Evercoin.Storage.Model
         /// <remarks>
         /// For the coinbase found in blocks, this is usually just a data push.
         /// </remarks>
-        public ImmutableList<byte> ScriptSignature { get; set; }
+        public byte[] ScriptSignature { get; set; }
 
         public uint SequenceNumber { get; set; }
 
@@ -97,7 +96,7 @@ namespace Evercoin.Storage.Model
             info.AddValue(SerializationName_SpendingTransactionIdentifier, this.SpendingTransactionIdentifier);
             info.AddValue(SerializationName_SpendingTransactionInputIndex, this.SpendingTransactionInputIndex);
             info.AddValue(SerializationName_SequenceNumber, this.SequenceNumber);
-            info.AddValue(SerializationName_ScriptSignature, this.ScriptSignature.ToList());
+            info.AddValue(SerializationName_ScriptSignature, this.ScriptSignature);
         }
     }
 }

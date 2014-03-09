@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Immutable;
 using System.Linq;
+using System.Runtime.InteropServices.ComTypes;
 using System.Text;
 
 using Evercoin.ProtocolObjects;
+using Evercoin.Util;
 
 namespace Evercoin.Network.MessageHandlers
 {
@@ -37,11 +38,16 @@ namespace Evercoin.Network.MessageHandlers
             byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(GetDataText);
             Array.Copy(unpaddedCommandBytes, commandBytes, unpaddedCommandBytes.Length);
 
-            ImmutableList<ProtocolInventoryVector> dataToRequestList = dataToRequest.ToImmutableList();
-            ProtocolCompactSize size = (ulong)dataToRequestList.Count;
+            ProtocolInventoryVector[] dataToRequestList = dataToRequest.GetArray();
+            ProtocolCompactSize size = (ulong)dataToRequestList.Length;
 
-            message.CreateFrom(commandBytes, ImmutableList.CreateRange(size.Data)
-                                                          .AddRange(dataToRequestList.SelectMany(x => x.Data)));
+            byte[] sizeBytes = size.Data;
+            IEnumerable<byte[]> dataToRequestSources = dataToRequestList.Select(x => x.Data);
+
+            byte[] dataToRequestBytes = ByteTwiddling.ConcatenateData(dataToRequestSources);
+            byte[] payload = ByteTwiddling.ConcatenateData(sizeBytes, dataToRequestBytes);
+
+            message.CreateFrom(commandBytes, payload);
             return message;
         }
     }
