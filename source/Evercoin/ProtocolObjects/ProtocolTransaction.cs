@@ -37,21 +37,19 @@ namespace Evercoin.ProtocolObjects
         {
             get
             {
-                ImmutableList<byte> dataToHash = ImmutableList.CreateRange(BitConverter.GetBytes(this.Version).LittleEndianToOrFromBitConverterEndianness())
-                    .AddRange(((ProtocolCompactSize)(ulong)this.Inputs.Count).Data)
-                    .AddRange(this.Inputs.SelectMany(x =>
-                        x.PrevOutTxId.ToLittleEndianUInt256Array()
-                            .Concat(BitConverter.GetBytes((uint)x.PrevOutN).LittleEndianToOrFromBitConverterEndianness())
-                            .Concat(((ProtocolCompactSize)(ulong)x.ScriptSig.Count).Data)
-                            .Concat(x.ScriptSig)
-                            .Concat(BitConverter.GetBytes(x.Sequence).LittleEndianToOrFromBitConverterEndianness())))
-                    .AddRange(((ProtocolCompactSize)(ulong)this.Outputs.Count).Data)
-                    .AddRange(this.Outputs.SelectMany(x => BitConverter.GetBytes(x.ValueInSatoshis).LittleEndianToOrFromBitConverterEndianness()
-                        .Concat(((ProtocolCompactSize)(ulong)x.ScriptPubKey.Count).Data)
-                        .Concat(x.ScriptPubKey)))
-                    .AddRange(BitConverter.GetBytes(this.LockTime).LittleEndianToOrFromBitConverterEndianness())
-                    .ToImmutableList();
-                return dataToHash;
+                return ImmutableList.CreateRange(BitConverter.GetBytes(this.Version).LittleEndianToOrFromBitConverterEndianness())
+                                    .AddRange(((ProtocolCompactSize)(ulong)this.Inputs.Count).Data)
+                                    .AddRange(this.Inputs.SelectMany(x => x.PrevOutTxId.ToLittleEndianUInt256Array()
+                                                                                       .Concat(BitConverter.GetBytes(x.PrevOutN).LittleEndianToOrFromBitConverterEndianness())
+                                                                                       .Concat(((ProtocolCompactSize)(ulong)x.ScriptSig.Count).Data)
+                                                                                       .Concat(x.ScriptSig)
+                                                                                       .Concat(BitConverter.GetBytes(x.Sequence).LittleEndianToOrFromBitConverterEndianness())))
+                                    .AddRange(((ProtocolCompactSize)(ulong)this.Outputs.Count).Data)
+                                    .AddRange(this.Outputs.SelectMany(x => BitConverter.GetBytes(x.ValueInSatoshis).LittleEndianToOrFromBitConverterEndianness()
+                                                                                                                   .Concat(((ProtocolCompactSize)(ulong)x.ScriptPubKey.Count).Data)
+                                                                                                                   .Concat(x.ScriptPubKey)))
+                                    .AddRange(BitConverter.GetBytes(this.LockTime).LittleEndianToOrFromBitConverterEndianness())
+                                    .ToImmutableList();
             }
         }
     }

@@ -26,7 +26,7 @@ namespace Evercoin.ProtocolObjects
         {
             get
             {
-                if (this.Value <= 0xfd)
+                if (this.Value < 0xfd)
                 {
                     return ImmutableList.Create((byte)this.Value);
                 }
@@ -47,7 +47,7 @@ namespace Evercoin.ProtocolObjects
                                                               .LittleEndianToOrFromBitConverterEndianness());
                 }
 
-                return ImmutableList.Create((byte)0xfe)
+                return ImmutableList.Create((byte)0xff)
                                     .AddRange(BitConverter.GetBytes(this.Value)
                                                           .LittleEndianToOrFromBitConverterEndianness());
             }

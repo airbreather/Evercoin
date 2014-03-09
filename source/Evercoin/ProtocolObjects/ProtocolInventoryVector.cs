@@ -16,22 +16,12 @@ namespace Evercoin.ProtocolObjects
 
         public BigInteger Hash { get; private set; }
 
-        public byte[] HashBytes
-        {
-            get
-            {
-                byte[] hash = this.Hash.ToByteArray();
-                Array.Resize(ref hash, 32);
-                return hash;
-            }
-        }
-
         public ImmutableList<byte> Data
         {
             get
             {
                 return ImmutableList.CreateRange(BitConverter.GetBytes((uint)this.Type).LittleEndianToOrFromBitConverterEndianness())
-                                    .AddRange(this.HashBytes);
+                                    .AddRange(this.Hash.ToLittleEndianUInt256Array());
             }
         }
 

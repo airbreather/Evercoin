@@ -10,9 +10,6 @@ namespace Evercoin
     /// Represents the parameters for a cryptocurrency blockchain.
     /// Changes to any of these parameters definitely result in a hardfork.
     /// </summary>
-    /// <remarks>
-    /// 
-    /// </remarks>
     public interface IChainParameters : IEquatable<IChainParameters>
     {
         /// <summary>

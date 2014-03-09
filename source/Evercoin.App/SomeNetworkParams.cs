@@ -57,14 +57,14 @@ namespace Evercoin.App
         /// </summary>
         /// <remarks>
         /// Looks like this is going to be 16 for everything that exists today:
-        /// 4 bytes for the <see cref="INetworkParameters.StaticMessagePrefixData"/>.
+        /// 4 bytes for the <see cref="StaticMessagePrefixData"/>.
         /// Remaining 12 bytes are the ASCII-encoded command.
         /// </remarks>
         public int MessagePrefixLengthInBytes { get { return 16; } }
 
         /// <summary>
         /// Gets the static data that starts every message for this network.
-        /// Must be shorter than <see cref="INetworkParameters.MessagePrefixLengthInBytes"/>.
+        /// Must be shorter than <see cref="MessagePrefixLengthInBytes"/>.
         /// </summary>
         /// <remarks>
         /// This is usually a sequence of 4 bytes that are uncommon
@@ -134,7 +134,7 @@ namespace Evercoin.App
                 .HashWith(this.PayloadChecksumLengthInBytes)
                 .HashWith(this.CommandLengthInBytes);
             builder = this.StaticMessagePrefixData.Aggregate(builder, (prevBuilder, nextByte) => prevBuilder.HashWith(nextByte));
-            return this.Seeds.Aggregate(builder, (prevBuilder, nextSeed) => prevBuilder.HashWith(nextSeed));
+            return this.Seeds.OrderBy(x => x.ToString(), StringComparer.OrdinalIgnoreCase).Aggregate(builder, (prevBuilder, nextSeed) => prevBuilder.HashWith(nextSeed));
         }
     }
 }

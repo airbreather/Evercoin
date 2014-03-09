@@ -35,12 +35,7 @@ namespace Evercoin
 
         public static implicit operator BigInteger(StackItem item)
         {
-            if (!item.value.HasValue)
-            {
-                item.value = new BigInteger(item.data.ToArray());
-            }
-
-            return item.value.Value;
+            return item.value ?? (item.value = new BigInteger(item.data.ToArray())).Value;
         }
 
         public static implicit operator bool(StackItem item)
@@ -50,7 +45,7 @@ namespace Evercoin
 
         public static implicit operator ImmutableList<byte>(StackItem item)
         {
-            return item.data ?? (item.data = item.value.Value.ToByteArray().ToImmutableList());
+            return item.data ?? (item.data = item.value.Value.ToLittleEndianUInt256Array().ToImmutableList());
         }
 
         public static implicit operator StackItem(BigInteger data)
