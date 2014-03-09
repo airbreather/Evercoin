@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel.Composition;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,7 +11,6 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly VerAckMessageBuilder verAckMessageBuilder;
 
-        [ImportingConstructor]
         public VersionMessageHandler(INetwork network, IHashAlgorithmStore hashAlgorithmStore)
             : base(RecognizedCommand, network)
         {

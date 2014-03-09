@@ -14,7 +14,7 @@ namespace Evercoin.Network.MessageHandlers
         private const string GetBlocksText = "getblocks";
         private static readonly Encoding CommandEncoding = Encoding.ASCII;
 
-        private readonly Network network;
+        private readonly INetwork network;
 
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
@@ -25,13 +25,7 @@ namespace Evercoin.Network.MessageHandlers
                 throw new ArgumentException("Command length is too short for the \"getblocks\" command.", "network");
             }
 
-            Network realNetwork = network as Network;
-            if (realNetwork == null)
-            {
-                throw new NotSupportedException("Other things not supported yet because lol");
-            }
-
-            this.network = realNetwork;
+            this.network = network;
             this.hashAlgorithmStore = hashAlgorithmStore;
         }
 

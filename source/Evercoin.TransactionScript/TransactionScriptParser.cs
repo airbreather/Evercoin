@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.ComponentModel.Composition;
 using System.Linq;
 
 namespace Evercoin.TransactionScript
 {
-    [Export(typeof(ITransactionScriptParser))]
     public sealed class TransactionScriptParser : ITransactionScriptParser
     {
         public ImmutableList<TransactionScriptOperation> Parse(IEnumerable<byte> bytes)

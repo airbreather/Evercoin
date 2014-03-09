@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.Serialization.Formatters.Binary;
@@ -17,7 +18,8 @@ using NodaTime;
 
 namespace Evercoin.Storage
 {
-    ////[Export("UncachedChainStore", typeof(IChainStore))]
+    ////[Export(typeof(IChainStore))]
+    ////[Export(typeof(IReadOnlyChainStore))]
     public sealed class ZipFileChainStore : ReadWriteChainStoreBase
     {
         private const string ZipFileName = @"C:\Freedom\evercoin.zip";
@@ -33,8 +35,6 @@ namespace Evercoin.Storage
         private readonly ConcurrentDictionary<BigInteger, ManualResetEventSlim> txWaiters = new ConcurrentDictionary<BigInteger, ManualResetEventSlim>();
 
         private readonly ZipFile archive;
-
-        private Instant lastSave = Instant.FromDateTimeUtc(DateTime.UtcNow);
 
         public ZipFileChainStore()
         {
@@ -122,56 +122,102 @@ namespace Evercoin.Storage
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
         {
-            do
+            Monitor.Enter(this.zipLock);
+            try
             {
-                lock (this.zipLock)
+                ZipEntry data;
+                do
                 {
-                    var data = this.archive[GetBlockEntryName(blockIdentifier)];
+                    data = this.archive[GetBlockEntryName(blockIdentifier)];
                     if (data != null)
                     {
-                        using (var stream = data.OpenReader())
-                        {
-                            BinaryFormatter binaryFormatter = new BinaryFormatter();
-                            return (Block)binaryFormatter.Deserialize(stream);
-                        }
+                        break;
+                    }
+
+                    Monitor.Exit(this.zipLock);
+                    ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, _ => new ManualResetEventSlim());
+                    if (mres.Wait(10000) &&
+                        this.blockWaiters.TryRemove(blockIdentifier, out mres))
+                    {
+                        mres.Dispose();
+                    }
+
+                    Monitor.Enter(this.zipLock);
+                }
+                while (true);
+
+                try
+                {
+                    using (var stream = data.OpenReader())
+                    {
+                        BinaryFormatter binaryFormatter = new BinaryFormatter();
+                        return (Block)binaryFormatter.Deserialize(stream);
                     }
                 }
-
-                ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, _ => new ManualResetEventSlim());
-                if (mres.Wait(10000) &&
-                    this.blockWaiters.TryRemove(blockIdentifier, out mres))
+                catch (BadStateException)
                 {
-                    mres.Dispose();
+                    this.archive.Save();
+                    using (var stream = data.OpenReader())
+                    {
+                        BinaryFormatter binaryFormatter = new BinaryFormatter();
+                        return (Block)binaryFormatter.Deserialize(stream);
+                    }
                 }
             }
-            while (true);
+            finally
+            {
+                Monitor.Exit(this.zipLock);
+            }
         }
 
         protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
         {
-            do
+            Monitor.Enter(this.zipLock);
+            try
             {
-                lock (this.zipLock)
+                ZipEntry data;
+                do
                 {
-                    var data = this.archive[GetTransactionEntryName(transactionIdentifier)];
+                    data = this.archive[GetTransactionEntryName(transactionIdentifier)];
                     if (data != null)
                     {
-                        using (var stream = data.OpenReader())
-                        {
-                            BinaryFormatter binaryFormatter = new BinaryFormatter();
-                            return (Transaction)binaryFormatter.Deserialize(stream);
-                        }
+                        break;
+                    }
+
+                    Monitor.Exit(this.zipLock);
+                    ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, _ => new ManualResetEventSlim());
+                    if (mres.Wait(10000) &&
+                        this.txWaiters.TryRemove(transactionIdentifier, out mres))
+                    {
+                        mres.Dispose();
+                    }
+
+                    Monitor.Enter(this.zipLock);
+                }
+                while (true);
+
+                try
+                {
+                    using (var stream = data.OpenReader())
+                    {
+                        BinaryFormatter binaryFormatter = new BinaryFormatter();
+                        return (Transaction)binaryFormatter.Deserialize(stream);
                     }
                 }
-
-                ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, _ => new ManualResetEventSlim());
-                if (mres.Wait(10000) &&
-                    this.txWaiters.TryRemove(transactionIdentifier, out mres))
+                catch (BadStateException)
                 {
-                    mres.Dispose();
+                    this.archive.Save();
+                    using (var stream = data.OpenReader())
+                    {
+                        BinaryFormatter binaryFormatter = new BinaryFormatter();
+                        return (Transaction)binaryFormatter.Deserialize(stream);
+                    }
                 }
             }
-            while (true);
+            finally
+            {
+                Monitor.Exit(this.zipLock);
+            }
         }
 
         protected override void PutBlockCore(IBlock block)
@@ -181,11 +227,11 @@ namespace Evercoin.Storage
             lock (this.zipLock)
             {
                 this.archive.AddEntry(GetBlockEntryName(typedBlock), (_, entryStream) => binaryFormatter.Serialize(entryStream, typedBlock));
-                this.Save();
+                this.archive.Save();
             }
 
             ManualResetEventSlim mres;
-            if (this.blockWaiters.TryRemove(block.Identifier, out mres))
+            if (this.blockWaiters.TryGetValue(block.Identifier, out mres))
             {
                 mres.Set();
             }
@@ -198,11 +244,11 @@ namespace Evercoin.Storage
             lock (this.zipLock)
             {
                 this.archive.AddEntry(GetTransactionEntryName(typedTransaction), (_, entryStream) => binaryFormatter.Serialize(entryStream, typedTransaction));
-                this.Save();
+                this.archive.Save();
             }
 
             ManualResetEventSlim mres;
-            if (this.txWaiters.TryRemove(transaction.Identifier, out mres))
+            if (this.txWaiters.TryGetValue(transaction.Identifier, out mres))
             {
                 mres.Set();
             }
@@ -238,16 +284,6 @@ namespace Evercoin.Storage
             Array.Reverse(transactionIdentifierBytes);
             string id = ByteTwiddling.ByteArrayToHexString(transactionIdentifierBytes);
             return String.Join(EntrySep, TxDir, id);
-        }
-
-        private void Save()
-        {
-            Instant now = Instant.FromDateTimeUtc(DateTime.UtcNow);
-            if (now - this.lastSave > Duration.FromSeconds(1))
-            {
-                this.archive.Save();
-                this.lastSave = Instant.FromDateTimeUtc(DateTime.UtcNow);
-            }
         }
     }
 }

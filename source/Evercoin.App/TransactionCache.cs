@@ -4,7 +4,7 @@ using System.Runtime.Caching;
 
 using Evercoin.Util;
 
-namespace Evercoin.Storage
+namespace Evercoin.App
 {
     internal sealed class TransactionCache
     {
@@ -38,7 +38,7 @@ namespace Evercoin.Storage
         {
             byte[] littleEndianUInt256Array = identifier.ToLittleEndianUInt256Array();
             Array.Reverse(littleEndianUInt256Array);
-            string canonicalTxIdentifier = ByteTwiddling.ByteArrayToHexString(littleEndianUInt256Array).ToLowerInvariant();
+            string canonicalTxIdentifier = ByteTwiddling.ByteArrayToHexString(littleEndianUInt256Array);
             return "T;" + canonicalTxIdentifier;
         }
     }

@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -25,7 +24,6 @@ namespace Evercoin.Network.MessageHandlers
         private readonly ITransactionScriptRunner scriptRunner;
         private static readonly byte[] RecognizedCommand = Encoding.ASCII.GetBytes("block");
 
-        [ImportingConstructor]
         public BlockMessageHandler(INetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore, ITransactionScriptRunner scriptRunner, ISignatureCheckerFactory signatureCheckerFactory)
             : base(RecognizedCommand, network)
         {

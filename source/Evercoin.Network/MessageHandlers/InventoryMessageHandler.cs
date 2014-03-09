@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Immutable;
-using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -21,7 +20,6 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
-        [ImportingConstructor]
         public InventoryMessageHandler(INetwork network, IReadOnlyChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore)
             : base(RecognizedCommand, network)
         {

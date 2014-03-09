@@ -30,7 +30,7 @@ namespace Evercoin
 
             return bytes;
         }
-        
+
         public static byte[] ToLittleEndianUInt256Array(this BigInteger bigInteger)
         {
             byte[] unpaddedResult = bigInteger.ToByteArray();
@@ -56,7 +56,6 @@ namespace Evercoin
             Buffer.BlockCopy(unpaddedResult, 0, result, 0, unpaddedResult.Length);
             return result;
         }
-
 
         /// <summary>
         /// Determines whether this Merkle tree is valid, using a given

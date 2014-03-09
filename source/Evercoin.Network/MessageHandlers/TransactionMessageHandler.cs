@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.Composition;
-using System.Text;
+﻿using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -14,7 +13,6 @@ namespace Evercoin.Network.MessageHandlers
 
         private readonly IChainStore chainStore;
 
-        [ImportingConstructor]
         public TransactionMessageHandler(INetwork network, IChainStore chainStore, IHashAlgorithmStore hashAlgorithmStore)
             : base(RecognizedCommand, network)
         {

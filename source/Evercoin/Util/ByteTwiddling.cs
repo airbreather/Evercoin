@@ -33,9 +33,9 @@ namespace Evercoin.Util
             for (int i = 0; i < bytes.Count; i++)
             {
                 b = bytes[i] >> 4;
-                c[i * 2] = (char)(55 + b + (((b - 10) >> 31) & -7));
+                c[i * 2] = (char)(87 + b + (((b - 10) >> 31) & -39));
                 b = bytes[i] & 0xF;
-                c[i * 2 + 1] = (char)(55 + b + (((b - 10) >> 31) & -7));
+                c[i * 2 + 1] = (char)(87 + b + (((b - 10) >> 31) & -39));
             }
 
             return new string(c);

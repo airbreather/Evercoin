@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Numerics;
 
@@ -9,7 +8,6 @@ using Evercoin.BaseImplementations;
 
 namespace Evercoin.TransactionScript
 {
-    [Export(typeof(ITransactionScriptRunner))]
     public sealed class TransactionScriptRunner : TransactionScriptRunnerBase
     {
         #region Various Definitions
@@ -111,7 +109,6 @@ namespace Evercoin.TransactionScript
 
         private readonly ITransactionScriptParser transactionScriptParser;
 
-        [ImportingConstructor]
         public TransactionScriptRunner(IHashAlgorithmStore hashAlgorithmStore, ITransactionScriptParser transactionScriptParser)
         {
             if (hashAlgorithmStore == null)

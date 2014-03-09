@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
@@ -18,15 +17,13 @@ using NodaTime;
 
 namespace Evercoin.Network
 {
-    [Export(typeof(INetwork))]
     public sealed class Network : INetwork
     {
         private readonly INetworkParameters networkParameters;
         private readonly IHashAlgorithmStore hashAlgorithmStore;
         private readonly ConcurrentDictionary<Guid, TcpClient> clientLookup = new ConcurrentDictionary<Guid, TcpClient>();
         private readonly Subject<IObservable<INetworkMessage>> messageObservables = new Subject<IObservable<INetworkMessage>>();
-        
-        [ImportingConstructor]
+
         public Network(INetworkParameters networkParameters, IHashAlgorithmStore hashAlgorithmStore)
         {
             if (networkParameters == null)

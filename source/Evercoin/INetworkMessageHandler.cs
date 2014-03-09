@@ -1,5 +1,4 @@
-﻿using System.ComponentModel.Composition;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 
 namespace Evercoin
@@ -8,7 +7,6 @@ namespace Evercoin
     /// A handler for <see cref="INetworkMessage"/> objects received
     /// over an <see cref="INetwork"/>.
     /// </summary>
-    [InheritedExport(typeof(INetworkMessageHandler))]
     public interface INetworkMessageHandler
     {
         /// <summary>

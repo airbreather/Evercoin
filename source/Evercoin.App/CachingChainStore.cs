@@ -1,5 +1,4 @@
 ﻿using System;
-using System.ComponentModel.Composition;
 using System.Numerics;
 using System.Runtime.Caching;
 using System.Threading;
@@ -7,11 +6,9 @@ using System.Threading.Tasks;
 
 using Evercoin.BaseImplementations;
 
-namespace Evercoin.Storage
+namespace Evercoin.App
 {
-    ////[Export(typeof(IChainStore))]
-    ////[Export(typeof(IReadOnlyChainStore))]
-    public sealed class CachingChainStorage : ReadWriteChainStoreBase
+    internal sealed class CachingChainStorage : ReadWriteChainStoreBase
     {
         private readonly IChainStore underlyingChainStore;
 
@@ -21,8 +18,7 @@ namespace Evercoin.Storage
 
         private readonly TransactionCache transactionCache;
 
-        [ImportingConstructor]
-        public CachingChainStorage([Import("UncachedChainStore")] IChainStore underlyingChainStore)
+        public CachingChainStorage(IChainStore underlyingChainStore)
         {
             this.underlyingChainStore = underlyingChainStore;
             MemoryCache memoryCache = MemoryCache.Default;

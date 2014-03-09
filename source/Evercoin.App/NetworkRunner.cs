@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
@@ -10,15 +11,34 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Evercoin.Network.MessageHandlers;
 using Evercoin.Util;
 
 namespace Evercoin.App
 {
     public sealed class NetworkRunner
     {
-        [Import(typeof(INetwork))] private INetwork network;
+        private readonly INetwork network;
 
-        [ImportMany] private readonly List<INetworkMessageHandler> messageHandlers = new List<INetworkMessageHandler>();
+        private readonly Collection<INetworkMessageHandler> messageHandlers = new Collection<INetworkMessageHandler>();
+
+        public NetworkRunner(INetwork network,
+                             BlockMessageHandler blockMessageHandler,
+                             InventoryMessageHandler inventoryMessageHandler,
+                             TransactionMessageHandler transactionMessageHandler,
+                             VerAckMessageHandler verAckMessageHandler,
+                             VersionMessageHandler versionMessageHandler)
+        {
+            this.network = network;
+            this.messageHandlers = new Collection<INetworkMessageHandler>
+                                   {
+                                       blockMessageHandler,
+                                       inventoryMessageHandler,
+                                       transactionMessageHandler,
+                                       verAckMessageHandler,
+                                       versionMessageHandler
+                                   };
+        }
 
         public async Task Run(CancellationToken token)
         {

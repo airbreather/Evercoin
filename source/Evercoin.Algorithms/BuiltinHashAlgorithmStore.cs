@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Collections.Immutable;
+using System.ComponentModel.Composition;
 
 using Evercoin.BaseImplementations;
 
@@ -13,6 +13,7 @@ namespace Evercoin.Algorithms
     /// <see cref="IHashAlgorithm"/>s that we have built-in handling for.
     /// This implementation is read-only.
     /// </summary>
+    [Export(typeof(IHashAlgorithmStore))]
     public sealed class BuiltinHashAlgorithmStore : HashAlgorithmStoreBase
     {
         /// <summary>
@@ -39,25 +40,9 @@ namespace Evercoin.Algorithms
             this.algorithms = algorithmBuilder.ToImmutable();
         }
 
-        /// <summary>
-        /// Gets the <see cref="IHashAlgorithm"/> identified by a given
-        /// <see cref="Guid"/>.
-        /// </summary>
-        /// <param name="identifier">
-        /// The <see cref="Guid"/> that identifies the
-        /// <see cref="IHashAlgorithm"/> value to get.
-        /// </param>
-        /// <returns>
-        /// The <see cref="IHashAlgorithm"/> identified by
-        /// <paramref name="identifier"/>.
-        /// </returns>
-        /// <exception cref="KeyNotFoundException">
-        /// <paramref name="identifier"/> does not map to an algorithm
-        /// that we know about.
-        /// </exception>
-        public override IHashAlgorithm GetHashAlgorithm(Guid identifier)
+        public override bool TryGetHashAlgorithm(Guid identifier, out IHashAlgorithm algorithm)
         {
-            return this.algorithms[identifier];
+            return this.algorithms.TryGetValue(identifier, out algorithm);
         }
     }
 }

@@ -7,7 +7,6 @@ namespace Evercoin.BaseImplementations
     /// <summary>
     /// Base class for implementations of <see cref="IHashAlgorithmStore"/>.
     /// </summary>
-    [InheritedExport(typeof(IHashAlgorithmStore))]
     public abstract class HashAlgorithmStoreBase : IHashAlgorithmStore
     {
         /// <summary>
@@ -26,6 +25,17 @@ namespace Evercoin.BaseImplementations
         /// <paramref name="identifier"/> does not map to an algorithm
         /// that we know about.
         /// </exception>
-        public abstract IHashAlgorithm GetHashAlgorithm(Guid identifier);
+        public IHashAlgorithm GetHashAlgorithm(Guid identifier)
+        {
+            IHashAlgorithm hashAlgorithm;
+            if (!this.TryGetHashAlgorithm(identifier, out hashAlgorithm))
+            {
+                throw new KeyNotFoundException(identifier + " does not map to an algorithm we know about.");
+            }
+
+            return hashAlgorithm;
+        }
+
+        public abstract bool TryGetHashAlgorithm(Guid identifier, out IHashAlgorithm hashAlgorithm);
     }
 }

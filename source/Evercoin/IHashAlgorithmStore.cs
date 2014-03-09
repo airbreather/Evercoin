@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 
 namespace Evercoin
 {
@@ -8,7 +7,6 @@ namespace Evercoin
     /// Represents a store that contains all the
     /// <see cref="IHashAlgorithm"/> objects that we know about.
     /// </summary>
-    [InheritedExport(typeof(IHashAlgorithmStore))]
     public interface IHashAlgorithmStore
     {
         /// <summary>
@@ -28,5 +26,7 @@ namespace Evercoin
         /// that we know about.
         /// </exception>
         IHashAlgorithm GetHashAlgorithm(Guid identifier);
+
+        bool TryGetHashAlgorithm(Guid identifier, out IHashAlgorithm hashAlgorithm);
     }
 }
