@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -8,19 +9,14 @@ namespace Evercoin
     /// <summary>
     /// Represents the observable cryptocurrency network.
     /// </summary>
-    /// <remarks>
-    /// TODO: Remove this remark.
-    /// This is actually intended to work for both SPV and Full-Node operation,
-    /// even in the filtering mode specified in BIP 37, via "dummy"
-    /// placeholder transactions that only have just enough data to fit into
-    /// the Merkle tree.
-    /// </remarks>
-    public interface IRawNetwork : IDisposable
+    public interface IRawNetwork
     {
         /// <summary>
         /// Gets an observable sequence of messages received on this network.
         /// </summary>
         IObservable<INetworkMessage> ReceivedMessages { get; }
+
+        IObservable<Guid> ReceivedConnections { get; }
 
         /// <summary>
         /// Gets the <see cref="INetworkParameters"/> object that defines the
@@ -134,6 +130,6 @@ namespace Evercoin
         /// </remarks>
         Task SendMessageToClientAsync(Guid clientId, INetworkMessage message, CancellationToken token);
 
-        Task AskForMoreBlocks();
+        TcpClient GetClientButPleaseBeNice(Guid clientId);
     }
 }

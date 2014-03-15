@@ -2,13 +2,17 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Evercoin.Util
 {
     public static class Cheating
     {
-        private static int maxIndex = 0;
+        private static int blockCount = 1;
         private static readonly object syncLock = new object();
+        private static readonly Dictionary<BigInteger, int> IdToHeight = new Dictionary<BigInteger, int>(300000) { { new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").Reverse().GetArray()), 0 } };
+        private static readonly Dictionary<BigInteger, ManualResetEventSlim> IdWaiters = new Dictionary<BigInteger, ManualResetEventSlim>(300000);
 
         private static BigInteger[] BlockIdentifiers = { new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").Reverse().GetArray()) };
 
@@ -22,7 +26,16 @@ namespace Evercoin.Util
                 }
 
                 BlockIdentifiers[height] = blockIdentifier;
-                maxIndex = Math.Max(maxIndex, height);
+                IdToHeight[blockIdentifier] = height;
+
+                ManualResetEventSlim mres;
+                if (!IdWaiters.TryGetValue(blockIdentifier, out mres))
+                {
+                    IdWaiters[blockIdentifier] = mres = new ManualResetEventSlim();
+                }
+
+                mres.Set();
+                blockCount++;
             }
         }
 
@@ -30,13 +43,37 @@ namespace Evercoin.Util
         {
             lock (syncLock)
             {
-                return new ArraySegment<BigInteger>(BlockIdentifiers, 0, maxIndex + 1);
+                return new ArraySegment<BigInteger>(BlockIdentifiers, 0, blockCount);
             }
         }
 
         public static int GetBlockIdentifierCount()
         {
-            return maxIndex + 1;
+            return blockCount;
+        }
+
+        public static async Task<int> GetBlockHeightAsync(BigInteger blockIdentifier, CancellationToken token)
+        {
+            int height;
+            if (IdToHeight.TryGetValue(blockIdentifier, out height))
+            {
+                return height;
+            }
+
+            ManualResetEventSlim mres;
+            lock (syncLock)
+            {
+                if (!IdWaiters.TryGetValue(blockIdentifier, out mres))
+                {
+                    IdWaiters[blockIdentifier] = mres = new ManualResetEventSlim();
+                }
+            }
+
+            await Task.Run(() => mres.Wait(token), token);
+            lock (syncLock)
+            {
+                return IdToHeight[blockIdentifier];
+            }
         }
 
         public static IMerkleTreeNode ToMerkleTree(this IEnumerable<IEnumerable<byte>> inputs, IHashAlgorithm hashAlgorithm)

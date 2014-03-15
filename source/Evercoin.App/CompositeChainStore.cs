@@ -37,19 +37,19 @@ namespace Evercoin.App
                    null;
         }
 
-        protected override void PutBlockCore(IBlock block)
+        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
         {
             foreach (IChainStore chainStore in this.underlyingChainStores)
             {
-                chainStore.PutBlock(block);
+                chainStore.PutBlock(blockIdentifier, block);
             }
         }
 
-        protected override void PutTransactionCore(ITransaction transaction)
+        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
         {
             foreach (IChainStore chainStore in this.underlyingChainStores)
             {
-                chainStore.PutTransaction(transaction);
+                chainStore.PutTransaction(transactionIdentifier, transaction);
             }
         }
 
@@ -105,19 +105,19 @@ namespace Evercoin.App
             return null;
         }
 
-        protected override async Task PutBlockAsyncCore(IBlock block, CancellationToken token)
+        protected override async Task PutBlockAsyncCore(BigInteger blockIdentifier, IBlock block, CancellationToken token)
         {
             foreach (IChainStore chainStore in this.underlyingChainStores)
             {
-                await chainStore.PutBlockAsync(block, token);
+                await chainStore.PutBlockAsync(blockIdentifier, block, token);
             }
         }
 
-        protected override async Task PutTransactionAsyncCore(ITransaction transaction, CancellationToken token)
+        protected override async Task PutTransactionAsyncCore(BigInteger transactionIdentifier, ITransaction transaction, CancellationToken token)
         {
             foreach (IChainStore chainStore in this.underlyingChainStores)
             {
-                await chainStore.PutTransactionAsync(transaction, token);
+                await chainStore.PutTransactionAsync(transactionIdentifier, transaction, token);
             }
         }
     }

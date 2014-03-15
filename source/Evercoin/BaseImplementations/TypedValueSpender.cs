@@ -1,9 +1,9 @@
 ﻿using System.Linq;
 using System.Numerics;
 
-namespace Evercoin.Network
+namespace Evercoin.BaseImplementations
 {
-    internal sealed class NetworkValueSpender : IValueSpender
+    internal sealed class TypedValueSpender : IValueSpender
     {
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.

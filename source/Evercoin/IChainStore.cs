@@ -1,4 +1,5 @@
-﻿using System.Threading;
+﻿using System.Numerics;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Evercoin
@@ -8,16 +9,16 @@ namespace Evercoin
     /// </summary>
     public interface IChainStore : IReadOnlyChainStore
     {
-        void PutBlock(IBlock block);
+        void PutBlock(BigInteger blockIdentifier, IBlock block);
 
-        void PutTransaction(ITransaction transaction);
+        void PutTransaction(BigInteger transactionIdentifier, ITransaction transaction);
 
-        Task PutBlockAsync(IBlock block);
+        Task PutBlockAsync(BigInteger blockIdentifier, IBlock block);
 
-        Task PutBlockAsync(IBlock block, CancellationToken token);
+        Task PutBlockAsync(BigInteger blockIdentifier, IBlock block, CancellationToken token);
 
-        Task PutTransactionAsync(ITransaction transaction);
+        Task PutTransactionAsync(BigInteger transactionIdentifier, ITransaction transaction);
 
-        Task PutTransactionAsync(ITransaction transaction, CancellationToken token);
+        Task PutTransactionAsync(BigInteger transactionIdentifier, ITransaction transaction, CancellationToken token);
     }
 }

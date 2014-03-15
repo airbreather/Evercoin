@@ -17,19 +17,19 @@ namespace Evercoin.App
     {
         private static void Main(string[] args)
         {
-            // Don't read too far into this part... it's mainly just a sanity check for the WIP stuff.
+            // Don't read too far into this assembly... it's mainly just a sanity check for the WIP stuff.
             AssemblyCatalog catalog1 = new AssemblyCatalog(Assembly.Load(new AssemblyName("Evercoin.Network")));
             AssemblyCatalog catalog2 = new AssemblyCatalog(Assembly.Load(new AssemblyName("Evercoin.Algorithms")));
             AssemblyCatalog catalog3 = new AssemblyCatalog(Assembly.Load(new AssemblyName("Evercoin.Storage")));
             AssemblyCatalog catalog4 = new AssemblyCatalog(Assembly.Load(new AssemblyName("Evercoin.TransactionScript")));
             AssemblyCatalog catalog5 = new AssemblyCatalog(Assembly.GetExecutingAssembly());
             AggregateCatalog catalog = new AggregateCatalog(catalog1, catalog2, catalog3, catalog4, catalog5);
+            using (CompositeChainStorage chainStorage = new CompositeChainStorage())
             using (CompositionContainer container = new CompositionContainer(catalog))
             {
-                CompositeChainStorage chainStorage = new CompositeChainStorage();
                 CompositeHashAlgorithmStore hashAlgorithmStore = new CompositeHashAlgorithmStore();
                 container.ComposeParts(chainStorage, hashAlgorithmStore);
-                EvercoinModule module = new EvercoinModule(chainStorage, hashAlgorithmStore);
+                using (EvercoinModule module = new EvercoinModule(chainStorage, hashAlgorithmStore))
                 using (StandardKernel kernel = new StandardKernel(module))
                 {
                     NetworkRunner runner = kernel.Get<NetworkRunner>();
@@ -57,21 +57,19 @@ namespace Evercoin.App
 
                     Console.WriteLine();
                     Console.WriteLine("=== Network ===");
-                    Console.WriteLine("Legend:");
-                    Console.WriteLine("(.) = OK");
-                    Console.WriteLine("(?) = Command is not handled");
-                    Console.WriteLine("(@) = Data is invalid");
-                    Console.WriteLine("(*) = Message is invalid");
-                    Console.WriteLine("(!) = Unknown error");
-                    Console.WriteLine();
-                    Console.WriteLine();
                     Console.WriteLine("Press Enter to quit...");
                     using (CancellationTokenSource cts = new CancellationTokenSource())
                     {
                         Task t = runner.Run(cts.Token);
                         Console.ReadLine();
                         cts.Cancel();
-                        t.Wait();
+                        try
+                        {
+                            t.Wait();
+                        }
+                        catch (OperationCanceledException)
+                        {
+                        }
                     }
                 }
             }

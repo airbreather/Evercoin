@@ -38,24 +38,7 @@ namespace Evercoin.Storage
                     },
                     TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").AsEnumerable().Reverse().GetArray() }
                 };
-                this.PutBlock(genesisBlock);
-            }
-            else
-            {
-                foreach (var entry in Directory.EnumerateFiles(BlockDirName))
-                {
-                    byte[] blockIdentifierBytes = ByteTwiddling.HexStringToByteArray(Path.GetFileName(entry));
-                    Array.Reverse(blockIdentifierBytes);
-                    BigInteger blockId = new BigInteger(blockIdentifierBytes);
-                    Block block;
-                    using (var stream = File.OpenRead(entry))
-                    {
-                        BinaryFormatter formatter = new BinaryFormatter();
-                        block = (Block)formatter.Deserialize(stream);
-                    }
-
-                    Cheating.Add((int)block.Height, blockId);
-                }
+                this.PutBlock(genesisBlockIdentifier, genesisBlock);
             }
         }
 
@@ -111,10 +94,10 @@ namespace Evercoin.Storage
             }
         }
 
-        protected override void PutBlockCore(IBlock block)
+        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
         {
-            string filePath = GetBlockFileName(block.Identifier);
-            Block typedBlock = new Block(block);
+            string filePath = GetBlockFileName(blockIdentifier);
+            Block typedBlock = new Block(blockIdentifier, block);
 
             using (FileStream stream = File.OpenWrite(filePath))
             {
@@ -123,16 +106,16 @@ namespace Evercoin.Storage
             }
 
             ManualResetEventSlim mres;
-            if (this.blockWaiters.TryGetValue(block.Identifier, out mres))
+            if (this.blockWaiters.TryGetValue(blockIdentifier, out mres))
             {
                 mres.Set();
             }
         }
 
-        protected override void PutTransactionCore(ITransaction transaction)
+        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
         {
-            string filePath = GetTransactionFileName(transaction.Identifier);
-            Transaction typedTransaction = new Transaction(transaction);
+            string filePath = GetTransactionFileName(transactionIdentifier);
+            Transaction typedTransaction = new Transaction(transactionIdentifier, transaction);
 
             using (FileStream stream = File.OpenWrite(filePath))
             {
@@ -141,7 +124,7 @@ namespace Evercoin.Storage
             }
 
             ManualResetEventSlim mres;
-            if (this.txWaiters.TryGetValue(transaction.Identifier, out mres))
+            if (this.txWaiters.TryGetValue(transactionIdentifier, out mres))
             {
                 mres.Set();
             }

@@ -3,7 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
+using Evercoin.BaseImplementations;
 using Evercoin.Util;
+
+using NodaTime;
 
 namespace Evercoin.ProtocolObjects
 {
@@ -38,12 +41,12 @@ namespace Evercoin.ProtocolObjects
         {
             get
             {
-                byte[] versionBytes = BitConverter.GetBytes(version).LittleEndianToOrFromBitConverterEndianness();
-                byte[] prevBlockIdBytes = prevBlockId.ToLittleEndianUInt256Array();
-                byte[] merkleRootBytes = merkleRoot.ToLittleEndianUInt256Array();
-                byte[] timestampBytes = BitConverter.GetBytes(timestamp).LittleEndianToOrFromBitConverterEndianness();
-                byte[] packedTargetBytes = BitConverter.GetBytes(bits).LittleEndianToOrFromBitConverterEndianness();
-                byte[] nonceBytes = BitConverter.GetBytes(nonce).LittleEndianToOrFromBitConverterEndianness();
+                byte[] versionBytes = BitConverter.GetBytes(this.version).LittleEndianToOrFromBitConverterEndianness();
+                byte[] prevBlockIdBytes = this.prevBlockId.ToLittleEndianUInt256Array();
+                byte[] merkleRootBytes = this.merkleRoot.ToLittleEndianUInt256Array();
+                byte[] timestampBytes = BitConverter.GetBytes(this.timestamp).LittleEndianToOrFromBitConverterEndianness();
+                byte[] packedTargetBytes = BitConverter.GetBytes(this.bits).LittleEndianToOrFromBitConverterEndianness();
+                byte[] nonceBytes = BitConverter.GetBytes(this.nonce).LittleEndianToOrFromBitConverterEndianness();
 
                 return ByteTwiddling.ConcatenateData(versionBytes, prevBlockIdBytes, merkleRootBytes, timestampBytes, packedTargetBytes, nonceBytes);
             }
@@ -77,5 +80,50 @@ namespace Evercoin.ProtocolObjects
         public uint Nonce { get { return this.nonce; } }
 
         public ProtocolTransaction[] IncludedTransactions { get { return this.includedTransactions; } }
+
+        public IBlock ToBlock(BigInteger blockIdentifier, IHashAlgorithm transactionHashAlgorithm)
+        {
+            foreach (ProtocolTransaction transaction in this.includedTransactions)
+            {
+                transaction.CalculateTxId(transactionHashAlgorithm);
+            }
+
+            return new TypedBlock
+            {
+                Coinbase = new TypedCoinbaseValueSource { AvailableValue = this.IncludedTransactions[0].Outputs.Sum(x => x.ValueInSatoshis), OriginatingBlockIdentifier = blockIdentifier },
+                DifficultyTarget = TargetFromBits(this.Bits),
+                Nonce = this.Nonce,
+                PreviousBlockIdentifier = this.PrevBlockId,
+                Timestamp = Instant.FromSecondsSinceUnixEpoch(this.Timestamp),
+                TransactionIdentifiers = this.IncludedTransactions.Select(x => x.TxId.ToLittleEndianUInt256Array()).ToMerkleTree(transactionHashAlgorithm),
+                Version = this.Version
+            };
+        }
+
+        private static BigInteger TargetFromBits(uint bits)
+        {
+            uint mantissa = bits & 0x007fffff;
+            bool negative = (bits & 0x00800000) != 0;
+            byte exponent = (byte)(bits >> 24);
+            BigInteger result;
+
+            if (exponent <= 3)
+            {
+                mantissa >>= 8 * (3 - exponent);
+                result = mantissa;
+            }
+            else
+            {
+                result = mantissa;
+                result <<= 8 * (exponent - 3);
+            }
+
+            if ((result.Sign < 0) != negative)
+            {
+                result = -result;
+            }
+
+            return result;
+        }
     }
 }

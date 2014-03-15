@@ -12,12 +12,12 @@ using System.Threading.Tasks;
 using Evercoin.ProtocolObjects;
 using Evercoin.Util;
 
+using NodaTime;
+
 namespace Evercoin.Network
 {
     public sealed class ProtocolStreamReader : BinaryReader
     {
-        private readonly CancellationTokenSource cts = new CancellationTokenSource();
-
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
         /// <summary>
@@ -32,84 +32,59 @@ namespace Evercoin.Network
 
         public int ProtocolVersion { get; set; }
 
-        public async Task<uint> ReadUInt32Async(CancellationToken token)
+        public Task<uint> ReadUInt32Async(CancellationToken token)
         {
-            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
-            {
-                return await this.ReadUInt32AsyncCore(linkedCancellationTokenSource.Token);
-            }
-        }
-        
-        public async Task<BigInteger> ReadUInt256Async(CancellationToken token)
-        {
-            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
-            {
-                return await this.ReadUInt256AsyncCore(linkedCancellationTokenSource.Token);
-            }
+            return this.ReadUInt32AsyncCore(token);
         }
 
-        public async Task<ProtocolCompactSize> ReadCompactSizeAsync(CancellationToken token)
+        public Task<BigInteger> ReadUInt256Async(CancellationToken token)
         {
-            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
-            {
-                return await this.ReadCompactSizeAsyncCore(linkedCancellationTokenSource.Token);
-            }
+            return this.ReadUInt256AsyncCore(token);
         }
 
-        public async Task<ProtocolInventoryVector> ReadInventoryVectorAsync(CancellationToken token)
+        public Task<ProtocolCompactSize> ReadCompactSizeAsync(CancellationToken token)
         {
-            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
-            {
-                return await this.ReadInventoryVectorAsyncCore(linkedCancellationTokenSource.Token);
-            }
+            return this.ReadCompactSizeAsyncCore(token);
         }
 
-        public async Task<ProtocolNetworkAddress> ReadNetworkAddressAsync(CancellationToken token)
+        public Task<ProtocolInventoryVector> ReadInventoryVectorAsync(CancellationToken token)
         {
-            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
-            {
-                return await this.ReadNetworkAddressAsyncCore(linkedCancellationTokenSource.Token);
-            }
+            return this.ReadInventoryVectorAsyncCore(token);
         }
 
-        public async Task<INetworkMessage> ReadNetworkMessageAsync(INetworkParameters networkParameters, Guid clientId, CancellationToken token)
+        public Task<ProtocolNetworkAddress> ReadNetworkAddressAsync(CancellationToken token)
         {
-            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
-            {
-                return await this.ReadNetworkMessageAsyncCore(networkParameters, clientId, linkedCancellationTokenSource.Token);
-            }
+            return this.ReadNetworkAddressAsyncCore(token);
         }
 
-        public async Task<ProtocolTxIn> ReadTxInAsync(CancellationToken token)
+        public Task<INetworkMessage> ReadNetworkMessageAsync(INetworkParameters networkParameters, Guid clientId, CancellationToken token)
         {
-            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
-            {
-                return await this.ReadTxInAsyncCore(linkedCancellationTokenSource.Token);
-            }
+            return this.ReadNetworkMessageAsyncCore(networkParameters, clientId, token);
         }
 
-        public async Task<ProtocolTxOut> ReadTxOutAsync(CancellationToken token)
+        public Task<ProtocolTxIn> ReadTxInAsync(CancellationToken token)
         {
-            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
-            {
-                return await this.ReadTxOutAsyncCore(linkedCancellationTokenSource.Token);
-            }
+            return this.ReadTxInAsyncCore(token);
         }
 
-        public async Task<ProtocolTransaction> ReadTransactionAsync(CancellationToken token)
+        public Task<ProtocolTxOut> ReadTxOutAsync(CancellationToken token)
         {
-            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
-            {
-                return await this.ReadTransactionAsyncCore(linkedCancellationTokenSource.Token);
-            }
+            return this.ReadTxOutAsyncCore(token);
         }
 
-        public async Task<ProtocolBlock> ReadBlockAsync(CancellationToken token)
+        public Task<ProtocolTransaction> ReadTransactionAsync(CancellationToken token)
         {
-            using (CancellationTokenSource linkedCancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(token, this.cts.Token))
-            {
-                return await this.ReadBlockAsyncCore(linkedCancellationTokenSource.Token);
-            }
+            return this.ReadTransactionAsyncCore(token);
+        }
+
+        public Task<ProtocolBlock> ReadBlockAsync(CancellationToken token)
+        {
+            return this.ReadBlockAsyncCore(token);
+        }
+
+        public Task<ProtocolVersionPacket> ReadVersionPacketAsync(CancellationToken token)
+        {
+            return this.ReadVersionPacketAsyncCore(token);
         }
 
         private async Task<byte> ReadByteAsync(CancellationToken token)
@@ -159,7 +134,7 @@ namespace Evercoin.Network
                 time = await this.ReadUInt32AsyncCore(token);
             }
 
-            uint services = await this.ReadUInt32AsyncCore(token);
+            ulong services = await this.ReadUInt64Async(token);
 
             byte[] addressBytes = await this.ReadBytesAsyncWithIntParam(16, token);
             var v6Address = new IPAddress(addressBytes);
@@ -196,7 +171,7 @@ namespace Evercoin.Network
             byte[] payload = await this.ReadBytesAsync(payloadLengthInBytes, token);
 
             IHashAlgorithm checksumAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(networkParameters.PayloadChecksumAlgorithmIdentifier);
-            byte[] actualChecksum = await Task.Run(() => checksumAlgorithm.CalculateHash(payload), token);
+            byte[] actualChecksum = checksumAlgorithm.CalculateHash(payload);
             if (!payloadChecksum.SequenceEqual(actualChecksum.GetRange(0, payloadChecksumLengthInBytes)))
             {
                 string exceptionMessage = String.Format(CultureInfo.InvariantCulture,
@@ -227,6 +202,12 @@ namespace Evercoin.Network
         {
             byte[] bytes = await this.ReadBytesAsyncWithIntParam(4, token);
             return BitConverter.ToUInt32(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
+        }
+
+        private async Task<int> ReadInt32AsyncCore(CancellationToken token)
+        {
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(4, token);
+            return BitConverter.ToInt32(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
         }
 
         private async Task<ulong> ReadUInt64Async(CancellationToken token)
@@ -298,7 +279,7 @@ namespace Evercoin.Network
         private async Task<ProtocolTxOut> ReadTxOutAsyncCore(CancellationToken token)
         {
             long valueInSatoshis = await this.ReadInt64Async(token);
-            
+
             ulong scriptPubKeyLength = await this.ReadCompactSizeAsyncCore(token);
             byte[] scriptPubKey = await this.ReadBytesAsync(scriptPubKeyLength, token);
 
@@ -330,7 +311,7 @@ namespace Evercoin.Network
         private async Task<ProtocolTransaction> ReadTransactionAsyncCore(CancellationToken token)
         {
             uint version = await this.ReadUInt32AsyncCore(token);
-            
+
             ulong inputCount = await this.ReadCompactSizeAsyncCore(token);
             List<ProtocolTxIn> inputs = new List<ProtocolTxIn>();
 
@@ -354,19 +335,41 @@ namespace Evercoin.Network
             return new ProtocolTransaction(version, inputs, outputs, lockTime);
         }
 
-        /// <summary>
-        /// Releases the unmanaged resources used by the <see cref="ProtocolStreamReader"/> class and optionally releases the managed resources.
-        /// </summary>
-        /// <param name="disposing">true to release both managed and unmanaged resources; false to release only unmanaged resources. </param>
-        protected override void Dispose(bool disposing)
+        private async Task<string> ReadProtocolStringAsyncCore(Encoding encoding, CancellationToken token)
         {
-            if (disposing)
-            {
-                this.cts.Cancel();
-                this.cts.Dispose();
-            }
+            ulong length = await this.ReadCompactSizeAsyncCore(token);
+            byte[] data = await this.ReadBytesAsync(length, token);
+            return encoding.GetString(data);
+        }
 
-            base.Dispose(disposing);
+        private async Task<bool> ReadBooleanAsyncCore(CancellationToken token)
+        {
+            byte[] singleByte = await this.ReadBytesAsyncWithIntParam(1, token);
+            return singleByte[0] != 0;
+        }
+
+        private async Task<ProtocolVersionPacket> ReadVersionPacketAsyncCore(CancellationToken token)
+        {
+            ////4	 version	 int32_t	 Identifies protocol version being used by the node
+            ////8	 services	 uint64_t	 bitfield of features to be enabled for this connection
+            ////8	 timestamp	 int64_t	 standard UNIX timestamp in seconds
+            ////26	 addr_recv	 net_addr	 The network address of the node receiving this message
+            ////26	 addr_from	 net_addr	 The network address of the node emitting this message
+            ////8	 nonce	 uint64_t	 Node random nonce, randomly generated every time a version packet is sent. This nonce is used to detect connections to self.
+            //// ?	 user_agent	var_str	User Agent (0x00 if string is 0 bytes long)
+            ////4	 start_height	 int32_t	 The last block received by the emitting node
+            ////1	 relay	 bool	 Whether the remote peer should announce relayed transactions or not, see BIP 0037, since version >= 70001
+            int version = await this.ReadInt32AsyncCore(token);
+            ulong services = await this.ReadUInt64Async(token);
+            long timestampInSecondsSinceUnixEpoch = await this.ReadInt64Async(token);
+            ProtocolNetworkAddress receivingAddress = await this.ReadNetworkAddressAsyncCore(token);
+            ProtocolNetworkAddress sendingAddress = await this.ReadNetworkAddressAsyncCore(token);
+            ulong nonce = await this.ReadUInt64Async(token);
+            string userAgent = await this.ReadProtocolStringAsyncCore(Encoding.UTF8, token);
+            int startHeight = await this.ReadInt32AsyncCore(token);
+
+            Instant timestamp = Instant.FromSecondsSinceUnixEpoch(timestampInSecondsSinceUnixEpoch);
+            return new ProtocolVersionPacket(version, services, timestamp, receivingAddress, sendingAddress, nonce, userAgent, startHeight, false);
         }
     }
 }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Linq;
 using System.Numerics;
 
@@ -14,7 +13,9 @@ namespace Evercoin.BaseImplementations
     {
         private readonly IBlock genesisBlock;
 
-        private readonly Guid proofOfWorkAlgorithmIdentifier;
+        private readonly Guid blockAlgorithmIdentifier;
+
+        private readonly Guid transactionHashAlgorithmIdentifier;
 
         private readonly Guid scriptHashAlgorithmIdentifier1;
 
@@ -27,8 +28,6 @@ namespace Evercoin.BaseImplementations
         private readonly Guid scriptHashAlgorithmIdentifier5;
 
         private readonly HashSet<SecurityMechanism> securityMechanisms;
-
-        private readonly Dictionary<LegacyBehavior, long> legacyBehaviorsToEmulate;
 
         private readonly Duration desiredTimeBetweenBlocks;
 
@@ -48,8 +47,11 @@ namespace Evercoin.BaseImplementations
         /// <param name="genesisBlock">
         /// The value for <see cref="GenesisBlock"/>.
         /// </param>
-        /// <param name="proofOfWorkAlgorithmIdentifier">
-        /// The value for <see cref="ProofOfWorkAlgorithmIdentifier"/>.
+        /// <param name="blockAlgorithmIdentifier">
+        /// The value for <see cref="BlockAlgorithmIdentifier"/>.
+        /// </param>
+        /// <param name="transactionHashAlgorithmIdentifier">
+        /// The value for <see cref="TransactionHashAlgorithmIdentifier"/>.
         /// </param>
         /// <param name="scriptHashAlgorithmIdentifier1">
         /// The value for <see cref="ScriptHashAlgorithmIdentifier1"/>.
@@ -87,11 +89,9 @@ namespace Evercoin.BaseImplementations
         /// <param name="maximumDifficultyTarget">
         /// The value for <see cref="MaximumDifficultyTarget"/>.
         /// </param>
-        /// <param name="legacyBehaviorsToEmulate">
-        /// The values for <see cref="LegacyBehaviorsToEmulate"/>.
-        /// </param>
         public ChainParameters(IBlock genesisBlock,
-                               Guid proofOfWorkAlgorithmIdentifier,
+                               Guid blockAlgorithmIdentifier,
+                               Guid transactionHashAlgorithmIdentifier,
                                Guid scriptHashAlgorithmIdentifier1,
                                Guid scriptHashAlgorithmIdentifier2,
                                Guid scriptHashAlgorithmIdentifier3,
@@ -103,11 +103,11 @@ namespace Evercoin.BaseImplementations
                                decimal initialSubsidyLevel,
                                decimal subsidyLevelMultiplier,
                                ulong blocksAtEachSubsidyLevel,
-                               BigInteger maximumDifficultyTarget,
-                               IEnumerable<KeyValuePair<LegacyBehavior, long>> legacyBehaviorsToEmulate)
+                               BigInteger maximumDifficultyTarget)
         {
             this.genesisBlock = genesisBlock;
-            this.proofOfWorkAlgorithmIdentifier = proofOfWorkAlgorithmIdentifier;
+            this.blockAlgorithmIdentifier = blockAlgorithmIdentifier;
+            this.transactionHashAlgorithmIdentifier = transactionHashAlgorithmIdentifier;
             this.scriptHashAlgorithmIdentifier1 = scriptHashAlgorithmIdentifier1;
             this.scriptHashAlgorithmIdentifier2 = scriptHashAlgorithmIdentifier2;
             this.scriptHashAlgorithmIdentifier3 = scriptHashAlgorithmIdentifier3;
@@ -120,7 +120,6 @@ namespace Evercoin.BaseImplementations
             this.subsidyLevelMultiplier = subsidyLevelMultiplier;
             this.blocksAtEachSubsidyLevel = blocksAtEachSubsidyLevel;
             this.maximumDifficultyTarget = maximumDifficultyTarget;
-            this.legacyBehaviorsToEmulate = legacyBehaviorsToEmulate.ToDictionary(x => x.Key, x => x.Value);
         }
 
         /// <summary>
@@ -138,7 +137,9 @@ namespace Evercoin.BaseImplementations
         /// aren't built-in could be used by implementing a custom
         /// <see cref="IHashAlgorithmStore"/>.
         /// </remarks>
-        public Guid ProofOfWorkAlgorithmIdentifier { get { return this.proofOfWorkAlgorithmIdentifier; } }
+        public Guid BlockAlgorithmIdentifier { get { return this.blockAlgorithmIdentifier; } }
+
+        public Guid TransactionHashAlgorithmIdentifier { get { return this.transactionHashAlgorithmIdentifier; } }
 
         /// <summary>
         /// Gets the <see cref="Guid"/> that identifies which
@@ -263,17 +264,6 @@ namespace Evercoin.BaseImplementations
         public BigInteger MaximumDifficultyTarget { get { return this.maximumDifficultyTarget; } }
 
         /// <summary>
-        /// Gets the set of legacy behaviors to emulate, mapped to the highest
-        /// block in the chain to stop emulating that behavior.
-        /// </summary>
-        /// <remarks>
-        /// Legacy behaviors are unintuitive quirks present in released
-        /// versions of the reference implementations that need to be
-        /// emulated in order for any client to be compatible.
-        /// </remarks>
-        public ReadOnlyDictionary<LegacyBehavior, long> LegacyBehaviorsToEmulate { get { return new ReadOnlyDictionary<LegacyBehavior, long>(this.legacyBehaviorsToEmulate); } }
-
-        /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
         /// <returns>
@@ -293,15 +283,14 @@ namespace Evercoin.BaseImplementations
                    this.BlocksAtEachSubsidyLevel == other.BlocksAtEachSubsidyLevel &&
                    this.MaximumDifficultyTarget == other.MaximumDifficultyTarget &&
                    this.BlocksPerDifficultyRetarget == other.BlocksPerDifficultyRetarget &&
-                   this.ProofOfWorkAlgorithmIdentifier == other.ProofOfWorkAlgorithmIdentifier &&
+                   this.BlockAlgorithmIdentifier == other.BlockAlgorithmIdentifier &&
                    this.SubsidyLevelMultiplier == other.SubsidyLevelMultiplier &&
                    this.ScriptHashAlgorithmIdentifier1 == other.ScriptHashAlgorithmIdentifier1 &&
                    this.ScriptHashAlgorithmIdentifier2 == other.ScriptHashAlgorithmIdentifier2 &&
                    this.ScriptHashAlgorithmIdentifier3 == other.ScriptHashAlgorithmIdentifier3 &&
                    this.ScriptHashAlgorithmIdentifier4 == other.ScriptHashAlgorithmIdentifier4 &&
                    this.ScriptHashAlgorithmIdentifier5 == other.ScriptHashAlgorithmIdentifier5 &&
-                   this.SecurityMechanisms.SetEquals(other.SecurityMechanisms) &&
-                   this.LegacyBehaviorsToEmulate.SequenceEquivalent(other.LegacyBehaviorsToEmulate);
+                   this.SecurityMechanisms.SetEquals(other.SecurityMechanisms);
         }
 
         /// <summary>
@@ -330,15 +319,14 @@ namespace Evercoin.BaseImplementations
                 .HashWith(this.BlocksAtEachSubsidyLevel)
                 .HashWith(this.MaximumDifficultyTarget)
                 .HashWith(this.BlocksPerDifficultyRetarget)
-                .HashWith(this.ProofOfWorkAlgorithmIdentifier)
+                .HashWith(this.BlockAlgorithmIdentifier)
                 .HashWith(this.SubsidyLevelMultiplier)
                 .HashWith(this.ScriptHashAlgorithmIdentifier1)
                 .HashWith(this.ScriptHashAlgorithmIdentifier2)
                 .HashWith(this.ScriptHashAlgorithmIdentifier3)
                 .HashWith(this.ScriptHashAlgorithmIdentifier4)
                 .HashWith(this.ScriptHashAlgorithmIdentifier5);
-            builder = this.SecurityMechanisms.OrderBy(x => x).Aggregate(builder, (prevBuilder, nextSecurityMechanism) => prevBuilder.HashWith(nextSecurityMechanism));
-            return this.LegacyBehaviorsToEmulate.OrderBy(x => x).Aggregate(builder, (prevBuilder, nextLegacyBug) => prevBuilder.HashWith(nextLegacyBug));
+            return this.SecurityMechanisms.OrderBy(x => x).Aggregate(builder, (prevBuilder, nextSecurityMechanism) => prevBuilder.HashWith(nextSecurityMechanism));
         }
     }
 }

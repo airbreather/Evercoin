@@ -55,6 +55,9 @@
     <DocumentationFile>bin\Release\Evercoin.App.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="Moq">
+      <HintPath>..\packages\Moq.4.2.1312.1622\lib\net40\Moq.dll</HintPath>
+    </Reference>
     <Reference Include="Ninject">
       <HintPath>..\packages\Ninject.3.0.1.10\lib\net45-full\Ninject.dll</HintPath>
     </Reference>

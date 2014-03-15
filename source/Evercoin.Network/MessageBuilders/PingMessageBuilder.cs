@@ -1,21 +1,20 @@
 ﻿using System;
-using System.Linq;
 using System.Text;
 
-namespace Evercoin.Network.MessageHandlers
+namespace Evercoin.Network.MessageBuilders
 {
-    internal sealed class VerAckMessageBuilder
+    internal sealed class PingMessageBuilder
     {
-        private const string VerAckText = "verack";
+        private const string PingMessageText = "ping";
         private static readonly Encoding CommandEncoding = Encoding.ASCII;
 
         private readonly IRawNetwork network;
 
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
-        public VerAckMessageBuilder(IRawNetwork network, IHashAlgorithmStore hashAlgorithmStore)
+        public PingMessageBuilder(IRawNetwork network, IHashAlgorithmStore hashAlgorithmStore)
         {
-            if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(VerAckText))
+            if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(PingMessageText))
             {
                 throw new ArgumentException("Command length is too short for the \"version\" command.", "network");
             }
@@ -24,15 +23,17 @@ namespace Evercoin.Network.MessageHandlers
             this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
-        public INetworkMessage BuildVerAckMessage(Guid clientId)
+        public INetworkMessage BuildPingMessage(Guid clientId, ulong nonce)
         {
             Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, clientId);
-
             byte[] commandBytes = new byte[this.network.Parameters.CommandLengthInBytes];
-            byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(VerAckText);
+            byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(PingMessageText);
             Array.Copy(unpaddedCommandBytes, commandBytes, unpaddedCommandBytes.Length);
 
-            message.CreateFrom(commandBytes, Enumerable.Empty<byte>());
+            byte[] pingBytes = BitConverter.GetBytes(nonce).LittleEndianToOrFromBitConverterEndianness();
+
+            message.CreateFrom(commandBytes, pingBytes);
+
             return message;
         }
     }

@@ -28,9 +28,9 @@ namespace Evercoin.App
             return foundTransaction != null;
         }
 
-        public void PutTransaction(ITransaction transaction)
+        public void PutTransaction(BigInteger transactionIdentifier, ITransaction transaction)
         {
-            string cacheKey = CreateCacheKey(transaction.Identifier);
+            string cacheKey = CreateCacheKey(transactionIdentifier);
             this.underlyingCache.Add(cacheKey, transaction, new CacheItemPolicy());
         }
 

@@ -34,44 +34,50 @@ namespace Evercoin.Storage
                 },
                 TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").Reverse().GetArray() }
             };
-            this.PutBlock(genesisBlock);
+            this.PutBlock(genesisBlockIdentifier, genesisBlock);
         }
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
         {
             IBlock block;
-            if (this.blocks.TryGetValue(blockIdentifier, out block))
+            bool weOwnMres = false;
+            ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, delegate
             {
-                return block;
+                weOwnMres = true;
+                return new ManualResetEventSlim();
+            });
+            while (!this.blocks.TryGetValue(blockIdentifier, out block))
+            {
+                mres.Wait(10000);
             }
 
-            ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, _ => new ManualResetEventSlim());
-            if (mres.Wait(100) &&
-                this.blockWaiters.TryRemove(blockIdentifier, out mres))
+            if (weOwnMres)
             {
                 mres.Dispose();
             }
 
-            this.blocks.TryGetValue(blockIdentifier, out block);
             return block;
         }
 
         protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
         {
             ITransaction transaction;
-            if (this.transactions.TryGetValue(transactionIdentifier, out transaction))
+            bool weOwnMres = false;
+            ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, delegate
             {
-                return transaction;
+                weOwnMres = true;
+                return new ManualResetEventSlim();
+            });
+            while (!this.transactions.TryGetValue(transactionIdentifier, out transaction))
+            {
+                mres.Wait(10000);
             }
 
-            ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, _ => new ManualResetEventSlim());
-            if (mres.Wait(100) &&
-                this.txWaiters.TryRemove(transactionIdentifier, out mres))
+            if (weOwnMres)
             {
                 mres.Dispose();
             }
 
-            this.transactions.TryGetValue(transactionIdentifier, out transaction);
             return transaction;
         }
 
@@ -95,16 +101,34 @@ namespace Evercoin.Storage
             return await Task.Run(() => this.ContainsTransactionCore(transactionIdentifier), token);
         }
 
-        protected override void PutBlockCore(IBlock block)
+        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
         {
-            this.blocks.Add(block.Identifier, block);
+            this.blocks.Add(blockIdentifier, block);
+
+            ManualResetEventSlim waiter;
+            if (this.blockWaiters.TryRemove(blockIdentifier, out waiter))
+            {
+                using (waiter)
+                {
+                    waiter.Set();
+                }
+            }
         }
 
-        protected override void PutTransactionCore(ITransaction transaction)
+        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
         {
             // TODO: coinbases can have duplicate transaction IDs before version 2.
             // TODO: Figure that shiz out!
-            this.transactions[transaction.Identifier] = transaction;
+            this.transactions[transactionIdentifier] = transaction;
+
+            ManualResetEventSlim waiter;
+            if (this.txWaiters.TryRemove(transactionIdentifier, out waiter))
+            {
+                using (waiter)
+                {
+                    waiter.Set();
+                }
+            }
         }
     }
 }

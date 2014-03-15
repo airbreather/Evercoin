@@ -60,31 +60,8 @@ namespace Evercoin.Storage
                                                              },
                                              TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").Reverse().GetArray() }
                                          };
-                    this.PutBlock(genesisBlock);
+                    this.PutBlock(genesisBlockIdentifier, genesisBlock);
                     this.archive.Save();
-                }
-                else
-                {
-                    foreach (var entry in this.archive.SelectEntries(BlockDir + EntrySep + "*"))
-                    {
-                        string fn = entry.FileName.Replace(BlockDir + EntrySep, String.Empty);
-                        if (fn.Length == 0)
-                        {
-                            continue;
-                        }
-
-                        byte[] blockIdentifierBytes = ByteTwiddling.HexStringToByteArray(fn);
-                        Array.Reverse(blockIdentifierBytes);
-                        BigInteger blockId = new BigInteger(blockIdentifierBytes);
-                        Block block;
-                        using (var stream = entry.OpenReader())
-                        {
-                            BinaryFormatter formatter = new BinaryFormatter();
-                            block = (Block)formatter.Deserialize(stream);
-                        }
-
-                        Cheating.Add((int)block.Height, blockId);
-                    }
                 }
             }
             catch
@@ -216,35 +193,35 @@ namespace Evercoin.Storage
             }
         }
 
-        protected override void PutBlockCore(IBlock block)
+        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
         {
-            Block typedBlock = new Block(block);
+            Block typedBlock = new Block(blockIdentifier, block);
             BinaryFormatter binaryFormatter = new BinaryFormatter();
             lock (this.zipLock)
             {
-                this.archive.AddEntry(GetBlockEntryName(typedBlock), (_, entryStream) => binaryFormatter.Serialize(entryStream, typedBlock));
+                this.archive.AddEntry(GetBlockEntryName(blockIdentifier), (_, entryStream) => binaryFormatter.Serialize(entryStream, typedBlock));
                 this.archive.Save();
             }
 
             ManualResetEventSlim mres;
-            if (this.blockWaiters.TryGetValue(block.Identifier, out mres))
+            if (this.blockWaiters.TryGetValue(blockIdentifier, out mres))
             {
                 mres.Set();
             }
         }
 
-        protected override void PutTransactionCore(ITransaction transaction)
+        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
         {
-            Transaction typedTransaction = new Transaction(transaction);
+            Transaction typedTransaction = new Transaction(transactionIdentifier, transaction);
             BinaryFormatter binaryFormatter = new BinaryFormatter();
             lock (this.zipLock)
             {
-                this.archive.AddEntry(GetTransactionEntryName(typedTransaction), (_, entryStream) => binaryFormatter.Serialize(entryStream, typedTransaction));
+                this.archive.AddEntry(GetTransactionEntryName(transactionIdentifier), (_, entryStream) => binaryFormatter.Serialize(entryStream, typedTransaction));
                 this.archive.Save();
             }
 
             ManualResetEventSlim mres;
-            if (this.txWaiters.TryGetValue(transaction.Identifier, out mres))
+            if (this.txWaiters.TryGetValue(transactionIdentifier, out mres))
             {
                 mres.Set();
             }
@@ -256,22 +233,12 @@ namespace Evercoin.Storage
             this.archive.Dispose();
         }
 
-        private static string GetBlockEntryName(IBlock block)
-        {
-            return GetBlockEntryName(block.Identifier);
-        }
-
         private static string GetBlockEntryName(BigInteger blockIdentifier)
         {
             byte[] blockIdentifierBytes = blockIdentifier.ToLittleEndianUInt256Array();
             Array.Reverse(blockIdentifierBytes);
             string id = ByteTwiddling.ByteArrayToHexString(blockIdentifierBytes);
             return String.Join(EntrySep, BlockDir, id);
-        }
-
-        private static string GetTransactionEntryName(ITransaction transaction)
-        {
-            return GetTransactionEntryName(transaction.Identifier);
         }
 
         private static string GetTransactionEntryName(BigInteger transactionIdentifier)

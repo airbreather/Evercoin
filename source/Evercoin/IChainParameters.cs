@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Numerics;
 
 using NodaTime;
@@ -28,7 +27,9 @@ namespace Evercoin
         /// aren't built-in could be used by implementing a custom
         /// <see cref="IHashAlgorithmStore"/>.
         /// </remarks>
-        Guid ProofOfWorkAlgorithmIdentifier { get; }
+        Guid BlockAlgorithmIdentifier { get; }
+
+        Guid TransactionHashAlgorithmIdentifier { get; }
 
         /// <summary>
         /// Gets the <see cref="Guid"/> that identifies which
@@ -151,16 +152,5 @@ namespace Evercoin
         /// and so on.
         /// </remarks>
         BigInteger MaximumDifficultyTarget { get; }
-
-        /// <summary>
-        /// Gets the set of legacy behaviors to emulate, mapped to the highest
-        /// block in the chain to stop emulating that behavior.
-        /// </summary>
-        /// <remarks>
-        /// Legacy behaviors are unintuitive quirks present in released
-        /// versions of the reference implementations that need to be
-        /// emulated in order for any client to be compatible.
-        /// </remarks>
-        ReadOnlyDictionary<LegacyBehavior, long> LegacyBehaviorsToEmulate { get; }
     }
 }

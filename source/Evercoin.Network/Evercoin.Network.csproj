@@ -79,27 +79,17 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CurrencyNetwork.cs" />
     <Compile Include="Message.cs" />
-    <Compile Include="MessageHandlers\BlockMessageHandler.cs" />
-    <Compile Include="MessageHandlers\GetBlocksMessageBuilder.cs" />
-    <Compile Include="MessageHandlers\GetDataMessageBuilder.cs" />
-    <Compile Include="MessageHandlers\InventoryMessageHandler.cs" />
-    <Compile Include="MessageHandlers\MessageHandlerBase.cs" />
-    <Compile Include="MessageHandlers\TransactionMessageHandler.cs" />
-    <Compile Include="MessageHandlers\VerAckMessageBuilder.cs" />
-    <Compile Include="MessageHandlers\VerAckMessageHandler.cs" />
-    <Compile Include="MessageHandlers\VersionMessageBuilder.cs" />
-    <Compile Include="MessageHandlers\VersionMessageHandler.cs" />
+    <Compile Include="MessageBuilders\GetBlocksMessageBuilder.cs" />
+    <Compile Include="MessageBuilders\GetDataMessageBuilder.cs" />
+    <Compile Include="MessageBuilders\PingMessageBuilder.cs" />
+    <Compile Include="MessageBuilders\VerAckMessageBuilder.cs" />
+    <Compile Include="MessageBuilders\VersionMessageBuilder.cs" />
     <Compile Include="RawNetwork.cs" />
-    <Compile Include="NetworkBlock.cs" />
-    <Compile Include="NetworkCoinbaseValueSource.cs" />
-    <Compile Include="NetworkTransaction.cs" />
-    <Compile Include="NetworkTransactionValueSource.cs" />
-    <Compile Include="NetworkValueSource.cs" />
-    <Compile Include="NetworkValueSpender.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ProtocolStreamReader.cs" />
-    <Compile Include="MessageHandlers\GetAddressesMessageBuilder.cs" />
+    <Compile Include="MessageBuilders\GetAddressesMessageBuilder.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

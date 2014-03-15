@@ -1,8 +1,8 @@
 ﻿using System.Numerics;
 
-namespace Evercoin.Network
+namespace Evercoin.BaseImplementations
 {
-    internal sealed class NetworkCoinbaseValueSource : NetworkValueSource, ICoinbaseValueSource
+    internal sealed class TypedCoinbaseValueSource : TypedValueSource, ICoinbaseValueSource
     {
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.

@@ -12,7 +12,6 @@ namespace Evercoin.Storage.Model
     {
         private const string SerializationName_Identifier = "Identifier";
         private const string SerializationName_PreviousBlockIdentifier = "PreviousBlockIdentifier";
-        private const string SerializationName_Height = "Height";
         private const string SerializationName_Timestamp = "Timestamp";
         private const string SerializationName_Nonce = "Nonce";
         private const string SerializationName_DifficultyTarget = "DifficultyTarget";
@@ -24,12 +23,11 @@ namespace Evercoin.Storage.Model
         {
         }
 
-        public Block(IBlock copyFrom)
+        public Block(BigInteger identifier, IBlock copyFrom)
             : this()
         {
-            this.Identifier = copyFrom.Identifier;
+            this.Identifier = identifier;
             this.PreviousBlockIdentifier = copyFrom.PreviousBlockIdentifier;
-            this.Height = copyFrom.Height;
             this.Timestamp = copyFrom.Timestamp;
             this.Nonce = copyFrom.Nonce;
             this.DifficultyTarget = copyFrom.DifficultyTarget;
@@ -42,7 +40,6 @@ namespace Evercoin.Storage.Model
         {
             this.Identifier = info.GetValue<BigInteger>(SerializationName_Identifier);
             this.PreviousBlockIdentifier = info.GetValue<BigInteger>(SerializationName_PreviousBlockIdentifier);
-            this.Height = info.GetUInt64(SerializationName_Height);
             this.Timestamp = info.GetValue<Instant>(SerializationName_Timestamp);
             this.Nonce = info.GetUInt32(SerializationName_Nonce);
             this.DifficultyTarget = info.GetValue<BigInteger>(SerializationName_DifficultyTarget);
@@ -66,9 +63,7 @@ namespace Evercoin.Storage.Model
             }
 
             return other != null &&
-                   this.Identifier == other.Identifier &&
                    this.PreviousBlockIdentifier == other.PreviousBlockIdentifier &&
-                   this.Height == other.Height &&
                    this.Timestamp == other.Timestamp &&
                    this.Nonce == other.Nonce &&
                    this.DifficultyTarget == other.DifficultyTarget &&
@@ -111,20 +106,8 @@ namespace Evercoin.Storage.Model
         public BigInteger DifficultyTarget { get; set; }
 
         /// <summary>
-        /// Gets how high this block is in the chain.
-        /// </summary>
-        /// <remarks>
-        /// In other words, how many nodes come before this one.
-        /// So, the genesis block is at height zero.
-        /// </remarks>
-        public ulong Height { get; set; }
-
-        /// <summary>
         /// Gets the identifier of the previous block in the chain.
         /// </summary>
-        /// <remarks>
-        /// When <see cref="IBlock.Height"/> equals 0, the return value is undefined.
-        /// </remarks>
         public BigInteger PreviousBlockIdentifier { get; set; }
 
         /// <summary>
@@ -135,7 +118,6 @@ namespace Evercoin.Storage.Model
         {
             info.AddValue(SerializationName_Identifier, this.Identifier);
             info.AddValue(SerializationName_PreviousBlockIdentifier, this.PreviousBlockIdentifier);
-            info.AddValue(SerializationName_Height, this.Height);
             info.AddValue(SerializationName_Timestamp, this.Timestamp);
             info.AddValue(SerializationName_Nonce, this.Nonce);
             info.AddValue(SerializationName_DifficultyTarget, this.DifficultyTarget);

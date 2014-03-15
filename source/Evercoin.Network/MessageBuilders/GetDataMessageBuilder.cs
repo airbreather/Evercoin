@@ -6,7 +6,7 @@ using System.Text;
 using Evercoin.ProtocolObjects;
 using Evercoin.Util;
 
-namespace Evercoin.Network.MessageHandlers
+namespace Evercoin.Network.MessageBuilders
 {
     internal sealed class GetDataMessageBuilder
     {

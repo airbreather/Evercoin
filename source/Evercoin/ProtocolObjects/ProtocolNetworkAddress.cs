@@ -34,6 +34,8 @@ namespace Evercoin.ProtocolObjects
                                    new byte[0];
 
                 byte[] servicesBytes = BitConverter.GetBytes(this.Services).LittleEndianToOrFromBitConverterEndianness();
+
+                // BIG-ENDIAN!!
                 byte[] addressBytes = this.Address.MapToIPv6().GetAddressBytes();
 
                 byte[] portBytes = BitConverter.GetBytes(this.Port).LittleEndianToOrFromBitConverterEndianness();

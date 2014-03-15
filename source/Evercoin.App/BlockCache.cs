@@ -28,9 +28,9 @@ namespace Evercoin.App
             return foundBlock != null;
         }
 
-        public void PutBlock(IBlock block)
+        public void PutBlock(BigInteger blockIdentifier, IBlock block)
         {
-            string cacheKey = CreateCacheKey(block.Identifier);
+            string cacheKey = CreateCacheKey(blockIdentifier);
             this.underlyingCache.Add(cacheKey, block, new CacheItemPolicy());
         }
 

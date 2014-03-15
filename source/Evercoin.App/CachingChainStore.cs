@@ -46,7 +46,7 @@ namespace Evercoin.App
             foundBlock = this.underlyingChainStore.GetBlock(blockIdentifier);
             if (foundBlock != null)
             {
-                this.blockCache.PutBlock(foundBlock);
+                this.blockCache.PutBlock(blockIdentifier, foundBlock);
             }
 
             return foundBlock;
@@ -63,22 +63,22 @@ namespace Evercoin.App
             foundTransaction = this.underlyingChainStore.GetTransaction(transactionIdentifier);
             if (foundTransaction != null)
             {
-                this.transactionCache.PutTransaction(foundTransaction);
+                this.transactionCache.PutTransaction(transactionIdentifier, foundTransaction);
             }
 
             return foundTransaction;
         }
 
-        protected override void PutBlockCore(IBlock block)
+        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
         {
-            this.blockCache.PutBlock(block);
-            this.underlyingChainStore.PutBlock(block);
+            this.blockCache.PutBlock(blockIdentifier, block);
+            this.underlyingChainStore.PutBlock(blockIdentifier, block);
         }
 
-        protected override void PutTransactionCore(ITransaction transaction)
+        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
         {
-            this.transactionCache.PutTransaction(transaction);
-            this.underlyingChainStore.PutTransaction(transaction);
+            this.transactionCache.PutTransaction(transactionIdentifier, transaction);
+            this.underlyingChainStore.PutTransaction(transactionIdentifier, transaction);
         }
 
         protected override bool ContainsBlockCore(BigInteger blockIdentifier)
@@ -116,7 +116,7 @@ namespace Evercoin.App
             foundBlock = await this.underlyingChainStore.GetBlockAsync(blockIdentifier, token);
             if (foundBlock != null)
             {
-                this.blockCache.PutBlock(foundBlock);
+                this.blockCache.PutBlock(blockIdentifier, foundBlock);
             }
 
             return foundBlock;
@@ -133,22 +133,22 @@ namespace Evercoin.App
             foundTransaction = await this.underlyingChainStore.GetTransactionAsync(transactionIdentifier, token);
             if (foundTransaction != null)
             {
-                this.transactionCache.PutTransaction(foundTransaction);
+                this.transactionCache.PutTransaction(transactionIdentifier, foundTransaction);
             }
 
             return foundTransaction;
         }
 
-        protected override async Task PutBlockAsyncCore(IBlock block, CancellationToken token)
+        protected override async Task PutBlockAsyncCore(BigInteger blockIdentifier, IBlock block, CancellationToken token)
         {
-            this.blockCache.PutBlock(block);
-            await this.underlyingChainStore.PutBlockAsync(block, token);
+            this.blockCache.PutBlock(blockIdentifier, block);
+            await this.underlyingChainStore.PutBlockAsync(blockIdentifier, block, token);
         }
 
-        protected override async Task PutTransactionAsyncCore(ITransaction transaction, CancellationToken token)
+        protected override async Task PutTransactionAsyncCore(BigInteger transactionIdentifier, ITransaction transaction, CancellationToken token)
         {
-            this.transactionCache.PutTransaction(transaction);
-            await this.underlyingChainStore.PutTransactionAsync(transaction, token);
+            this.transactionCache.PutTransaction(transactionIdentifier, transaction);
+            await this.underlyingChainStore.PutTransactionAsync(transactionIdentifier, transaction, token);
         }
 
         protected override void DisposeManagedResources()

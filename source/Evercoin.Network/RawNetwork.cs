@@ -1,28 +1,28 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Sockets;
-using System.Numerics;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using System.Threading;
 using System.Threading.Tasks;
 
-using Evercoin.Network.MessageHandlers;
-using Evercoin.Util;
-
-using NodaTime;
-
 namespace Evercoin.Network
 {
-    public sealed class RawNetwork : IRawNetwork
+    public sealed class RawNetwork : DisposableObject, IRawNetwork
     {
         private readonly INetworkParameters networkParameters;
         private readonly IHashAlgorithmStore hashAlgorithmStore;
         private readonly ConcurrentDictionary<Guid, TcpClient> clientLookup = new ConcurrentDictionary<Guid, TcpClient>();
-        private readonly Subject<IObservable<INetworkMessage>> messageObservables = new Subject<IObservable<INetworkMessage>>();
+
+        private readonly Subject<INetworkMessage> allMessages = new Subject<INetworkMessage>();
+
+        private readonly TcpListener listener;
+
+        private readonly Subject<Guid> incomingConnections = new Subject<Guid>();
 
         public RawNetwork(INetworkParameters networkParameters, IHashAlgorithmStore hashAlgorithmStore)
         {
@@ -38,12 +38,38 @@ namespace Evercoin.Network
 
             this.networkParameters = networkParameters;
             this.hashAlgorithmStore = hashAlgorithmStore;
+            this.listener = new TcpListener(new IPEndPoint(IPAddress.Any, 11223));
+            this.listener.Start();
+            IObservable<TcpClient> incomingClients = Observable.FromAsync(() => this.listener.AcceptTcpClientAsync()).Repeat().TakeWhile(_ => !this.IsDisposed);
+            incomingClients.Subscribe
+            (
+                client =>
+                {
+                    Guid clientId = Guid.NewGuid();
+                    this.clientLookup.TryAdd(clientId, client);
+                    this.incomingConnections.OnNext(clientId);
+                    ProtocolStreamReader streamReader = new ProtocolStreamReader(new BufferedStream(client.GetStream()), false, this.hashAlgorithmStore);
+                    IObservable<INetworkMessage> messageStream = Observable.FromAsync(ct => streamReader.ReadNetworkMessageAsync(this.networkParameters, clientId, ct))
+                                                                           .DoWhile(() => client.Connected)
+                                                                           .TakeWhile(msg => msg != null)
+                                                                           .Finally(delegate
+                                                                                    {
+                                                                                        streamReader.Dispose();
+                                                                                        client.Close();
+                                                                                        this.clientLookup.TryRemove(clientId, out client);
+                                                                                    });
+
+                    messageStream.Subscribe(this.allMessages.OnNext);
+                }
+            );
+
+            ////this.allMessages.Subscribe(x => Console.WriteLine("Recv: {0} . {1}", Encoding.ASCII.GetString(x.CommandBytes), ByteTwiddling.ByteArrayToHexString(x.Payload)));
         }
 
         /// <summary>
         /// Gets an observable sequence of messages received on this network.
         /// </summary>
-        public IObservable<INetworkMessage> ReceivedMessages { get { return this.messageObservables.Merge(); } }
+        public IObservable<INetworkMessage> ReceivedMessages { get { return this.allMessages; } }
 
         /// <summary>
         /// Gets the <see cref="INetworkParameters"/> object that defines the
@@ -72,6 +98,8 @@ namespace Evercoin.Network
         {
             return await this.ConnectToClientAsync(endPoint, CancellationToken.None);
         }
+
+        public IObservable<Guid> ReceivedConnections { get { return this.incomingConnections; } }
 
         /// <summary>
         /// Asynchronously connects to a client.
@@ -105,15 +133,6 @@ namespace Evercoin.Network
         public async Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint, CancellationToken token)
         {
             return await this.ConnectToClientCoreAsync(async client => await client.ConnectAsync(endPoint.Host, endPoint.Port), token);
-        }
-
-        public void Dispose()
-        {
-            this.messageObservables.OnCompleted();
-            foreach (var client in this.ClientLookup.Values)
-            {
-                client.Close();
-            }
         }
 
         /// <summary>
@@ -160,6 +179,13 @@ namespace Evercoin.Network
             await this.SendMessageCoreAsync(client, message, token);
         }
 
+        public TcpClient GetClientButPleaseBeNice(Guid clientId)
+        {
+            TcpClient client;
+            this.clientLookup.TryGetValue(clientId, out client);
+            return client;
+        }
+
         private async Task<Guid> ConnectToClientCoreAsync(Func<TcpClient, Task> connectionCallback, CancellationToken token)
         {
             Guid clientId = Guid.NewGuid();
@@ -168,18 +194,17 @@ namespace Evercoin.Network
 
             await connectionCallback(client);
             ProtocolStreamReader streamReader = new ProtocolStreamReader(client.GetStream(), true, this.hashAlgorithmStore);
-            IObservable<INetworkMessage> messageStream = Observable.FromAsync(ct => streamReader.ReadNetworkMessageAsync(this.networkParameters, clientId, ct))
+            IObservable<INetworkMessage> messageStream = Observable.FromAsync(() => streamReader.ReadNetworkMessageAsync(this.networkParameters, clientId, token))
                                                                    .DoWhile(() => client.Connected)
                                                                    .TakeWhile(msg => msg != null && !token.IsCancellationRequested)
-                                                                   .Finally(streamReader.Dispose);
+                                                                   .Finally(delegate
+                                                                    {
+                                                                        streamReader.Dispose();
+                                                                        client.Close();
+                                                                        this.clientLookup.TryRemove(clientId, out client);
+                                                                    });
 
-            await Task.Run(() => this.messageObservables.OnNext(messageStream), token);
-
-            VersionMessageBuilder builder = new VersionMessageBuilder(this, this.hashAlgorithmStore);
-
-            INetworkMessage mm = builder.BuildVersionMessage(clientId, 1, Instant.FromDateTimeUtc(DateTime.UtcNow), 500, "/Evercoin:0.0.0/VS:0.0.0/", 1, pleaseRelayTransactionsToMe: false);
-            await this.SendMessageToClientAsync(clientId, mm, token);
-
+            messageStream.Subscribe(this.allMessages.OnNext);
             return clientId;
         }
 
@@ -190,35 +215,10 @@ namespace Evercoin.Network
                 throw new InvalidOperationException("The client is not connected.");
             }
 
+            ////Console.WriteLine("Send: {0} . {1}", Encoding.ASCII.GetString(messageToSend.CommandBytes), ByteTwiddling.ByteArrayToHexString(messageToSend.Payload));
+
             byte[] messageBytes = messageToSend.FullData;
             await client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length, token);
-        }
-
-        public async Task AskForMoreBlocks()
-        {
-            await Task.Delay(500);
-            GetBlocksMessageBuilder b = new GetBlocksMessageBuilder(this, this.hashAlgorithmStore);
-            var message = b.BuildGetDataMessage(Guid.NewGuid(), FetchBlockLocator().ToList(), BigInteger.Zero);
-            await this.BroadcastMessageAsync(message);
-        }
-
-        internal static IEnumerable<BigInteger> FetchBlockLocator()
-        {
-            IReadOnlyList<BigInteger> blockIdentifierCollection = Cheating.GetBlockIdentifiers();
-
-            int step = 1;
-            int start = 0;
-            for (int i = blockIdentifierCollection.Count - 1; i > 0; start++, i -= step)
-            {
-                if (start >= 10)
-                {
-                    step *= 2;
-                }
-
-                yield return blockIdentifierCollection[i];
-            }
-
-            yield return blockIdentifierCollection[0];
         }
     }
 }

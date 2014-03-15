@@ -31,6 +31,9 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Evercoin.Network", "Evercoin.Network\Evercoin.Network.csproj", "{F88F4DD8-7BA2-474C-899F-FE79FED46F54}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{10A64A33-EF41-426D-AAC2-CE982EC7A110}"
+	ProjectSection(SolutionItems) = preProject
+		Performance1.psess = Performance1.psess
+	EndProjectSection
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "Secp256k1.NET", "..\external\Secp256k1.NET\Secp256k1.NET.vcxproj", "{FC8F0BD7-6066-4E47-AA84-E48DD0BEB46D}"
 EndProject
@@ -88,5 +91,8 @@ Global
 		{1D9671B4-430F-43B4-9836-F822C92C48BC} = {68CACBBC-E6FA-4AAD-83AE-CF5059CEC3C0}
 		{245C1178-E2F5-4101-A822-CD9A82DC35AC} = {68CACBBC-E6FA-4AAD-83AE-CF5059CEC3C0}
 		{87FC1948-73BC-4905-A154-1DEA0EFE6AAB} = {68CACBBC-E6FA-4AAD-83AE-CF5059CEC3C0}
+	EndGlobalSection
+	GlobalSection(Performance) = preSolution
+		HasPerformanceSessions = true
 	EndGlobalSection
 EndGlobal

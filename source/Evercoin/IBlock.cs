@@ -14,11 +14,6 @@ namespace Evercoin
     public interface IBlock : IEquatable<IBlock>
     {
         /// <summary>
-        /// Gets an integer that identifies this block.
-        /// </summary>
-        BigInteger Identifier { get; }
-
-        /// <summary>
         /// Gets the ordered list of the identifiers of
         /// <see cref="ITransaction"/> objects contained within this block.
         /// </summary>
@@ -51,20 +46,8 @@ namespace Evercoin
         BigInteger DifficultyTarget { get; }
 
         /// <summary>
-        /// Gets how high this block is in the chain.
-        /// </summary>
-        /// <remarks>
-        /// In other words, how many nodes come before this one.
-        /// So, the genesis block is at height zero.
-        /// </remarks>
-        ulong Height { get; }
-
-        /// <summary>
         /// Gets the identifier of the previous block in the chain.
         /// </summary>
-        /// <remarks>
-        /// When <see cref="Height"/> equals 0, the return value is undefined.
-        /// </remarks>
         BigInteger PreviousBlockIdentifier { get; }
     }
 }

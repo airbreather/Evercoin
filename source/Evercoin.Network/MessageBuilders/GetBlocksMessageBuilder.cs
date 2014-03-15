@@ -7,7 +7,7 @@ using System.Text;
 using Evercoin.ProtocolObjects;
 using Evercoin.Util;
 
-namespace Evercoin.Network.MessageHandlers
+namespace Evercoin.Network.MessageBuilders
 {
     internal sealed class GetBlocksMessageBuilder
     {
@@ -29,9 +29,9 @@ namespace Evercoin.Network.MessageHandlers
             this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
-        public INetworkMessage BuildGetDataMessage(Guid clientId,
-                                                   IEnumerable<BigInteger> knownHashes,
-                                                   BigInteger lastKnownHash)
+        public INetworkMessage BuildGetBlocksMessage(Guid clientId,
+                                                     IEnumerable<BigInteger> knownHashes,
+                                                     BigInteger lastKnownHash)
         {
             Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, clientId);
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 
 using Evercoin.ProtocolObjects;
 using Evercoin.Util;
@@ -32,13 +33,38 @@ namespace Evercoin.Algorithms
 
             byte[] hashTypeBytes = { hashType, 0, 0, 0 };
 
-            ProtocolTxIn[] inputs = this.transaction.Inputs.Select((input, n) => new ProtocolTxIn(input.SpendingTransactionIdentifier, input.SpendingTransactionInputIndex, n == this.outputIndex ? ByteTwiddling.ConcatenateData(script.Select(ScriptOpToBytes)) : Enumerable.Empty<byte>(), input.SequenceNumber)).GetArray();
-            ProtocolTxOut[] outputs = this.transaction.Outputs.Select(x => new ProtocolTxOut((long)x.AvailableValue, x.ScriptPublicKey)).GetArray();
+            ProtocolTxIn[] inputs = new ProtocolTxIn[this.transaction.Inputs.Length];
+            for (int i = 0; i < inputs.Length; i++)
+            {
+                IValueSpender spender = this.transaction.Inputs[i];
+                IValueSource valueSource = spender.SpendingValueSource;
+                ITransactionValueSource transactionValueSource = valueSource as ITransactionValueSource;
+                if (transactionValueSource != null)
+                {
+                    BigInteger originatingTransactionIdentifier = transactionValueSource.OriginatingTransactionIdentifier;
+                    uint originatingTransactionOutputIndex = transactionValueSource.OriginatingTransactionOutputIndex;
+                    IEnumerable<byte> scriptSig = i == this.outputIndex ? script.SelectMany(ScriptOpToBytes) : Enumerable.Empty<byte>();
+                    uint seq = spender.SequenceNumber;
+                    inputs[i] = new ProtocolTxIn(originatingTransactionIdentifier, originatingTransactionOutputIndex, scriptSig, seq);
+                }
+            }
+
+            ProtocolTxOut[] outputs = new ProtocolTxOut[this.transaction.Outputs.Length];
+            for (int i = 0; i < outputs.Length; i++)
+            {
+                ITransactionValueSource valueSource = this.transaction.Outputs[i];
+                long availableValue = (long)valueSource.AvailableValue;
+                byte[] scriptPubKey = valueSource.ScriptPublicKey;
+
+                outputs[i] = new ProtocolTxOut(availableValue, scriptPubKey);
+            }
+
             ProtocolTransaction tx = new ProtocolTransaction(this.transaction.Version, inputs, outputs, this.transaction.LockTime);
 
             var dataToHash = ByteTwiddling.ConcatenateData(tx.Data, hashTypeBytes);
             var hashedData = this.hashAlgorithm.CalculateHash(dataToHash);
-            return Signatures.Verify(hashedData, signatureBytes, publicKey.GetArray()) == Signatures.VerifyResult.Verified;
+            Signatures.VerifyResult result = Signatures.Verify(hashedData, signatureBytes, publicKey.GetArray());
+            return result == Signatures.VerifyResult.Verified;
         }
 
         private static byte[] ScriptOpToBytes(TransactionScriptOperation op)

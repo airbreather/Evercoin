@@ -1,6 +1,6 @@
-﻿namespace Evercoin.Network
+﻿namespace Evercoin.BaseImplementations
 {
-    internal class NetworkValueSource : IValueSource
+    internal class TypedValueSource : IValueSource
     {
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
+using Evercoin.BaseImplementations;
 using Evercoin.Util;
 
 namespace Evercoin.ProtocolObjects
@@ -44,18 +45,18 @@ namespace Evercoin.ProtocolObjects
                 // Inputs
                 byte[] inputCountBytes = ((ProtocolCompactSize)(ulong)this.Inputs.Length).Data;
                 IEnumerable<byte[]> inputByteSources = this.Inputs.Select(x => x.PrevOutTxId.ToLittleEndianUInt256Array()
-                                                                                 .Concat(BitConverter.GetBytes(x.PrevOutN).LittleEndianToOrFromBitConverterEndianness())
-                                                                                 .Concat(((ProtocolCompactSize)(ulong)x.ScriptSig.Length).Data)
-                                                                                 .Concat(x.ScriptSig)
-                                                                                 .Concat(BitConverter.GetBytes(x.Sequence).LittleEndianToOrFromBitConverterEndianness())
-                                                                                 .GetArray());
+                                                                                            .Concat(BitConverter.GetBytes(x.PrevOutN).LittleEndianToOrFromBitConverterEndianness())
+                                                                                            .Concat(((ProtocolCompactSize)(ulong)x.ScriptSig.Length).Data)
+                                                                                            .Concat(x.ScriptSig)
+                                                                                            .Concat(BitConverter.GetBytes(x.Sequence).LittleEndianToOrFromBitConverterEndianness())
+                                                                                            .GetArray());
 
                 // Outputs
                 byte[] outputCountBytes = ((ProtocolCompactSize)(ulong)this.Outputs.Length).Data;
                 IEnumerable<byte[]> outputByteSources = this.Outputs.Select(x => BitConverter.GetBytes(x.ValueInSatoshis).LittleEndianToOrFromBitConverterEndianness()
-                                                                                                              .Concat(((ProtocolCompactSize)(ulong)x.ScriptPubKey.Length).Data)
-                                                                                                              .Concat(x.ScriptPubKey)
-                                                                                                              .GetArray());
+                                                                                                                         .Concat(((ProtocolCompactSize)(ulong)x.ScriptPubKey.Length).Data)
+                                                                                                                         .Concat(x.ScriptPubKey)
+                                                                                                                         .GetArray());
 
                 // Lock time
                 byte[] lockTimeBytes = BitConverter.GetBytes(this.LockTime).LittleEndianToOrFromBitConverterEndianness();
@@ -65,6 +66,32 @@ namespace Evercoin.ProtocolObjects
 
                 return ByteTwiddling.ConcatenateData(versionBytes, inputCountBytes, inputBytes, outputCountBytes, outputBytes, lockTimeBytes);
             }
+        }
+
+        public ITransaction ToTransaction(IDictionary<BigInteger, ITransaction> prevTransactions, IBlock spendingBlock)
+        {
+            return new TypedTransaction
+            {
+                LockTime = this.LockTime,
+                Version = this.Version,
+                Inputs = this.Inputs.Select((x, n) => new TypedValueSpender
+                                                      {
+                                                          ScriptSignature = x.ScriptSig,
+                                                          SequenceNumber = x.Sequence,
+                                                          SpendingTransactionIdentifier = this.TxId,
+                                                          SpendingTransactionInputIndex = (uint)n,
+                                                          SpendingValueSource = x.PrevOutTxId.IsZero ? 
+                                                                                (IValueSource)spendingBlock.Coinbase :
+                                                                                prevTransactions[x.PrevOutTxId].Outputs[(int)x.PrevOutN]
+                                                      }).ToArray(),
+                Outputs = this.Outputs.Select((x, n) => new TypedTransactionValueSource 
+                                                        {
+                                                            AvailableValue = x.ValueInSatoshis,
+                                                            OriginatingTransactionIdentifier = this.TxId,
+                                                            OriginatingTransactionOutputIndex = (uint)n,
+                                                            ScriptPublicKey = x.ScriptPubKey
+                                                        }).ToArray()
+            };
         }
     }
 }

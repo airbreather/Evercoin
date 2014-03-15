@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Globalization;
 
 namespace Evercoin
 {
@@ -15,7 +16,7 @@ namespace Evercoin
 
         ~DisposableObject()
         {
-            Debug.Assert(this.IsDisposed, "Freeing an IDisposable object without disposing it first.");
+            Debug.Assert(this.IsDisposed, String.Format(CultureInfo.InvariantCulture, "Freeing an IDisposable object without disposing it first: {0}.", this.GetType().Name));
             this.DisposeUnmanagedResources();
         }
 

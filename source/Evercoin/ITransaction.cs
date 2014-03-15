@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Numerics;
 
 namespace Evercoin
 {
@@ -11,18 +10,6 @@ namespace Evercoin
     /// </remarks>
     public interface ITransaction : IEquatable<ITransaction>
     {
-        /// <summary>
-        /// Gets a string that identifies this transaction.
-        /// </summary>
-        BigInteger Identifier { get; }
-
-        /// <summary>
-        /// Gets the identifier of the <see cref="IBlock"/> that contains
-        /// this transaction, if any.
-        /// <see cref="String.Empty"/> if it is not yet included in a block.
-        /// </summary>
-        BigInteger ContainingBlockIdentifier { get; }
-
         /// <summary>
         /// Gets the version of this transaction.
         /// </summary>
