@@ -227,10 +227,10 @@ namespace Evercoin.App
                 return false;
             }
 
-            await this.chainStore.PutBlockAsync(blockIdentifier, typedBlock, token);
-
             int prevBlockHeight = await prevBlockHeightGetter;
             Cheating.Add(prevBlockHeight + 1, blockIdentifier);
+
+            await this.chainStore.PutBlockAsync(blockIdentifier, typedBlock, token);
 
             return true;
         }

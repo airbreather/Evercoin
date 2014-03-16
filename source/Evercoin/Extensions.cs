@@ -146,5 +146,30 @@ namespace Evercoin
         {
             return source.Where(x => !predicate(x));
         }
+
+        public static void AddRange<T>(this ICollection<T> collection, IEnumerable<T> values)
+        {
+            if (collection == null)
+            {
+                throw new ArgumentNullException("collection");
+            }
+
+            if (values == null)
+            {
+                throw new ArgumentNullException("values");
+            }
+
+            List<T> list = collection as List<T>;
+            if (list != null)
+            {
+                list.AddRange(values);
+                return;
+            }
+
+            foreach (T value in values)
+            {
+                collection.Add(value);
+            }
+        }
     }
 }

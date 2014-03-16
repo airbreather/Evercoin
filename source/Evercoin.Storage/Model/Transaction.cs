@@ -6,8 +6,8 @@ using System.Runtime.Serialization;
 
 namespace Evercoin.Storage.Model
 {
-    [Serializable]
-    internal sealed class Transaction : ITransaction, ISerializable
+    [DataContract(Name = "Transaction", Namespace = "Evercoin.Storage.Model")]
+    internal sealed class Transaction : ITransaction
     {
         private const string SerializationName_Identifier = "Identifier";
         private const string SerializationName_Version = "Version";
@@ -15,10 +15,11 @@ namespace Evercoin.Storage.Model
         private const string SerializationName_Outputs = "Outputs";
         private const string SerializationName_LockTime = "LockTime";
 
+        private Lazy<Collection<ValueSpender>> typedInputs = new Lazy<Collection<ValueSpender>>();
+        private Lazy<Collection<TransactionValueSource>> typedOutputs = new Lazy<Collection<TransactionValueSource>>();
+
         public Transaction()
         {
-            this.TypedInputs = new Collection<ValueSpender>();
-            this.TypedOutputs = new Collection<TransactionValueSource>();
         }
 
         public Transaction(BigInteger identifier, ITransaction copyFrom)
@@ -27,25 +28,43 @@ namespace Evercoin.Storage.Model
             this.Identifier = identifier;
             this.Version = copyFrom.Version;
             this.LockTime = copyFrom.LockTime;
-            foreach (IValueSpender input in copyFrom.Inputs)
-            {
-                this.TypedInputs.Add(new ValueSpender(input));
-            }
-
-            foreach (ITransactionValueSource output in copyFrom.Outputs)
-            {
-                this.TypedOutputs.Add(new TransactionValueSource(output));
-            }
+            this.TypedInputs.AddRange(copyFrom.Inputs.Select(x => new ValueSpender(x)));
+            this.TypedOutputs.AddRange(copyFrom.Outputs.Select(x => new TransactionValueSource(x)));
         }
 
-        private Transaction(SerializationInfo info, StreamingContext context)
-        {
-            this.Identifier = info.GetValue<BigInteger>(SerializationName_Identifier);
-            this.Version = info.GetUInt32(SerializationName_Version);
-            this.LockTime = info.GetUInt32(SerializationName_LockTime);
-            this.TypedInputs = info.GetValue<Collection<ValueSpender>>(SerializationName_Inputs);
-            this.TypedOutputs = info.GetValue<Collection<TransactionValueSource>>(SerializationName_Outputs);
-        }
+        /// <summary>
+        /// Gets a string that identifies this transaction.
+        /// </summary>
+        [DataMember(Name = SerializationName_Identifier)]
+        public BigInteger Identifier { get; set; }
+
+        /// <summary>
+        /// Gets the version of this transaction.
+        /// </summary>
+        [DataMember(Name = SerializationName_Version)]
+        public uint Version { get; set; }
+
+        /// <summary>
+        /// Gets the inputs spent by this transaction.
+        /// </summary>
+        [DataMember(Name = SerializationName_Inputs)]
+        public Collection<ValueSpender> TypedInputs { get { return this.typedInputs.Value; } }
+
+        /// <summary>
+        /// Gets the outputs of this transaction.
+        /// </summary>
+        [DataMember(Name = SerializationName_Outputs)]
+        public Collection<TransactionValueSource> TypedOutputs { get { return this.typedOutputs.Value; } }
+
+        public IValueSpender[] Inputs { get { return this.typedInputs.Value.GetArray<IValueSpender>(); } }
+
+        /// <summary>
+        /// Gets the outputs of this transaction.
+        /// </summary>
+        public ITransactionValueSource[] Outputs { get { return this.typedOutputs.Value.GetArray<ITransactionValueSource>(); } }
+
+        [DataMember(Name = SerializationName_LockTime)]
+        public uint LockTime { get; set; }
 
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
@@ -62,52 +81,17 @@ namespace Evercoin.Storage.Model
             }
 
             return other != null &&
-                   this.TypedInputs.SequenceEqual(other.Inputs) &&
-                   this.TypedOutputs.SequenceEqual(other.Outputs) &&
+                   this.typedInputs.Value.SequenceEqual(other.Inputs) &&
+                   this.typedOutputs.Value.SequenceEqual(other.Outputs) &&
                    this.Version == other.Version &&
                    this.LockTime == other.LockTime;
         }
 
-        /// <summary>
-        /// Gets a string that identifies this transaction.
-        /// </summary>
-        public BigInteger Identifier { get; set; }
-
-        /// <summary>
-        /// Gets the version of this transaction.
-        /// </summary>
-        public uint Version { get; set; }
-
-        /// <summary>
-        /// Gets the inputs spent by this transaction.
-        /// </summary>
-        public Collection<ValueSpender> TypedInputs { get; private set; }
-
-        public IValueSpender[] Inputs { get { return this.TypedInputs.GetArray<IValueSpender>(); } }
-
-        /// <summary>
-        /// Gets the outputs of this transaction.
-        /// </summary>
-        public Collection<TransactionValueSource> TypedOutputs { get; private set; }
-
-        /// <summary>
-        /// Gets the outputs of this transaction.
-        /// </summary>
-        public ITransactionValueSource[] Outputs { get { return this.TypedOutputs.GetArray<ITransactionValueSource>(); } }
-
-        public uint LockTime { get; set; }
-
-        /// <summary>
-        /// Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo"/> with the data needed to serialize the target object.
-        /// </summary>
-        /// <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> to populate with data. </param><param name="context">The destination (see <see cref="T:System.Runtime.Serialization.StreamingContext"/>) for this serialization. </param><exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
+        [OnDeserializing]
+        private void OnDeserializing(StreamingContext ctx)
         {
-            info.AddValue(SerializationName_Identifier, this.Identifier);
-            info.AddValue(SerializationName_Version, this.Version);
-            info.AddValue(SerializationName_Inputs, this.TypedInputs);
-            info.AddValue(SerializationName_Outputs, this.TypedOutputs);
-            info.AddValue(SerializationName_LockTime, this.LockTime);
+            this.typedInputs = new Lazy<Collection<ValueSpender>>();
+            this.typedOutputs = new Lazy<Collection<TransactionValueSource>>();
         }
     }
 }

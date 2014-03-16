@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -13,8 +15,8 @@ using Evercoin.Util;
 
 namespace Evercoin.Storage
 {
-    ////[Export(typeof(IChainStore))]
-    ////[Export(typeof(IReadOnlyChainStore))]
+    [Export(typeof(IChainStore))]
+    [Export(typeof(IReadOnlyChainStore))]
     public sealed class FileSystemChainStore : ReadWriteChainStoreBase
     {
         private const string BlockDirName = @"C:\Freedom\blocks";
@@ -22,33 +24,51 @@ namespace Evercoin.Storage
 
         public FileSystemChainStore()
         {
+            if (!Directory.Exists(BlockDirName))
+            {
+                Directory.CreateDirectory(BlockDirName);
+            }
+
+            if (!Directory.Exists(TxDirName))
+            {
+                Directory.CreateDirectory(TxDirName);
+            }
+
             BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").AsEnumerable().Reverse().GetArray());
             if (!this.ContainsBlock(genesisBlockIdentifier))
             {
                 Block genesisBlock = new Block
-                {
-                    Identifier = genesisBlockIdentifier,
-                    TypedCoinbase = new CoinbaseValueSource
-                    {
-                        AvailableValue = 50,
-                        OriginatingBlockIdentifier = genesisBlockIdentifier
-                    },
-                    TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").AsEnumerable().Reverse().GetArray() }
-                };
+                                     {
+                                         Identifier = genesisBlockIdentifier,
+                                         TypedCoinbase = new CoinbaseValueSource
+                                                         {
+                                                             AvailableValue = 50,
+                                                             OriginatingBlockIdentifier = genesisBlockIdentifier
+                                                         },
+                                         TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").AsEnumerable().Reverse().GetArray() }
+                                     };
                 this.PutBlock(genesisBlockIdentifier, genesisBlock);
+                Cheating.Add(0, genesisBlockIdentifier);
             }
             else
             {
-                Dictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new Dictionary<BigInteger, BigInteger>();
-                foreach (string filePath in Directory.EnumerateFiles(BlockDirName))
+                ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+                ConcurrentDictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new ConcurrentDictionary<BigInteger, BigInteger>();
+                Parallel.ForEach(Directory.EnumerateFiles(BlockDirName), options, filePath =>
                 {
                     string name = Path.GetFileName(filePath);
                     byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
                     Array.Reverse(hexBytes);
                     BigInteger blockId = new BigInteger(hexBytes);
-                    IBlock block = this.FindBlockCore(blockId);
-                    blockIdToNextBlockIdMapping[block.PreviousBlockIdentifier] = blockId;
-                }
+                    try
+                    {
+                        IBlock block = this.FindBlockCore(blockId);
+                        blockIdToNextBlockIdMapping[block.PreviousBlockIdentifier] = blockId;
+                    }
+                    catch
+                    {
+                    }
+                });
 
                 BigInteger prevBlockId = BigInteger.Zero;
                 for (int i = 0; i < blockIdToNextBlockIdMapping.Count; i++)
@@ -62,6 +82,36 @@ namespace Evercoin.Storage
                     Cheating.Add(i, blockId);
                     prevBlockId = blockId;
                 }
+
+                HashSet<BigInteger> goodBlockIds = new HashSet<BigInteger>(blockIdToNextBlockIdMapping.Values);
+                Parallel.ForEach(Directory.EnumerateFiles(BlockDirName), options, filePath =>
+                {
+                    string name = Path.GetFileName(filePath);
+                    byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
+                    Array.Reverse(hexBytes);
+                    BigInteger blockId = new BigInteger(hexBytes);
+                    if (!goodBlockIds.Contains(blockId) &&
+                        blockId != genesisBlockIdentifier)
+                    {
+                        File.Delete(filePath);
+                    }
+                });
+
+                Parallel.ForEach(Directory.EnumerateFiles(TxDirName), options, filePath =>
+                {
+                    string name = Path.GetFileName(filePath);
+                    byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
+                    Array.Reverse(hexBytes);
+                    BigInteger transactionIdentifier = new BigInteger(hexBytes);
+                    try
+                    {
+                        ITransaction tx = this.FindTransactionCore(transactionIdentifier);
+                    }
+                    catch
+                    {
+                        File.Delete(filePath);
+                    }
+                });
             }
         }
 
@@ -92,8 +142,8 @@ namespace Evercoin.Storage
 
             using (stream)
             {
-                BinaryFormatter binaryFormatter = new BinaryFormatter();
-                return (Block)binaryFormatter.Deserialize(stream);
+                var serializer = new DataContractSerializer(typeof(Block));
+                return (Block)serializer.ReadObject(stream);
             }
         }
 
@@ -124,8 +174,8 @@ namespace Evercoin.Storage
 
             using (stream)
             {
-                BinaryFormatter binaryFormatter = new BinaryFormatter();
-                return (Transaction)binaryFormatter.Deserialize(stream);
+                var serializer = new DataContractSerializer(typeof(Transaction));
+                return (Transaction)serializer.ReadObject(stream);
             }
         }
 
@@ -136,8 +186,8 @@ namespace Evercoin.Storage
 
             using (FileStream stream = File.OpenWrite(filePath))
             {
-                BinaryFormatter binaryFormatter = new BinaryFormatter();
-                binaryFormatter.Serialize(stream, typedBlock);
+                var serializer = new DataContractSerializer(typeof(Block));
+                serializer.WriteObject(stream, typedBlock);
             }
         }
 
@@ -148,8 +198,8 @@ namespace Evercoin.Storage
 
             using (FileStream stream = File.OpenWrite(filePath))
             {
-                BinaryFormatter binaryFormatter = new BinaryFormatter();
-                binaryFormatter.Serialize(stream, typedTransaction);
+                var serializer = new DataContractSerializer(typeof(Transaction));
+                serializer.WriteObject(stream, typedTransaction);
             }
         }
 

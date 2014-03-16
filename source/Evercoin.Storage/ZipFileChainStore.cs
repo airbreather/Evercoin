@@ -1,8 +1,9 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.Serialization.Formatters.Binary;
+using System.Runtime.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -11,9 +12,11 @@ using Evercoin.Storage.Model;
 using Evercoin.Util;
 
 using Ionic.Zip;
+using Ionic.Zlib;
 
 namespace Evercoin.Storage
 {
+    // HINT: Don't use this.  It sucks.
     ////[Export(typeof(IChainStore))]
     ////[Export(typeof(IReadOnlyChainStore))]
     public sealed class ZipFileChainStore : ReadWriteChainStoreBase
@@ -27,16 +30,19 @@ namespace Evercoin.Storage
 
         private readonly object zipLock = new object();
 
-        private readonly ConcurrentDictionary<BigInteger, ManualResetEventSlim> blockWaiters = new ConcurrentDictionary<BigInteger, ManualResetEventSlim>();
-        private readonly ConcurrentDictionary<BigInteger, ManualResetEventSlim> txWaiters = new ConcurrentDictionary<BigInteger, ManualResetEventSlim>();
-
         private readonly ZipFile archive;
 
         public ZipFileChainStore()
         {
-            this.archive = new ZipFile(ZipFileName) { UseZip64WhenSaving = Zip64Option.Always };
             try
             {
+                this.archive = new ZipFile(ZipFileName)
+                               {
+                                   UseZip64WhenSaving = Zip64Option.AsNecessary
+                               };
+
+                this.archive.CompressionLevel = CompressionLevel.BestCompression;
+
                 if (!this.archive.ContainsEntry(BlockDir + EntrySep))
                 {
                     this.archive.AddDirectoryByName(BlockDir);
@@ -61,12 +67,45 @@ namespace Evercoin.Storage
                                              TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").Reverse().GetArray() }
                                          };
                     this.PutBlock(genesisBlockIdentifier, genesisBlock);
-                    this.archive.Save();
+                    this.Save();
+                    Cheating.Add(0, genesisBlockIdentifier);
+                }
+                else
+                {
+                    DataContractSerializer blockSerializer = new DataContractSerializer(typeof(Block));
+                    Dictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new Dictionary<BigInteger, BigInteger>();
+                    foreach (var entry in this.archive.SelectEntries(BlockDir + EntrySep + "*").Skip(1))
+                    {
+                        Block block;
+                        using (var stream = entry.OpenReader())
+                        {
+                            block = (Block)blockSerializer.ReadObject(stream);
+                        }
+
+                        blockIdToNextBlockIdMapping[block.PreviousBlockIdentifier] = block.Identifier;
+                    }
+
+                    BigInteger prevBlockId = BigInteger.Zero;
+                    for (int i = 0; i < blockIdToNextBlockIdMapping.Count; i++)
+                    {
+                        BigInteger blockId;
+                        if (!blockIdToNextBlockIdMapping.TryGetValue(prevBlockId, out blockId))
+                        {
+                            break;
+                        }
+
+                        Cheating.Add(i, blockId);
+                        prevBlockId = blockId;
+                    }
                 }
             }
             catch
             {
-                this.archive.Dispose();
+                if (this.archive != null)
+                {
+                    this.archive.Dispose();
+                }
+
                 throw;
             }
         }
@@ -95,6 +134,7 @@ namespace Evercoin.Storage
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
         {
+            SpinWait spinner = new SpinWait();
             Monitor.Enter(this.zipLock);
             try
             {
@@ -108,32 +148,25 @@ namespace Evercoin.Storage
                     }
 
                     Monitor.Exit(this.zipLock);
-                    ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, _ => new ManualResetEventSlim());
-                    if (mres.Wait(10000) &&
-                        this.blockWaiters.TryRemove(blockIdentifier, out mres))
-                    {
-                        mres.Dispose();
-                    }
-
+                    spinner.SpinOnce();
                     Monitor.Enter(this.zipLock);
                 }
                 while (true);
 
+                DataContractSerializer blockSerializer = new DataContractSerializer(typeof(Block));
                 try
                 {
                     using (var stream = data.OpenReader())
                     {
-                        BinaryFormatter binaryFormatter = new BinaryFormatter();
-                        return (Block)binaryFormatter.Deserialize(stream);
+                        return (Block)blockSerializer.ReadObject(stream);
                     }
                 }
                 catch (BadStateException)
                 {
-                    this.archive.Save();
+                    this.Save();
                     using (var stream = data.OpenReader())
                     {
-                        BinaryFormatter binaryFormatter = new BinaryFormatter();
-                        return (Block)binaryFormatter.Deserialize(stream);
+                        return (Block)blockSerializer.ReadObject(stream);
                     }
                 }
             }
@@ -145,6 +178,7 @@ namespace Evercoin.Storage
 
         protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
         {
+            SpinWait spinner = new SpinWait();
             Monitor.Enter(this.zipLock);
             try
             {
@@ -158,32 +192,25 @@ namespace Evercoin.Storage
                     }
 
                     Monitor.Exit(this.zipLock);
-                    ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, _ => new ManualResetEventSlim());
-                    if (mres.Wait(10000) &&
-                        this.txWaiters.TryRemove(transactionIdentifier, out mres))
-                    {
-                        mres.Dispose();
-                    }
-
+                    spinner.SpinOnce();
                     Monitor.Enter(this.zipLock);
                 }
                 while (true);
 
+                DataContractSerializer txSerializer = new DataContractSerializer(typeof(Transaction));
                 try
                 {
                     using (var stream = data.OpenReader())
                     {
-                        BinaryFormatter binaryFormatter = new BinaryFormatter();
-                        return (Transaction)binaryFormatter.Deserialize(stream);
+                        return (Transaction)txSerializer.ReadObject(stream);
                     }
                 }
                 catch (BadStateException)
                 {
-                    this.archive.Save();
+                    this.Save();
                     using (var stream = data.OpenReader())
                     {
-                        BinaryFormatter binaryFormatter = new BinaryFormatter();
-                        return (Transaction)binaryFormatter.Deserialize(stream);
+                        return (Transaction)txSerializer.ReadObject(stream);
                     }
                 }
             }
@@ -196,40 +223,28 @@ namespace Evercoin.Storage
         protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
         {
             Block typedBlock = new Block(blockIdentifier, block);
-            BinaryFormatter binaryFormatter = new BinaryFormatter();
+            DataContractSerializer blockSerializer = new DataContractSerializer(typeof(Block));
+
             lock (this.zipLock)
             {
-                this.archive.AddEntry(GetBlockEntryName(blockIdentifier), (_, entryStream) => binaryFormatter.Serialize(entryStream, typedBlock));
-                this.archive.Save();
-            }
-
-            ManualResetEventSlim mres;
-            if (this.blockWaiters.TryGetValue(blockIdentifier, out mres))
-            {
-                mres.Set();
+                this.archive.AddEntry(GetBlockEntryName(blockIdentifier), (_, entryStream) => blockSerializer.WriteObject(entryStream, typedBlock));
             }
         }
 
         protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
         {
             Transaction typedTransaction = new Transaction(transactionIdentifier, transaction);
-            BinaryFormatter binaryFormatter = new BinaryFormatter();
+            DataContractSerializer txSerializer = new DataContractSerializer(typeof(Transaction));
+
             lock (this.zipLock)
             {
-                this.archive.AddEntry(GetTransactionEntryName(transactionIdentifier), (_, entryStream) => binaryFormatter.Serialize(entryStream, typedTransaction));
-                this.archive.Save();
-            }
-
-            ManualResetEventSlim mres;
-            if (this.txWaiters.TryGetValue(transactionIdentifier, out mres))
-            {
-                mres.Set();
+                this.archive.AddEntry(GetTransactionEntryName(transactionIdentifier), (_, entryStream) => txSerializer.WriteObject(entryStream, typedTransaction));
             }
         }
 
         protected override void DisposeManagedResources()
         {
-            this.archive.Save();
+            this.Save();
             this.archive.Dispose();
         }
 
@@ -247,6 +262,11 @@ namespace Evercoin.Storage
             Array.Reverse(transactionIdentifierBytes);
             string id = ByteTwiddling.ByteArrayToHexString(transactionIdentifierBytes);
             return String.Join(EntrySep, TxDir, id);
+        }
+
+        private void Save()
+        {
+            this.archive.Save();
         }
     }
 }

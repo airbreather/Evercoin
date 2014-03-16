@@ -1,10 +1,9 @@
-using System;
 using System.Runtime.Serialization;
 
 namespace Evercoin.Storage.Model
 {
-    [Serializable]
-    internal abstract class ValueSource : IValueSource, ISerializable
+    [DataContract(Name = "ValueSource", Namespace = "Evercoin.Storage.Model")]
+    internal abstract class ValueSource : IValueSource
     {
         private const string SerializationName_AvailableValue = "AvailableValue";
 
@@ -17,10 +16,11 @@ namespace Evercoin.Storage.Model
             this.AvailableValue = copyFrom.AvailableValue;
         }
 
-        protected ValueSource(SerializationInfo info, StreamingContext context)
-        {
-            this.AvailableValue = info.GetDecimal(SerializationName_AvailableValue);
-        }
+        /// <summary>
+        /// Gets how much value can be spent by this source.
+        /// </summary>
+        [DataMember(Name = SerializationName_AvailableValue)]
+        public decimal AvailableValue { get; set; }
 
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
@@ -38,16 +38,6 @@ namespace Evercoin.Storage.Model
 
             return other != null &&
                    this.AvailableValue == other.AvailableValue;
-        }
-
-        /// <summary>
-        /// Gets how much value can be spent by this source.
-        /// </summary>
-        public decimal AvailableValue { get; set; }
-
-        public virtual void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            info.AddValue(SerializationName_AvailableValue, this.AvailableValue);
         }
     }
 }

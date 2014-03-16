@@ -4,8 +4,8 @@ using System.Runtime.Serialization;
 
 namespace Evercoin.Storage.Model
 {
-    [Serializable]
-    public sealed class MerkleTreeNode : IMerkleTreeNode, ISerializable
+    [DataContract(Name = "MerkleTreeNode", Namespace = "Evercoin.Storage.Model")]
+    public sealed class MerkleTreeNode : IMerkleTreeNode
     {
         private const string SerializationName_Data = "Data";
         private const string SerializationName_LeftChild = "LeftChild";
@@ -40,41 +40,26 @@ namespace Evercoin.Storage.Model
             }
         }
 
-        private MerkleTreeNode(SerializationInfo info, StreamingContext context)
-        {
-            this.Data = info.GetValue<byte[]>(SerializationName_Data);
-            this.LeftChild = info.GetValue<MerkleTreeNode>(SerializationName_LeftChild);
-            this.RightChild = info.GetValue<MerkleTreeNode>(SerializationName_RightChild);
-        }
-
         /// <summary>
         /// Gets the data stored in this node.
         /// </summary>
+        [DataMember(Name = SerializationName_Data)]
         public byte[] Data { get; set; }
 
         /// <summary>
         /// Gets the left subtree.
         /// </summary>
+        [DataMember(Name = SerializationName_LeftChild)]
         public MerkleTreeNode LeftChild { get; set; }
 
         /// <summary>
         /// Gets the right subtree.
         /// </summary>
+        [DataMember(Name = SerializationName_RightChild)]
         public MerkleTreeNode RightChild { get; set; }
 
         IMerkleTreeNode IMerkleTreeNode.LeftChild { get { return this.LeftChild; } }
 
         IMerkleTreeNode IMerkleTreeNode.RightChild { get { return this.RightChild; } }
-
-        /// <summary>
-        /// Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo"/> with the data needed to serialize the target object.
-        /// </summary>
-        /// <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> to populate with data. </param><param name="context">The destination (see <see cref="T:System.Runtime.Serialization.StreamingContext"/>) for this serialization. </param><exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            info.AddValue(SerializationName_Data, this.Data);
-            info.AddValue(SerializationName_LeftChild, this.LeftChild);
-            info.AddValue(SerializationName_RightChild, this.RightChild);
-        }
     }
 }

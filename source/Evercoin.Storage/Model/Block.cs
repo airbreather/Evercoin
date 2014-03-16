@@ -1,5 +1,4 @@
-﻿using System;
-using System.Linq;
+﻿using System.Linq;
 using System.Numerics;
 using System.Runtime.Serialization;
 
@@ -7,8 +6,8 @@ using NodaTime;
 
 namespace Evercoin.Storage.Model
 {
-    [Serializable]
-    internal sealed class Block : IBlock, ISerializable
+    [DataContract(Name = "Block", Namespace = "Evercoin.Storage.Model")]
+    internal sealed class Block : IBlock
     {
         private const string SerializationName_Identifier = "Identifier";
         private const string SerializationName_PreviousBlockIdentifier = "PreviousBlockIdentifier";
@@ -34,18 +33,6 @@ namespace Evercoin.Storage.Model
             this.TransactionIdentifiers = new MerkleTreeNode(copyFrom.TransactionIdentifiers);
             this.Version = copyFrom.Version;
             this.TypedCoinbase = new CoinbaseValueSource(copyFrom.Coinbase);
-        }
-
-        private Block(SerializationInfo info, StreamingContext context)
-        {
-            this.Identifier = info.GetValue<BigInteger>(SerializationName_Identifier);
-            this.PreviousBlockIdentifier = info.GetValue<BigInteger>(SerializationName_PreviousBlockIdentifier);
-            this.Timestamp = info.GetValue<Instant>(SerializationName_Timestamp);
-            this.Nonce = info.GetUInt32(SerializationName_Nonce);
-            this.DifficultyTarget = info.GetValue<BigInteger>(SerializationName_DifficultyTarget);
-            this.Version = info.GetUInt32(SerializationName_Version);
-            this.TypedCoinbase = info.GetValue<CoinbaseValueSource>(SerializationName_TypedCoinbase);
-            this.TransactionIdentifiers = info.GetValue<MerkleTreeNode>(SerializationName_TransactionIdentifiers);
         }
 
         /// <summary>
@@ -74,12 +61,14 @@ namespace Evercoin.Storage.Model
         /// <summary>
         /// Gets an integer that identifies this block.
         /// </summary>
+        [DataMember(Name = SerializationName_Identifier)]
         public BigInteger Identifier { get; set; }
 
         /// <summary>
         /// Gets the ordered list of the identifiers of
         /// <see cref="ITransaction"/> objects contained within this block.
         /// </summary>
+        [DataMember(Name = SerializationName_TransactionIdentifiers)]
         public MerkleTreeNode TransactionIdentifiers { get; set; }
 
         IMerkleTreeNode IBlock.TransactionIdentifiers { get { return this.TransactionIdentifiers; } }
@@ -87,43 +76,33 @@ namespace Evercoin.Storage.Model
         /// <summary>
         /// Gets the version of this block.
         /// </summary>
+        [DataMember(Name = SerializationName_Version)]
         public uint Version { get; set; }
 
         /// <summary>
         /// Gets the <see cref="NodaTime.Instant"/> in time when this block was created.
         /// </summary>
+        [DataMember(Name = SerializationName_Timestamp)]
         public Instant Timestamp { get; set; }
 
         /// <summary>
         /// Gets the nonce for this block.
         /// </summary>
+        [DataMember(Name = SerializationName_Nonce)]
         public uint Nonce { get; set; }
 
+        [DataMember(Name = SerializationName_TypedCoinbase)]
         public CoinbaseValueSource TypedCoinbase { get; set; }
 
         public ICoinbaseValueSource Coinbase { get { return this.TypedCoinbase; } }
 
+        [DataMember(Name = SerializationName_DifficultyTarget)]
         public BigInteger DifficultyTarget { get; set; }
 
         /// <summary>
         /// Gets the identifier of the previous block in the chain.
         /// </summary>
+        [DataMember(Name = SerializationName_PreviousBlockIdentifier)]
         public BigInteger PreviousBlockIdentifier { get; set; }
-
-        /// <summary>
-        /// Populates a <see cref="T:System.Runtime.Serialization.SerializationInfo"/> with the data needed to serialize the target object.
-        /// </summary>
-        /// <param name="info">The <see cref="T:System.Runtime.Serialization.SerializationInfo"/> to populate with data. </param><param name="context">The destination (see <see cref="T:System.Runtime.Serialization.StreamingContext"/>) for this serialization. </param><exception cref="T:System.Security.SecurityException">The caller does not have the required permission. </exception>
-        public void GetObjectData(SerializationInfo info, StreamingContext context)
-        {
-            info.AddValue(SerializationName_Identifier, this.Identifier);
-            info.AddValue(SerializationName_PreviousBlockIdentifier, this.PreviousBlockIdentifier);
-            info.AddValue(SerializationName_Timestamp, this.Timestamp);
-            info.AddValue(SerializationName_Nonce, this.Nonce);
-            info.AddValue(SerializationName_DifficultyTarget, this.DifficultyTarget);
-            info.AddValue(SerializationName_Version, this.Version);
-            info.AddValue(SerializationName_TypedCoinbase, this.TypedCoinbase);
-            info.AddValue(SerializationName_TransactionIdentifiers, this.TransactionIdentifiers);
-        }
     }
 }
