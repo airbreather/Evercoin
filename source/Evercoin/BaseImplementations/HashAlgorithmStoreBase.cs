@@ -6,7 +6,7 @@ namespace Evercoin.BaseImplementations
     /// <summary>
     /// Base class for implementations of <see cref="IHashAlgorithmStore"/>.
     /// </summary>
-    public abstract class HashAlgorithmStoreBase : IHashAlgorithmStore
+    public abstract class HashAlgorithmStoreBase : DisposableObject, IHashAlgorithmStore
     {
         /// <summary>
         /// Gets the <see cref="IHashAlgorithm"/> identified by a given

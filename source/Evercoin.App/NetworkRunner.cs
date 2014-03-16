@@ -81,6 +81,7 @@ namespace Evercoin.App
                             {
                                 prev = blidCount;
                                 await this.network.RequestBlockOffersAsync(Cheating.GetBlockIdentifiers(), token);
+                                spinner.Reset();
                             }
 
                             spinner.SpinOnce();
@@ -92,10 +93,7 @@ namespace Evercoin.App
                 }
             );
 
-            this.network.ReceivedInventoryOffers.Subscribe(async x =>
-            {
-                await this.network.RequestInventoryAsync(x.Where(y => knownInventory.TryAdd(y, y)), token);
-            });
+            this.network.ReceivedInventoryOffers.Subscribe(async x => await this.network.RequestInventoryAsync(x.Where(y => knownInventory.TryAdd(y, y)), token));
 
             this.network.ReceivedBlocks.Subscribe(async x =>
             {
@@ -106,8 +104,6 @@ namespace Evercoin.App
                 }
             });
 
-            // TODO: eliminate race conditions... would do that before checking this in, but it's been too long.
-            await Task.Delay(5000, token);
             this.network.Start(token);
             await Task.WhenAll(endPoints.Select(endPoint => this.network.ConnectToPeerAsync(new ProtocolNetworkAddress(null, 1, endPoint.Address, (ushort)endPoint.Port), token)));
         }
@@ -131,6 +127,7 @@ namespace Evercoin.App
                 }
             }
 
+            Task<int> prevBlockHeightGetter = Cheating.GetBlockHeightAsync(block.PrevBlockId, token);
             byte[] dataToHash = block.HeaderData;
 
             IHashAlgorithm blockHashAlgorithm = this.network.CurrencyParameters.HashAlgorithmStore.GetHashAlgorithm(this.network.CurrencyParameters.ChainParameters.BlockAlgorithmIdentifier);
@@ -159,35 +156,32 @@ namespace Evercoin.App
                 return false;
             }
 
-            Dictionary<BigInteger, ITransaction> foundTransactions = new Dictionary<BigInteger, ITransaction>(neededTransactionFetchers.Count);
-            foreach (var kvp in neededTransactionFetchers)
-            {
-                BigInteger txId = kvp.Key;
-                Task<ITransaction> fetcher = kvp.Value;
-
-                foundTransactions[txId] = await fetcher;
-            }
-
-            Dictionary<BigInteger, ITransaction> allValidInputTransactions = foundTransactions.ToDictionary(x => x.Key, x => x.Value);
+            Dictionary<BigInteger, ITransaction> allValidInputTransactions = neededTransactionFetchers.ToDictionary(x => x.Key, x => x.Value.Result);
             foreach (ProtocolTransaction protoTransaction in block.IncludedTransactions)
             {
                 ITransaction tx = protoTransaction.ToTransaction(allValidInputTransactions, typedBlock);
                 allValidInputTransactions[protoTransaction.TxId] = tx;
             }
 
-            foreach (ProtocolTransaction protoTransaction in block.IncludedTransactions)
+            ParallelOptions options = new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = Environment.ProcessorCount };
+            ParallelLoopResult validationResult = Parallel.ForEach(block.IncludedTransactions, options, (protoTransaction, loopStateOuter) =>
             {
                 ITransaction tx = allValidInputTransactions[protoTransaction.TxId];
 
-                for (int i = 0; i < tx.Inputs.Length; i++)
+                Parallel.For(0, tx.Inputs.Length, options, (i, loopStateInner) =>
                 {
+                    if (loopStateOuter.IsStopped)
+                    {
+                        return;
+                    }
+
                     var input = tx.Inputs[i];
 
                     ITransactionValueSource inputValueSource = input.SpendingValueSource as ITransactionValueSource;
                     if (inputValueSource == null)
                     {
                         // probably coinbase -- no script to validate.
-                        continue;
+                        return;
                     }
 
                     byte[] scriptSig = input.ScriptSignature;
@@ -195,23 +189,43 @@ namespace Evercoin.App
                     var result = this.scriptRunner.EvaluateScript(scriptSig, signatureChecker);
                     if (!result)
                     {
-                        return false;
+                        loopStateOuter.Stop();
+                        loopStateInner.Stop();
+                        return;
+                    }
+
+                    if (loopStateOuter.IsStopped)
+                    {
+                        return;
                     }
 
                     byte[] scriptPubKey = allValidInputTransactions[inputValueSource.OriginatingTransactionIdentifier].Outputs[(int)inputValueSource.OriginatingTransactionOutputIndex].ScriptPublicKey;
 
                     if (!this.scriptRunner.EvaluateScript(scriptPubKey, signatureChecker, result.MainStack, result.AlternateStack))
                     {
-                        return false;
+                        loopStateOuter.Stop();
+                        loopStateInner.Stop();
                     }
+                });
+
+                if (loopStateOuter.IsStopped)
+                {
+                    return;
                 }
 
-                await this.chainStore.PutTransactionAsync(protoTransaction.TxId, tx, token);
+                this.chainStore.PutTransactionAsync(protoTransaction.TxId, tx, token);
+            });
+
+            if (!validationResult.IsCompleted)
+            {
+                return false;
             }
 
-            int prevBlockHeight = await Cheating.GetBlockHeightAsync(block.PrevBlockId, token);
             await this.chainStore.PutBlockAsync(blockIdentifier, typedBlock, token);
+
+            int prevBlockHeight = await prevBlockHeightGetter;
             Cheating.Add(prevBlockHeight + 1, blockIdentifier);
+
             return true;
         }
     }

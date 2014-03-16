@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 
 using Org.BouncyCastle.Crypto;
 
@@ -9,32 +10,27 @@ namespace Evercoin.Algorithms
     /// An <see cref="IHashAlgorithm"/> that's implemented
     /// using an <see cref="IDigest"/>.
     /// </summary>
-    internal sealed class DigestBasedHashAlgorithm : IHashAlgorithm
+    internal sealed class DigestBasedHashAlgorithm : DisposableObject, IHashAlgorithm
     {
         /// <summary>
         /// The <see cref="IDigest"/> used by this algorithm.
         /// </summary>
-        private readonly IDigest digest;
-
-        /// <summary>
-        /// An object to lock on for thread synchronization.
-        /// </summary>
-        private readonly object syncLock = new object();
+        private readonly ThreadLocal<IDigest> digestFactory;
 
         /// <summary>
         /// Initializes a new instance of the <see cref="DigestBasedHashAlgorithm"/> class.
         /// </summary>
-        /// <param name="digest">
-        /// The <see cref="IDigest"/> that provides 
+        /// <param name="digestFactory">
+        /// A delegate that can produce the <see cref="IDigest"/> per thread.
         /// </param>
-        public DigestBasedHashAlgorithm(IDigest digest)
+        public DigestBasedHashAlgorithm(Func<IDigest> digestFactory)
         {
-            if (digest == null)
+            if (digestFactory == null)
             {
-                throw new ArgumentNullException("digest");
+                throw new ArgumentNullException("digestFactory");
             }
 
-            this.digest = digest;
+            this.digestFactory = new ThreadLocal<IDigest>(digestFactory);
         }
 
         /// <summary>
@@ -56,21 +52,24 @@ namespace Evercoin.Algorithms
                 throw new ArgumentNullException("inputData");
             }
 
-            byte[] result;
-            lock (this.syncLock)
+            IDigest threadLocalDigest = this.digestFactory.Value;
+            int resultLength = threadLocalDigest.GetDigestSize();
+            byte[] result = new byte[resultLength];
+
+            foreach (byte b in inputData)
             {
-                int resultLength = this.digest.GetDigestSize();
-                result = new byte[resultLength];
-
-                foreach (byte b in inputData)
-                {
-                    digest.Update(b);
-                }
-
-                digest.DoFinal(result, 0);
+                threadLocalDigest.Update(b);
             }
 
+            threadLocalDigest.DoFinal(result, 0);
+
             return result;
+        }
+
+        protected override void DisposeManagedResources()
+        {
+            this.digestFactory.Dispose();
+            base.DisposeManagedResources();
         }
     }
 }

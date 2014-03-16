@@ -1,5 +1,4 @@
 ﻿using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Numerics;
@@ -16,10 +15,8 @@ namespace Evercoin.Storage
     [Export(typeof(IReadOnlyChainStore))]
     public sealed class MemoryChainStore : ReadWriteChainStoreBase
     {
-        private readonly Dictionary<BigInteger, IBlock> blocks = new Dictionary<BigInteger, IBlock>();
-        private readonly Dictionary<BigInteger, ITransaction> transactions = new Dictionary<BigInteger, ITransaction>();
-        private readonly ConcurrentDictionary<BigInteger, ManualResetEventSlim> blockWaiters = new ConcurrentDictionary<BigInteger, ManualResetEventSlim>();
-        private readonly ConcurrentDictionary<BigInteger, ManualResetEventSlim> txWaiters = new ConcurrentDictionary<BigInteger, ManualResetEventSlim>();
+        private readonly ConcurrentDictionary<BigInteger, IBlock> blocks = new ConcurrentDictionary<BigInteger, IBlock>();
+        private readonly ConcurrentDictionary<BigInteger, ITransaction> transactions = new ConcurrentDictionary<BigInteger, ITransaction>();
 
         public MemoryChainStore()
         {
@@ -39,21 +36,11 @@ namespace Evercoin.Storage
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
         {
+            SpinWait waiter = new SpinWait();
             IBlock block;
-            bool weOwnMres = false;
-            ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, delegate
-            {
-                weOwnMres = true;
-                return new ManualResetEventSlim();
-            });
             while (!this.blocks.TryGetValue(blockIdentifier, out block))
             {
-                mres.Wait(10000);
-            }
-
-            if (weOwnMres)
-            {
-                mres.Dispose();
+                waiter.SpinOnce();
             }
 
             return block;
@@ -61,21 +48,11 @@ namespace Evercoin.Storage
 
         protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
         {
+            SpinWait waiter = new SpinWait();
             ITransaction transaction;
-            bool weOwnMres = false;
-            ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, delegate
-            {
-                weOwnMres = true;
-                return new ManualResetEventSlim();
-            });
             while (!this.transactions.TryGetValue(transactionIdentifier, out transaction))
             {
-                mres.Wait(10000);
-            }
-
-            if (weOwnMres)
-            {
-                mres.Dispose();
+                waiter.SpinOnce();
             }
 
             return transaction;
@@ -103,16 +80,7 @@ namespace Evercoin.Storage
 
         protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
         {
-            this.blocks.Add(blockIdentifier, block);
-
-            ManualResetEventSlim waiter;
-            if (this.blockWaiters.TryRemove(blockIdentifier, out waiter))
-            {
-                using (waiter)
-                {
-                    waiter.Set();
-                }
-            }
+            this.blocks[blockIdentifier] = block;
         }
 
         protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
@@ -120,15 +88,6 @@ namespace Evercoin.Storage
             // TODO: coinbases can have duplicate transaction IDs before version 2.
             // TODO: Figure that shiz out!
             this.transactions[transactionIdentifier] = transaction;
-
-            ManualResetEventSlim waiter;
-            if (this.txWaiters.TryRemove(transactionIdentifier, out waiter))
-            {
-                using (waiter)
-                {
-                    waiter.Set();
-                }
-            }
         }
     }
 }
