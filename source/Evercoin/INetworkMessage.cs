@@ -13,9 +13,9 @@ namespace Evercoin
         INetworkParameters NetworkParameters { get; }
 
         /// <summary>
-        /// Gets the ID of the remote client sending or receiving this message.
+        /// Gets the remote peer sending or receiving this message.
         /// </summary>
-        Guid RemoteClient { get; }
+        INetworkPeer RemotePeer { get; }
 
         /// <summary>
         /// Gets the command of this message.

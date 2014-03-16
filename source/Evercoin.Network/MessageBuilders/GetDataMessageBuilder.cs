@@ -28,10 +28,10 @@ namespace Evercoin.Network.MessageBuilders
             this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
-        public INetworkMessage BuildGetDataMessage(Guid clientId,
+        public INetworkMessage BuildGetDataMessage(INetworkPeer peer,
                                                    IEnumerable<ProtocolInventoryVector> dataToRequest)
         {
-            Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, clientId);
+            Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, peer);
 
             byte[] commandBytes = new byte[this.network.Parameters.CommandLengthInBytes];
             byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(GetDataText);

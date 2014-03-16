@@ -23,6 +23,9 @@ namespace Evercoin
     /// </remarks>
     public interface ICurrencyNetwork
     {
+        /// <summary>
+        /// Gets the parameters that define this currency.
+        /// </summary>
         ICurrencyParameters CurrencyParameters { get; }
 
         /// <summary>
@@ -38,17 +41,12 @@ namespace Evercoin
         /// <summary>
         /// Gets the identifiers of inventory items we've been offered.
         /// </summary>
-        IObservable<ProtocolInventoryVector[]> ReceivedInventoryOffers { get; }
+        IObservable<Tuple<INetworkPeer, ProtocolInventoryVector[]>> ReceivedInventoryOffers { get; }
 
         /// <summary>
         /// Gets the identifiers of blocks we've been offered.
         /// </summary>
-        IObservable<BigInteger> ReceivedBlockRequests { get; }
-
-        /// <summary>
-        /// Gets the identifiers of transactions we've been offered.
-        /// </summary>
-        IObservable<BigInteger> ReceivedTransactionRequests { get; }
+        IObservable<Tuple<INetworkPeer, ProtocolInventoryVector[]>> ReceivedInventoryRequests { get; }
 
         /// <summary>
         /// Gets the addresses of peers we've been offered.
@@ -61,7 +59,7 @@ namespace Evercoin
         /// <remarks>
         /// Ordering, validity, etc. not guaranteed.
         /// </remarks>
-        IObservable<ProtocolBlock> ReceivedBlocks { get; }
+        IObservable<Tuple<INetworkPeer, ProtocolBlock>> ReceivedBlocks { get; }
 
         /// <summary>
         /// Gets the transaction messages we've received.
@@ -69,12 +67,12 @@ namespace Evercoin
         /// <remarks>
         /// Ordering, validity, etc. not guaranteed.
         /// </remarks>
-        IObservable<ProtocolTransaction> ReceivedTransactions { get; }
+        IObservable<Tuple<INetworkPeer, ProtocolTransaction>> ReceivedTransactions { get; }
 
         /// <summary>
         /// Gets the ping responses we've received.
         /// </summary>
-        IObservable<ProtocolPingResponse> ReceivedPingResponses { get; }
+        IObservable<Tuple<INetworkPeer, ulong>> ReceivedPingResponses { get; }
 
         /// <summary>
         /// Gets the version packages we've received.
@@ -87,8 +85,11 @@ namespace Evercoin
         IObservable<INetworkPeer> ReceivedVersionAcknowledgements { get; }
 
         /// <summary>
-        /// Asks connected clients to offer us a new pack of blocks.
+        /// Asks a connected client to offer us a new pack of blocks.
         /// </summary>
+        /// <param name="peer">
+        /// The peer to request the block offers from.
+        /// </param>
         /// <param name="knownBlockIdentifiers">
         /// The blocks that we already know about.
         /// </param>
@@ -97,13 +98,17 @@ namespace Evercoin
         /// </returns>
         /// <remarks>
         /// Note that the task only encapsulates the request.  Once it
-        /// completes, observe <see cref="ReceivedInventoryOffers"/> for responses.
+        /// completes, observe <see cref="ReceivedInventoryOffers"/>
+        /// for responses.
         /// </remarks>
-        Task RequestBlockOffersAsync(IEnumerable<BigInteger> knownBlockIdentifiers);
+        Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers);
 
         /// <summary>
-        /// Asks connected clients to offer us a new pack of blocks.
+        /// Asks a connected client to offer us a new pack of blocks.
         /// </summary>
+        /// <param name="peer">
+        /// The peer to request the block offers from.
+        /// </param>
         /// <param name="knownBlockIdentifiers">
         /// The blocks that we already know about.
         /// </param>
@@ -115,9 +120,10 @@ namespace Evercoin
         /// </returns>
         /// <remarks>
         /// Note that the task only encapsulates the request.  Once it
-        /// completes, observe <see cref="ReceivedInventoryOffers"/> for responses.
+        /// completes, observe <see cref="ReceivedInventoryOffers"/>
+        /// for responses.
         /// </remarks>
-        Task RequestBlockOffersAsync(IEnumerable<BigInteger> knownBlockIdentifiers, CancellationToken token);
+        Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, CancellationToken token);
 
         /// <summary>
         /// Asks connected clients to offer us a new pack
@@ -275,7 +281,7 @@ namespace Evercoin
         /// <returns>
         /// A task encapsulating the connection result.
         /// </returns>
-        Task<INetworkPeer> ConnectToPeerAsync(ProtocolNetworkAddress peerAddress);
+        Task ConnectToPeerAsync(ProtocolNetworkAddress peerAddress);
 
         /// <summary>
         /// Attempts to connect to a peer.
@@ -289,7 +295,7 @@ namespace Evercoin
         /// <returns>
         /// A task encapsulating the connection result.
         /// </returns>
-        Task<INetworkPeer> ConnectToPeerAsync(ProtocolNetworkAddress peerAddress, CancellationToken token);
+        Task ConnectToPeerAsync(ProtocolNetworkAddress peerAddress, CancellationToken token);
 
         /// <summary>
         /// Announces our version to a peer.

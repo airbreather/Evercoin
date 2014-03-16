@@ -60,11 +60,11 @@ namespace Evercoin.App
                     Console.WriteLine("Press Enter to quit...");
                     using (CancellationTokenSource cts = new CancellationTokenSource())
                     {
-                        Task t = runner.Run(cts.Token);
-                        Console.ReadLine();
-                        cts.Cancel();
                         try
                         {
+                            Task t = runner.Run(cts.Token);
+                            Console.ReadLine();
+                            cts.Cancel();
                             t.Wait();
                         }
                         catch (OperationCanceledException)

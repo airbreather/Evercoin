@@ -57,9 +57,9 @@ namespace Evercoin.Network
             return this.ReadNetworkAddressAsyncCore(token);
         }
 
-        public Task<INetworkMessage> ReadNetworkMessageAsync(INetworkParameters networkParameters, Guid clientId, CancellationToken token)
+        public Task<INetworkMessage> ReadNetworkMessageAsync(INetworkParameters networkParameters, INetworkPeer peer, CancellationToken token)
         {
-            return this.ReadNetworkMessageAsyncCore(networkParameters, clientId, token);
+            return this.ReadNetworkMessageAsyncCore(networkParameters, peer, token);
         }
 
         public Task<ProtocolTxIn> ReadTxInAsync(CancellationToken token)
@@ -144,7 +144,7 @@ namespace Evercoin.Network
             return new ProtocolNetworkAddress(time, services, v4Address, port);
         }
 
-        private async Task<INetworkMessage> ReadNetworkMessageAsyncCore(INetworkParameters networkParameters, Guid clientId, CancellationToken token)
+        private async Task<INetworkMessage> ReadNetworkMessageAsyncCore(INetworkParameters networkParameters, INetworkPeer peer, CancellationToken token)
         {
             byte[] data = await this.ReadBytesAsyncWithIntParam(networkParameters.MessagePrefixLengthInBytes, token);
             byte[] expectedStaticPrefix = networkParameters.StaticMessagePrefixData;
@@ -182,7 +182,7 @@ namespace Evercoin.Network
                 throw new InvalidOperationException(exceptionMessage);
             }
 
-            Message message = new Message(networkParameters, this.hashAlgorithmStore, clientId);
+            Message message = new Message(networkParameters, this.hashAlgorithmStore, peer);
             message.CreateFrom(commandBytes, payload);
             return message;
         }
@@ -350,15 +350,6 @@ namespace Evercoin.Network
 
         private async Task<ProtocolVersionPacket> ReadVersionPacketAsyncCore(CancellationToken token)
         {
-            ////4	 version	 int32_t	 Identifies protocol version being used by the node
-            ////8	 services	 uint64_t	 bitfield of features to be enabled for this connection
-            ////8	 timestamp	 int64_t	 standard UNIX timestamp in seconds
-            ////26	 addr_recv	 net_addr	 The network address of the node receiving this message
-            ////26	 addr_from	 net_addr	 The network address of the node emitting this message
-            ////8	 nonce	 uint64_t	 Node random nonce, randomly generated every time a version packet is sent. This nonce is used to detect connections to self.
-            //// ?	 user_agent	var_str	User Agent (0x00 if string is 0 bytes long)
-            ////4	 start_height	 int32_t	 The last block received by the emitting node
-            ////1	 relay	 bool	 Whether the remote peer should announce relayed transactions or not, see BIP 0037, since version >= 70001
             int version = await this.ReadInt32AsyncCore(token);
             ulong services = await this.ReadUInt64Async(token);
             long timestampInSecondsSinceUnixEpoch = await this.ReadInt64Async(token);

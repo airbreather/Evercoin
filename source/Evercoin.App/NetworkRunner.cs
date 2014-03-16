@@ -80,7 +80,7 @@ namespace Evercoin.App
                                 blidCount != prev)
                             {
                                 prev = blidCount;
-                                await this.network.RequestBlockOffersAsync(Cheating.GetBlockIdentifiers(), token);
+                                await this.network.RequestBlockOffersAsync(x, Cheating.GetBlockIdentifiers(), token);
                                 spinner.Reset();
                             }
 
@@ -93,20 +93,25 @@ namespace Evercoin.App
                 }
             );
 
-            this.network.ReceivedInventoryOffers.Subscribe(async x => await this.network.RequestInventoryAsync(x.Where(y => knownInventory.TryAdd(y, y)), token));
+            this.network.ReceivedInventoryOffers.Subscribe(async x => await this.network.RequestInventoryAsync(x.Item2.Where(y => knownInventory.TryAdd(y, y)), token));
 
             this.network.ReceivedBlocks.Subscribe(async x =>
             {
-                bool isHandled = await this.HandleBlock(x, token);
+                bool isHandled = await this.HandleBlock(x.Item2, token);
                 if (isHandled)
                 {
                     Console.Write("\r({0})", Cheating.GetBlockIdentifierCount());
                 }
             });
 
-            await Task.Delay(5000, token);
-            this.network.Start(token);
-            await Task.WhenAll(endPoints.Select(endPoint => this.network.ConnectToPeerAsync(new ProtocolNetworkAddress(null, 1, endPoint.Address, (ushort)endPoint.Port), token)));
+            try
+            {
+                this.network.Start(token);
+                await Task.WhenAll(endPoints.Select(endPoint => this.network.ConnectToPeerAsync(new ProtocolNetworkAddress(null, 1, endPoint.Address, (ushort)endPoint.Port), token)));
+            }
+            catch (OperationCanceledException)
+            {
+            }
         }
 
         private async Task<bool> HandleBlock(ProtocolBlock block, CancellationToken token)

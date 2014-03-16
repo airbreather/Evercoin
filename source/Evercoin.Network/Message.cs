@@ -13,17 +13,17 @@ namespace Evercoin.Network
 
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
-        private readonly Guid remoteClientId;
+        private readonly INetworkPeer remotePeer;
 
         private byte[] payloadSize;
 
         private byte[] payloadChecksum;
 
-        public Message(INetworkParameters networkParameters, IHashAlgorithmStore hashAlgorithmStore, Guid remoteClientId)
+        public Message(INetworkParameters networkParameters, IHashAlgorithmStore hashAlgorithmStore, INetworkPeer remotePeer)
         {
             this.networkParameters = networkParameters;
             this.hashAlgorithmStore = hashAlgorithmStore;
-            this.remoteClientId = remoteClientId;
+            this.remotePeer = remotePeer;
         }
 
         public byte[] FullData
@@ -49,7 +49,7 @@ namespace Evercoin.Network
         /// <summary>
         /// Gets the ID of the remote client sending or receiving this message.
         /// </summary>
-        public Guid RemoteClient { get { return this.remoteClientId; } }
+        public INetworkPeer RemotePeer { get { return this.remotePeer; } }
 
         public void CreateFrom(IEnumerable<byte> command, IEnumerable<byte> payload)
         {

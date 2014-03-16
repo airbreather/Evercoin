@@ -5,7 +5,6 @@ using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
 using System.Net;
-using System.Net.Sockets;
 using System.Numerics;
 using System.Reactive.Subjects;
 using System.Text;
@@ -32,15 +31,23 @@ namespace Evercoin.Network
 
         private readonly Subject<INetworkPeer> peerConnections = new Subject<INetworkPeer>();
 
-        private readonly Subject<ProtocolInventoryVector[]> inventoryOffers = new Subject<ProtocolInventoryVector[]>();
+        private readonly Subject<Tuple<INetworkPeer, ProtocolInventoryVector[]>> inventoryOffers = new Subject<Tuple<INetworkPeer, ProtocolInventoryVector[]>>();
 
-        private readonly Subject<ProtocolBlock> blocksReceived = new Subject<ProtocolBlock>();
+        private readonly Subject<Tuple<INetworkPeer, ProtocolInventoryVector[]>> inventoryRequests = new Subject<Tuple<INetworkPeer, ProtocolInventoryVector[]>>();
 
-        private readonly Subject<ProtocolTransaction> transactionsReceived = new Subject<ProtocolTransaction>();
+        private readonly Subject<Tuple<INetworkPeer, ProtocolBlock>> blocksReceived = new Subject<Tuple<INetworkPeer, ProtocolBlock>>();
+
+        private readonly Subject<Tuple<INetworkPeer, ProtocolTransaction>> transactionsReceived = new Subject<Tuple<INetworkPeer, ProtocolTransaction>>();
 
         private readonly Subject<Tuple<INetworkPeer, ProtocolVersionPacket>> versionOffersReceived = new Subject<Tuple<INetworkPeer, ProtocolVersionPacket>>();
 
+        private readonly Subject<Tuple<INetworkPeer, ulong>> pongsReceived = new Subject<Tuple<INetworkPeer, ulong>>();
+
         private readonly Subject<INetworkPeer> versionAcknowledgementsReceived = new Subject<INetworkPeer>();
+
+        private readonly Subject<ProtocolNetworkAddress> peerOffers = new Subject<ProtocolNetworkAddress>();
+
+        private readonly Subject<Tuple<INetworkPeer, string, byte[]>> unrecognizedMessagesReceived = new Subject<Tuple<INetworkPeer, string, byte[]>>();
 
         public CurrencyNetwork(IRawNetwork rawNetwork, IHashAlgorithmStore hashAlgorithmStore, ICurrencyParameters currencyParameters)
         {
@@ -64,31 +71,17 @@ namespace Evercoin.Network
         /// <summary>
         /// Gets the identifiers of inventory items we've been offered.
         /// </summary>
-        public override IObservable<ProtocolInventoryVector[]> ReceivedInventoryOffers { get { return this.inventoryOffers; } }
+        public override IObservable<Tuple<INetworkPeer, ProtocolInventoryVector[]>> ReceivedInventoryOffers { get { return this.inventoryOffers; } }
 
         /// <summary>
         /// Gets the identifiers of blocks we've been offered.
         /// </summary>
-        public override IObservable<BigInteger> ReceivedBlockRequests
-        {
-            get { throw new NotImplementedException(); }
-        }
-
-        /// <summary>
-        /// Gets the identifiers of transactions we've been offered.
-        /// </summary>
-        public override IObservable<BigInteger> ReceivedTransactionRequests
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override IObservable<Tuple<INetworkPeer, ProtocolInventoryVector[]>> ReceivedInventoryRequests { get { return this.inventoryRequests; } }
 
         /// <summary>
         /// Gets the addresses of peers we've been offered.
         /// </summary>
-        public override IObservable<ProtocolNetworkAddress> ReceivedPeerOffers
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override IObservable<ProtocolNetworkAddress> ReceivedPeerOffers { get { return this.peerOffers; } }
 
         /// <summary>
         /// Gets the block messages we've received.
@@ -96,7 +89,7 @@ namespace Evercoin.Network
         /// <remarks>
         /// Ordering, validity, etc. not guaranteed.
         /// </remarks>
-        public override IObservable<ProtocolBlock> ReceivedBlocks { get { return this.blocksReceived; } }
+        public override IObservable<Tuple<INetworkPeer, ProtocolBlock>> ReceivedBlocks { get { return this.blocksReceived; } }
 
         /// <summary>
         /// Gets the transaction messages we've received.
@@ -104,15 +97,12 @@ namespace Evercoin.Network
         /// <remarks>
         /// Ordering, validity, etc. not guaranteed.
         /// </remarks>
-        public override IObservable<ProtocolTransaction> ReceivedTransactions { get { return this.transactionsReceived; } }
+        public override IObservable<Tuple<INetworkPeer, ProtocolTransaction>> ReceivedTransactions { get { return this.transactionsReceived; } }
 
         /// <summary>
         /// Gets the ping responses we've received.
         /// </summary>
-        public override IObservable<ProtocolPingResponse> ReceivedPingResponses
-        {
-            get { throw new NotImplementedException(); }
-        }
+        public override IObservable<Tuple<INetworkPeer, ulong>> ReceivedPingResponses { get { return this.pongsReceived; } }
 
         /// <summary>
         /// Gets the version packages we've received.
@@ -125,8 +115,11 @@ namespace Evercoin.Network
         public override IObservable<INetworkPeer> ReceivedVersionAcknowledgements { get { return this.versionAcknowledgementsReceived; } }
 
         /// <summary>
-        /// Asks connected clients to offer us a new pack of blocks.
+        /// Asks a connected client to offer us a new pack of blocks.
         /// </summary>
+        /// <param name="peer">
+        /// The peer to request the block offers from.
+        /// </param>
         /// <param name="knownBlockIdentifiers">
         /// The blocks that we already know about.
         /// </param>
@@ -138,9 +131,10 @@ namespace Evercoin.Network
         /// </returns>
         /// <remarks>
         /// Note that the task only encapsulates the request.  Once it
-        /// completes, observe <see cref="ICurrencyNetwork.ReceivedBlockOffers"/> for responses.
+        /// completes, observe <see cref="ReceivedInventoryOffers"/>
+        /// for responses.
         /// </remarks>
-        public override async Task RequestBlockOffersAsync(IEnumerable<BigInteger> knownBlockIdentifiers, CancellationToken token)
+        public override async Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, CancellationToken token)
         {
             BigInteger[] blockIdentifierCollection = knownBlockIdentifiers.GetArray();
             List<BigInteger> listToRequest = new List<BigInteger>();
@@ -160,8 +154,8 @@ namespace Evercoin.Network
             listToRequest.Add(blockIdentifierCollection[0]);
 
             GetBlocksMessageBuilder b = new GetBlocksMessageBuilder(this.rawNetwork, this.hashAlgorithmStore);
-            var message = b.BuildGetBlocksMessage(Guid.NewGuid(), listToRequest, BigInteger.Zero);
-            await this.rawNetwork.BroadcastMessageAsync(message, token);
+            var message = b.BuildGetBlocksMessage(peer, listToRequest, BigInteger.Zero);
+            await this.rawNetwork.SendMessageToClientAsync(peer, message, token);
         }
 
         /// <summary>
@@ -176,7 +170,7 @@ namespace Evercoin.Network
         /// </returns>
         /// <remarks>
         /// Note that the task only encapsulates the request.  Once it
-        /// completes, observe <see cref="ICurrencyNetwork.ReceivedTransactionOffers"/>
+        /// completes, observe <see cref="ReceivedInventoryOffers"/>
         /// for responses.
         /// </remarks>
         public override Task RequestTransactionOffersAsync(CancellationToken token)
@@ -198,15 +192,15 @@ namespace Evercoin.Network
         /// </returns>
         /// <remarks>
         /// Note that the task only encapsulates the request.  Once it
-        /// completes, observe <see cref="ICurrencyNetwork.ReceivedBlocks"/>
-        /// or <see cref="ICurrencyNetwork.ReceivedTransactions"/>.
+        /// completes, observe <see cref="ReceivedBlocks"/>
+        /// or <see cref="ReceivedTransactions"/>.
         /// </remarks>
         public override async Task RequestInventoryAsync(IEnumerable<ProtocolInventoryVector> inventoryVectors, CancellationToken token)
         {
-            Guid clientId = this.ConnectedPeers.First().Key;
+            INetworkPeer peer = this.ConnectedPeers.First().Value;
 
-            INetworkMessage response = new GetDataMessageBuilder(this.rawNetwork, this.hashAlgorithmStore).BuildGetDataMessage(clientId, inventoryVectors);
-            await this.rawNetwork.SendMessageToClientAsync(clientId, response, token);
+            INetworkMessage response = new GetDataMessageBuilder(this.rawNetwork, this.hashAlgorithmStore).BuildGetDataMessage(peer, inventoryVectors);
+            await this.rawNetwork.SendMessageToClientAsync(peer, response, token);
         }
 
         /// <summary>
@@ -244,8 +238,8 @@ namespace Evercoin.Network
         public override async Task SendPingAsync(INetworkPeer peer, ulong nonce, CancellationToken token)
         {
             PingMessageBuilder messageBuilder = new PingMessageBuilder(this.rawNetwork, this.hashAlgorithmStore);
-            INetworkMessage message = messageBuilder.BuildPingMessage(peer.Identifier, nonce);
-            await this.rawNetwork.SendMessageToClientAsync(peer.Identifier, message, token);
+            INetworkMessage message = messageBuilder.BuildPingMessage(peer, nonce);
+            await this.rawNetwork.SendMessageToClientAsync(peer, message, token);
         }
 
         /// <summary>
@@ -263,8 +257,8 @@ namespace Evercoin.Network
         public override async Task AcknowledgePeerVersionAsync(INetworkPeer peer, CancellationToken token)
         {
             VerAckMessageBuilder builder = new VerAckMessageBuilder(this.rawNetwork, this.hashAlgorithmStore);
-            INetworkMessage response = builder.BuildVerAckMessage(peer.Identifier);
-            await this.rawNetwork.SendMessageToClientAsync(peer.Identifier, response, token);
+            INetworkMessage response = builder.BuildVerAckMessage(peer);
+            await this.rawNetwork.SendMessageToClientAsync(peer, response, token);
         }
 
         /// <summary>
@@ -279,23 +273,13 @@ namespace Evercoin.Network
         /// <returns>
         /// A task encapsulating the connection result.
         /// </returns>
-        public override async Task<INetworkPeer> ConnectToPeerAsync(ProtocolNetworkAddress peerAddress, CancellationToken token)
+        public override Task ConnectToPeerAsync(ProtocolNetworkAddress peerAddress, CancellationToken token)
         {
             IPAddress address = peerAddress.Address;
             ushort port = peerAddress.Port;
 
             IPEndPoint endPoint = new IPEndPoint(address, port);
-            Guid peerIdentifier = await this.rawNetwork.ConnectToClientAsync(endPoint, token);
-            if (peerIdentifier == Guid.Empty)
-            {
-                return null;
-            }
-
-            TcpClient client = this.rawNetwork.GetClientButPleaseBeNice(peerIdentifier);
-            NetworkPeer peer = new NetworkPeer(peerIdentifier, ConnectionDirection.Outgoing, (IPEndPoint)client.Client.LocalEndPoint, (IPEndPoint)client.Client.RemoteEndPoint);
-            this.connectedPeers[peerIdentifier] = peer;
-            this.peerConnections.OnNext(peer);
-            return peer;
+            return this.rawNetwork.ConnectToClientAsync(endPoint, token);
         }
 
         /// <summary>
@@ -317,19 +301,18 @@ namespace Evercoin.Network
             ProtocolVersionPacket packet = new ProtocolVersionPacket(version, services, timestamp, receivingAddress, sendingAddress, nonce, userAgent, startHeight, pleaseRelayTransactionsToMe);
 
             VersionMessageBuilder messageBuilder = new VersionMessageBuilder(this.rawNetwork, this.hashAlgorithmStore);
-            INetworkMessage message = messageBuilder.BuildVersionMessage(peer.Identifier, packet);
-            await this.rawNetwork.SendMessageToClientAsync(peer.Identifier, message, token);
+            INetworkMessage message = messageBuilder.BuildVersionMessage(peer, packet);
+            await this.rawNetwork.SendMessageToClientAsync(peer, message, token);
         }
 
         public override void Start(CancellationToken token)
         {
-            this.rawNetwork.ReceivedConnections.Subscribe
+            this.rawNetwork.PeerConnections.Subscribe
             (
                 x =>
                 {
-                    TcpClient client = this.rawNetwork.GetClientButPleaseBeNice(x);
-                    NetworkPeer peer = new NetworkPeer(x, ConnectionDirection.Incoming, (IPEndPoint)client.Client.LocalEndPoint, (IPEndPoint)client.Client.RemoteEndPoint);
-                    this.peerConnections.OnNext(this.connectedPeers[x] = peer);
+                    this.connectedPeers.TryAdd(x.Identifier, x);
+                    this.peerConnections.OnNext(x);
                 },
                 this.peerConnections.OnError,
                 this.peerConnections.OnCompleted,
@@ -348,164 +331,107 @@ namespace Evercoin.Network
             Array.Resize(ref versionBytes, this.CurrencyParameters.NetworkParameters.CommandLengthInBytes);
             Array.Resize(ref verackBytes, this.CurrencyParameters.NetworkParameters.CommandLengthInBytes);
 
-            this.rawNetwork.ReceivedMessages.Subscribe
-            (
-                async x =>
+            string invCommand = Encoding.ASCII.GetString(invBytes);
+            string blockCommand = Encoding.ASCII.GetString(blockBytes);
+            string txCommand = Encoding.ASCII.GetString(txBytes);
+            string versionCommand = Encoding.ASCII.GetString(versionBytes);
+            string verackCommand = Encoding.ASCII.GetString(verackBytes);
+
+            Dictionary<string, Action<INetworkMessage>> mapping = new Dictionary<string, Action<INetworkMessage>>
+            {
                 {
-                    if (!x.CommandBytes.SequenceEqual(invBytes))
+                    invCommand,
+                    async x =>
                     {
-                        return;
-                    }
+                        List<ProtocolInventoryVector> inventoryVectors = new List<ProtocolInventoryVector>();
 
-                    List<ProtocolInventoryVector> inventoryVectors = new List<ProtocolInventoryVector>();
-
-                    using (MemoryStream stream = new MemoryStream(x.Payload))
-                    using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
-                    {
-                        ulong neededItemCount = await reader.ReadCompactSizeAsync(token);
-
-                        while (neededItemCount-- > 0)
+                        using (MemoryStream stream = new MemoryStream(x.Payload))
+                        using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
                         {
-                            ProtocolInventoryVector vector = await reader.ReadInventoryVectorAsync(token);
-                            inventoryVectors.Add(vector);
+                            ulong neededItemCount = await reader.ReadCompactSizeAsync(token);
+
+                            while (neededItemCount-- > 0)
+                            {
+                                ProtocolInventoryVector vector = await reader.ReadInventoryVectorAsync(token);
+                                inventoryVectors.Add(vector);
+                            }
+                        }
+
+                        this.inventoryOffers.OnNext(Tuple.Create(x.RemotePeer, inventoryVectors.ToArray()));
+                    }
+                },
+                {
+                    blockCommand,
+                    async x =>
+                    {
+                        using (MemoryStream stream = new MemoryStream(x.Payload))
+                        using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
+                        {
+                            ProtocolBlock protoBlock = await reader.ReadBlockAsync(token);
+                            this.blocksReceived.OnNext(Tuple.Create(x.RemotePeer, protoBlock));
                         }
                     }
-
-                    this.inventoryOffers.OnNext(inventoryVectors.ToArray());
-                }
-            , token);
-
-            this.rawNetwork.ReceivedMessages.Subscribe
-            (
-                async x =>
+                },
                 {
-                    if (!x.CommandBytes.SequenceEqual(blockBytes))
+                    txCommand,
+                    async x =>
                     {
-                        return;
+                        using (MemoryStream stream = new MemoryStream(x.Payload))
+                        using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
+                        {
+                            ProtocolTransaction protoTransaction = await reader.ReadTransactionAsync(token);
+                            this.transactionsReceived.OnNext(Tuple.Create(x.RemotePeer, protoTransaction));
+                        }
                     }
-
-                    using (MemoryStream stream = new MemoryStream(x.Payload))
-                    using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
-                    {
-                        ProtocolBlock protoBlock = await reader.ReadBlockAsync(token);
-                        this.blocksReceived.OnNext(protoBlock);
-                    }
-                }
-            , token);
-
-            this.rawNetwork.ReceivedMessages.Subscribe
-            (
-                async x =>
+                },
                 {
-                    if (!x.CommandBytes.SequenceEqual(txBytes))
+                    versionCommand,
+                    async x =>
                     {
-                        return;
+                        using (MemoryStream stream = new MemoryStream(x.Payload))
+                        using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
+                        {
+                            ProtocolVersionPacket versionPacket = await reader.ReadVersionPacketAsync(token);
+                            this.versionOffersReceived.OnNext(Tuple.Create(x.RemotePeer, versionPacket));
+                        }
                     }
-
-                    using (MemoryStream stream = new MemoryStream(x.Payload))
-                    using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
-                    {
-                        ProtocolTransaction protoTransaction = await reader.ReadTransactionAsync(token);
-                        this.transactionsReceived.OnNext(protoTransaction);
-                    }
-                }
-            , token);
-
-            this.rawNetwork.ReceivedMessages.Subscribe
-            (
-                async x =>
+                },
                 {
-                    if (!x.NetworkParameters.Equals(this.currencyParameters.NetworkParameters) ||
-                        !x.CommandBytes.SequenceEqual(versionBytes))
+                    verackCommand,
+                    x =>
                     {
-                        return;
+                        this.versionAcknowledgementsReceived.OnNext(x.RemotePeer);
                     }
+                },
+            };
 
-                    using (MemoryStream stream = new MemoryStream(x.Payload))
-                    using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
-                    {
-                        ProtocolVersionPacket versionPacket = await reader.ReadVersionPacketAsync(token);
-                        this.versionOffersReceived.OnNext(Tuple.Create(this.connectedPeers[x.RemoteClient], versionPacket));
-                    }
-                }
-            , token);
-
+            Func<INetworkMessage, bool> messageHandler = this.HandleMessage(mapping);
             this.rawNetwork.ReceivedMessages.Subscribe
             (
                 x =>
                 {
-                    if (!x.CommandBytes.SequenceEqual(verackBytes))
+                    if (!messageHandler(x))
                     {
-                        return;
+                        this.unrecognizedMessagesReceived.OnNext(Tuple.Create(x.RemotePeer, Encoding.ASCII.GetString(x.CommandBytes), x.Payload));
                     }
-
-                    this.versionAcknowledgementsReceived.OnNext(this.connectedPeers[x.RemoteClient]);
                 }
             , token);
         }
-    }
 
-    internal sealed class NetworkPeer : INetworkPeer
-    {
-        private readonly Guid identifier;
-
-        private readonly ConnectionDirection direction;
-
-        private readonly IPEndPoint localEndPoint;
-
-        private readonly IPEndPoint remoteEndPoint;
-
-        public NetworkPeer(Guid identifier, ConnectionDirection direction, IPEndPoint localEndPoint, IPEndPoint remoteEndPoint)
+        private Func<INetworkMessage, bool> HandleMessage(Dictionary<string, Action<INetworkMessage>> handlers)
         {
-            this.identifier = identifier;
-            this.direction = direction;
-            this.localEndPoint = localEndPoint;
-            this.remoteEndPoint = remoteEndPoint;
+            return x =>
+            {
+                string command = Encoding.ASCII.GetString(x.CommandBytes);
+                Action<INetworkMessage> handler;
+                if (!handlers.TryGetValue(command, out handler))
+                {
+                    return false;
+                }
+
+                handler(x);
+                return true;
+            };
         }
-
-        /// <summary>
-        /// Gets the direction of the connection to this peer.
-        /// </summary>
-        /// <remarks>
-        /// <see cref="ConnectionDirection.Incoming"/> = peer connected to us.
-        /// <see cref="ConnectionDirection.Outgoing"/> = we connected to peer.
-        /// </remarks>
-        public ConnectionDirection PeerConnectionDirection { get { return this.direction; } }
-
-        /// <summary>
-        /// Gets a value that uniquely identifies this peer.
-        /// </summary>
-        public Guid Identifier { get { return this.identifier; } }
-
-        /// <summary>
-        /// Gets a value indicating whether we've successfully exchanged version
-        /// information with this peer at this point in time.
-        /// </summary>
-        public bool NegotiatedProtocolVersion { get; private set; }
-
-        /// <summary>
-        /// Gets the version of the protocol to use when communicating
-        /// with this peer.
-        /// </summary>
-        public int ProtocolVersion { get; private set; }
-
-        /// <summary>
-        /// Gets the identifiers of blocks that this peer is aware of.
-        /// </summary>
-        public HashSet<BigInteger> KnownBlockIdentifiers { get; private set; }
-
-        /// <summary>
-        /// Gets the identifiers of transactions that this peer is aware of.
-        /// </summary>
-        public HashSet<BigInteger> KnownTransactionIdentifiers { get; private set; }
-
-        /// <summary>
-        /// Gets the timestamp of the last message we received from this peer.
-        /// </summary>
-        public Instant LastMessageReceivedTime { get; private set; }
-
-        public IPEndPoint LocalEndPoint { get { return this.localEndPoint; } }
-
-        public IPEndPoint RemoteEndPoint { get { return this.remoteEndPoint; } }
     }
 }

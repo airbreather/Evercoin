@@ -17,12 +17,13 @@ namespace Evercoin.Network
         private readonly INetworkParameters networkParameters;
         private readonly IHashAlgorithmStore hashAlgorithmStore;
         private readonly ConcurrentDictionary<Guid, TcpClient> clientLookup = new ConcurrentDictionary<Guid, TcpClient>();
+        private readonly ConcurrentDictionary<Guid, INetworkPeer> peerLookup = new ConcurrentDictionary<Guid, INetworkPeer>();
 
         private readonly Subject<INetworkMessage> allMessages = new Subject<INetworkMessage>();
 
         private readonly TcpListener listener;
 
-        private readonly Subject<Guid> incomingConnections = new Subject<Guid>();
+        private readonly Subject<INetworkPeer> peerConnections = new Subject<INetworkPeer>();
 
         public RawNetwork(INetworkParameters networkParameters, IHashAlgorithmStore hashAlgorithmStore)
         {
@@ -47,15 +48,18 @@ namespace Evercoin.Network
                 {
                     Guid clientId = Guid.NewGuid();
                     this.clientLookup.TryAdd(clientId, client);
-                    this.incomingConnections.OnNext(clientId);
+                    INetworkPeer peer = new NetworkPeer(clientId, ConnectionDirection.Incoming, (IPEndPoint)client.Client.LocalEndPoint, (IPEndPoint)client.Client.RemoteEndPoint);
+                    this.peerLookup.TryAdd(clientId, peer);
+                    this.peerConnections.OnNext(peer);
                     ProtocolStreamReader streamReader = new ProtocolStreamReader(new BufferedStream(client.GetStream()), false, this.hashAlgorithmStore);
-                    IObservable<INetworkMessage> messageStream = Observable.FromAsync(ct => streamReader.ReadNetworkMessageAsync(this.networkParameters, clientId, ct))
+                    IObservable<INetworkMessage> messageStream = Observable.FromAsync(ct => streamReader.ReadNetworkMessageAsync(this.networkParameters, peer, ct))
                                                                            .DoWhile(() => client.Connected)
                                                                            .TakeWhile(msg => msg != null)
                                                                            .Finally(delegate
                                                                                     {
                                                                                         streamReader.Dispose();
                                                                                         client.Close();
+                                                                                        this.peerLookup.TryRemove(clientId, out peer);
                                                                                         this.clientLookup.TryRemove(clientId, out client);
                                                                                     });
 
@@ -77,29 +81,27 @@ namespace Evercoin.Network
         /// </summary>
         public INetworkParameters Parameters { get { return this.networkParameters; } }
 
-        internal IDictionary<Guid, TcpClient> ClientLookup { get { return this.clientLookup; } }
-
         public async Task BroadcastMessageAsync(INetworkMessage message)
         {
             await this.BroadcastMessageAsync(message, CancellationToken.None);
         }
 
-        public async Task SendMessageToClientAsync(Guid clientId, INetworkMessage message)
+        public Task SendMessageToClientAsync(INetworkPeer peer, INetworkMessage message)
         {
-            await this.SendMessageToClientAsync(clientId, message, CancellationToken.None);
+            return this.SendMessageToClientAsync(peer, message, CancellationToken.None);
         }
 
-        public async Task<Guid> ConnectToClientAsync(IPEndPoint endPoint)
+        public Task ConnectToClientAsync(IPEndPoint endPoint)
         {
-            return await this.ConnectToClientAsync(endPoint, CancellationToken.None);
+            return this.ConnectToClientAsync(endPoint, CancellationToken.None);
         }
 
-        public async Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint)
+        public Task ConnectToClientAsync(DnsEndPoint endPoint)
         {
-            return await this.ConnectToClientAsync(endPoint, CancellationToken.None);
+            return this.ConnectToClientAsync(endPoint, CancellationToken.None);
         }
 
-        public IObservable<Guid> ReceivedConnections { get { return this.incomingConnections; } }
+        public IObservable<INetworkPeer> PeerConnections { get { return this.peerConnections; } }
 
         /// <summary>
         /// Asynchronously connects to a client.
@@ -110,15 +112,15 @@ namespace Evercoin.Network
         /// <returns>
         /// An awaitable task that yields the ID of the connected client.
         /// </returns>
-        public async Task<Guid> ConnectToClientAsync(IPEndPoint endPoint, CancellationToken token)
+        public Task ConnectToClientAsync(IPEndPoint endPoint, CancellationToken token)
         {
             TcpClient existingClient = this.clientLookup.Values.FirstOrDefault(x => x.Client.RemoteEndPoint.Equals(endPoint));
             if (existingClient != null)
             {
-                return Guid.Empty;
+                return Task.FromResult(true);
             }
 
-            return await this.ConnectToClientCoreAsync(async client => await client.ConnectAsync(endPoint.Address, endPoint.Port), token);
+            return this.ConnectToClientCoreAsync(client => client.ConnectAsync(endPoint.Address, endPoint.Port), token);
         }
 
         /// <summary>
@@ -130,9 +132,9 @@ namespace Evercoin.Network
         /// <returns>
         /// An awaitable task that yields the ID of the connected client.
         /// </returns>
-        public async Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint, CancellationToken token)
+        public Task ConnectToClientAsync(DnsEndPoint endPoint, CancellationToken token)
         {
-            return await this.ConnectToClientCoreAsync(async client => await client.ConnectAsync(endPoint.Host, endPoint.Port), token);
+            return this.ConnectToClientCoreAsync(client => client.ConnectAsync(endPoint.Host, endPoint.Port), token);
         }
 
         /// <summary>
@@ -154,10 +156,10 @@ namespace Evercoin.Network
         }
 
         /// <summary>
-        /// Asynchronously sends a message to a single client on the network.
+        /// Asynchronously sends a message to a single peer on the network.
         /// </summary>
-        /// <param name="clientId">
-        /// The ID of the client to send the message to.
+        /// <param name="peer">
+        /// The peer to send the message to.
         /// </param>
         /// <param name="message">
         /// The <see cref="INetworkMessage"/> to send.
@@ -168,44 +170,40 @@ namespace Evercoin.Network
         /// <remarks>
         /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
         /// </remarks>
-        public async Task SendMessageToClientAsync(Guid clientId, INetworkMessage message, CancellationToken token)
+        public Task SendMessageToClientAsync(INetworkPeer peer, INetworkMessage message, CancellationToken token)
         {
             TcpClient client;
-            if (!this.clientLookup.TryGetValue(clientId, out client))
+            if (!this.clientLookup.TryGetValue(peer.Identifier, out client))
             {
-                throw new ArgumentException("Client " + clientId + " not found.", "clientId");
+                throw new ArgumentException("Peer " + peer.Identifier + " not found.", "peer");
             }
 
-            await this.SendMessageCoreAsync(client, message, token);
+            return this.SendMessageCoreAsync(client, message, token);
         }
 
-        public TcpClient GetClientButPleaseBeNice(Guid clientId)
-        {
-            TcpClient client;
-            this.clientLookup.TryGetValue(clientId, out client);
-            return client;
-        }
-
-        private async Task<Guid> ConnectToClientCoreAsync(Func<TcpClient, Task> connectionCallback, CancellationToken token)
+        private async Task ConnectToClientCoreAsync(Func<TcpClient, Task> connectionCallback, CancellationToken token)
         {
             Guid clientId = Guid.NewGuid();
             TcpClient client = new TcpClient(AddressFamily.InterNetwork);
             this.clientLookup.TryAdd(clientId, client);
-
             await connectionCallback(client);
+            INetworkPeer peer = new NetworkPeer(clientId, ConnectionDirection.Outgoing, (IPEndPoint)client.Client.LocalEndPoint, (IPEndPoint)client.Client.RemoteEndPoint);
+            this.peerLookup.TryAdd(clientId, peer);
+
+            this.peerConnections.OnNext(peer);
             ProtocolStreamReader streamReader = new ProtocolStreamReader(client.GetStream(), true, this.hashAlgorithmStore);
-            IObservable<INetworkMessage> messageStream = Observable.FromAsync(() => streamReader.ReadNetworkMessageAsync(this.networkParameters, clientId, token))
+            IObservable<INetworkMessage> messageStream = Observable.FromAsync(() => streamReader.ReadNetworkMessageAsync(this.networkParameters, peer, token))
                                                                    .DoWhile(() => client.Connected)
                                                                    .TakeWhile(msg => msg != null && !token.IsCancellationRequested)
                                                                    .Finally(delegate
                                                                     {
                                                                         streamReader.Dispose();
                                                                         client.Close();
+                                                                        this.peerLookup.TryRemove(clientId, out peer);
                                                                         this.clientLookup.TryRemove(clientId, out client);
                                                                     });
 
             messageStream.Subscribe(this.allMessages.OnNext);
-            return clientId;
         }
 
         private async Task SendMessageCoreAsync(TcpClient client, INetworkMessage messageToSend, CancellationToken token)

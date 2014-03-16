@@ -23,9 +23,9 @@ namespace Evercoin.Network.MessageBuilders
             this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
-        public INetworkMessage BuildPingMessage(Guid clientId, ulong nonce)
+        public INetworkMessage BuildPingMessage(INetworkPeer peer, ulong nonce)
         {
-            Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, clientId);
+            Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, peer);
             byte[] commandBytes = new byte[this.network.Parameters.CommandLengthInBytes];
             byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(PingMessageText);
             Array.Copy(unpaddedCommandBytes, commandBytes, unpaddedCommandBytes.Length);

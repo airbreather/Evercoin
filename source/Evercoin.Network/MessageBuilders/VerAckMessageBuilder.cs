@@ -24,9 +24,9 @@ namespace Evercoin.Network.MessageBuilders
             this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
-        public INetworkMessage BuildVerAckMessage(Guid clientId)
+        public INetworkMessage BuildVerAckMessage(INetworkPeer peer)
         {
-            Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, clientId);
+            Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, peer);
 
             byte[] commandBytes = new byte[this.network.Parameters.CommandLengthInBytes];
             byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(VerAckText);

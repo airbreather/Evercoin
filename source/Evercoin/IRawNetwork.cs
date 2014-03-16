@@ -1,23 +1,16 @@
 ﻿using System;
 using System.Net;
-using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 
 namespace Evercoin
 {
     /// <summary>
-    /// Represents the observable cryptocurrency network.
+    /// Encapsulates the raw messages that pass through the network,
+    /// as well as the peers that send and receive those messages.
     /// </summary>
     public interface IRawNetwork
     {
-        /// <summary>
-        /// Gets an observable sequence of messages received on this network.
-        /// </summary>
-        IObservable<INetworkMessage> ReceivedMessages { get; }
-
-        IObservable<Guid> ReceivedConnections { get; }
-
         /// <summary>
         /// Gets the <see cref="INetworkParameters"/> object that defines the
         /// parameters that this network uses.
@@ -25,15 +18,14 @@ namespace Evercoin
         INetworkParameters Parameters { get; }
 
         /// <summary>
-        /// Asynchronously connects to a client.
+        /// Gets an observable sequence of messages received on this network.
         /// </summary>
-        /// <param name="endPoint">
-        /// The end point of the client to connect to.
-        /// </param>
-        /// <returns>
-        /// An awaitable task that yields the ID of the connected client.
-        /// </returns>
-        Task<Guid> ConnectToClientAsync(IPEndPoint endPoint);
+        IObservable<INetworkMessage> ReceivedMessages { get; }
+
+        /// <summary>
+        /// Gets an observable sequence of 
+        /// </summary>
+        IObservable<INetworkPeer> PeerConnections { get; }
 
         /// <summary>
         /// Asynchronously connects to a client.
@@ -42,9 +34,23 @@ namespace Evercoin
         /// The end point of the client to connect to.
         /// </param>
         /// <returns>
-        /// An awaitable task that yields the ID of the connected client.
+        /// A task that encapsulates the connection request.
         /// </returns>
-        Task<Guid> ConnectToClientAsync(IPEndPoint endPoint, CancellationToken token);
+        Task ConnectToClientAsync(IPEndPoint endPoint);
+
+        /// <summary>
+        /// Asynchronously connects to a client.
+        /// </summary>
+        /// <param name="endPoint">
+        /// The end point of the client to connect to.
+        /// </param>
+        /// <param name="token">
+        /// A <see cref="CancellationToken"/> to use to signal cancellation.
+        /// </param>
+        /// <returns>
+        /// A task that encapsulates the connection request.
+        /// </returns>
+        Task ConnectToClientAsync(IPEndPoint endPoint, CancellationToken token);
 
         /// <summary>
         /// Asynchronously connects to a client.
@@ -53,9 +59,9 @@ namespace Evercoin
         /// The end point of the client to connect to.
         /// </param>
         /// <returns>
-        /// An awaitable task that yields the ID of the connected client.
+        /// A task that encapsulates the connection request.
         /// </returns>
-        Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint);
+        Task ConnectToClientAsync(DnsEndPoint endPoint);
 
         /// <summary>
         /// Asynchronously connects to a client.
@@ -63,10 +69,13 @@ namespace Evercoin
         /// <param name="endPoint">
         /// The end point of the client to connect to.
         /// </param>
+        /// <param name="token">
+        /// A <see cref="CancellationToken"/> to use to signal cancellation.
+        /// </param>
         /// <returns>
-        /// An awaitable task that yields the ID of the connected client.
+        /// A task that encapsulates the connection request.
         /// </returns>
-        Task<Guid> ConnectToClientAsync(DnsEndPoint endPoint, CancellationToken token);
+        Task ConnectToClientAsync(DnsEndPoint endPoint, CancellationToken token);
 
         /// <summary>
         /// Asynchronously broadcasts a message to all clients on the network.
@@ -88,6 +97,9 @@ namespace Evercoin
         /// <param name="message">
         /// The <see cref="INetworkMessage"/> to broadcast.
         /// </param>
+        /// <param name="token">
+        /// A <see cref="CancellationToken"/> to use to signal cancellation.
+        /// </param>
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
@@ -99,7 +111,7 @@ namespace Evercoin
         /// <summary>
         /// Asynchronously sends a message to a single client on the network.
         /// </summary>
-        /// <param name="clientId">
+        /// <param name="peer">
         /// The ID of the client to send the message to.
         /// </param>
         /// <param name="message">
@@ -111,16 +123,19 @@ namespace Evercoin
         /// <remarks>
         /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
         /// </remarks>
-        Task SendMessageToClientAsync(Guid clientId, INetworkMessage message);
+        Task SendMessageToClientAsync(INetworkPeer peer, INetworkMessage message);
 
         /// <summary>
         /// Asynchronously sends a message to a single client on the network.
         /// </summary>
-        /// <param name="clientId">
+        /// <param name="peer">
         /// The ID of the client to send the message to.
         /// </param>
         /// <param name="message">
         /// The <see cref="INetworkMessage"/> to send.
+        /// </param>
+        /// <param name="token">
+        /// A <see cref="CancellationToken"/> to use to signal cancellation.
         /// </param>
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
@@ -128,8 +143,6 @@ namespace Evercoin
         /// <remarks>
         /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
         /// </remarks>
-        Task SendMessageToClientAsync(Guid clientId, INetworkMessage message, CancellationToken token);
-
-        TcpClient GetClientButPleaseBeNice(Guid clientId);
+        Task SendMessageToClientAsync(INetworkPeer peer, INetworkMessage message, CancellationToken token);
     }
 }
