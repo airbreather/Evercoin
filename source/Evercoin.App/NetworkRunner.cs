@@ -104,6 +104,7 @@ namespace Evercoin.App
                 }
             });
 
+            await Task.Delay(5000, token);
             this.network.Start(token);
             await Task.WhenAll(endPoints.Select(endPoint => this.network.ConnectToPeerAsync(new ProtocolNetworkAddress(null, 1, endPoint.Address, (ushort)endPoint.Port), token)));
         }

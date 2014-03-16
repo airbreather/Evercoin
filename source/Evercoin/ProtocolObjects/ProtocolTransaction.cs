@@ -44,19 +44,11 @@ namespace Evercoin.ProtocolObjects
 
                 // Inputs
                 byte[] inputCountBytes = ((ProtocolCompactSize)(ulong)this.Inputs.Length).Data;
-                IEnumerable<byte[]> inputByteSources = this.Inputs.Select(x => x.PrevOutTxId.ToLittleEndianUInt256Array()
-                                                                                            .Concat(BitConverter.GetBytes(x.PrevOutN).LittleEndianToOrFromBitConverterEndianness())
-                                                                                            .Concat(((ProtocolCompactSize)(ulong)x.ScriptSig.Length).Data)
-                                                                                            .Concat(x.ScriptSig)
-                                                                                            .Concat(BitConverter.GetBytes(x.Sequence).LittleEndianToOrFromBitConverterEndianness())
-                                                                                            .GetArray());
+                IEnumerable<byte[]> inputByteSources = this.Inputs.Select(x => x.Data);
 
                 // Outputs
                 byte[] outputCountBytes = ((ProtocolCompactSize)(ulong)this.Outputs.Length).Data;
-                IEnumerable<byte[]> outputByteSources = this.Outputs.Select(x => BitConverter.GetBytes(x.ValueInSatoshis).LittleEndianToOrFromBitConverterEndianness()
-                                                                                                                         .Concat(((ProtocolCompactSize)(ulong)x.ScriptPubKey.Length).Data)
-                                                                                                                         .Concat(x.ScriptPubKey)
-                                                                                                                         .GetArray());
+                IEnumerable<byte[]> outputByteSources = this.Outputs.Select(x => x.Data);
 
                 // Lock time
                 byte[] lockTimeBytes = BitConverter.GetBytes(this.LockTime).LittleEndianToOrFromBitConverterEndianness();
@@ -83,14 +75,14 @@ namespace Evercoin.ProtocolObjects
                                                           SpendingValueSource = x.PrevOutTxId.IsZero ? 
                                                                                 (IValueSource)spendingBlock.Coinbase :
                                                                                 prevTransactions[x.PrevOutTxId].Outputs[(int)x.PrevOutN]
-                                                      }).ToArray(),
+                                                      }).GetArray<IValueSpender>(),
                 Outputs = this.Outputs.Select((x, n) => new TypedTransactionValueSource 
                                                         {
                                                             AvailableValue = x.ValueInSatoshis,
                                                             OriginatingTransactionIdentifier = this.TxId,
                                                             OriginatingTransactionOutputIndex = (uint)n,
                                                             ScriptPublicKey = x.ScriptPubKey
-                                                        }).ToArray()
+                                                        }).GetArray<ITransactionValueSource>()
             };
         }
     }

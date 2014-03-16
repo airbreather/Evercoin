@@ -1,9 +1,40 @@
 ﻿using System.Linq;
 
+using Evercoin.Util;
+
 namespace Evercoin.BaseImplementations
 {
     internal sealed class TypedTransaction : ITransaction
     {
+        /// <summary>
+        /// Gets the version of this transaction.
+        /// </summary>
+        public uint Version { get; set; }
+
+        /// <summary>
+        /// Gets the inputs spent by this transaction.
+        /// </summary>
+        public IValueSpender[] Inputs { get; set; }
+
+        /// <summary>
+        /// Gets the outputs of this transaction.
+        /// </summary>
+        public ITransactionValueSource[] Outputs { get; set; }
+
+        public uint LockTime { get; set; }
+
+        /// <summary>
+        /// Determines whether the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>.
+        /// </summary>
+        /// <returns>
+        /// true if the specified object  is equal to the current object; otherwise, false.
+        /// </returns>
+        /// <param name="obj">The object to compare with the current object. </param>
+        public override bool Equals(object obj)
+        {
+            return this.Equals(obj as ITransaction);
+        }
+
         /// <summary>
         /// Indicates whether the current object is equal to another object of the same type.
         /// </summary>
@@ -26,20 +57,21 @@ namespace Evercoin.BaseImplementations
         }
 
         /// <summary>
-        /// Gets the version of this transaction.
+        /// Serves as a hash function for a particular type. 
         /// </summary>
-        public uint Version { get; set; }
+        /// <returns>
+        /// A hash code for the current <see cref="T:System.Object"/>.
+        /// </returns>
+        public override int GetHashCode()
+        {
+            HashCodeBuilder builder = new HashCodeBuilder()
+                .HashWith(this.Version)
+                .HashWith(this.LockTime);
 
-        /// <summary>
-        /// Gets the inputs spent by this transaction.
-        /// </summary>
-        public IValueSpender[] Inputs { get; set; }
+            builder = this.Inputs.Aggregate(builder, (prevBuilder, nextInput) => prevBuilder.HashWith(nextInput));
+            builder = this.Outputs.Aggregate(builder, (prevBuilder, nextOutput) => prevBuilder.HashWith(nextOutput));
 
-        /// <summary>
-        /// Gets the outputs of this transaction.
-        /// </summary>
-        public ITransactionValueSource[] Outputs { get; set; }
-
-        public uint LockTime { get; set; }
+            return builder;
+        }
     }
 }

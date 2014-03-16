@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Numerics;
@@ -20,9 +20,6 @@ namespace Evercoin.Storage
         private const string BlockDirName = @"C:\Freedom\blocks";
         private const string TxDirName = @"C:\Freedom\transactions";
 
-        private readonly ConcurrentDictionary<BigInteger, ManualResetEventSlim> blockWaiters = new ConcurrentDictionary<BigInteger, ManualResetEventSlim>();
-        private readonly ConcurrentDictionary<BigInteger, ManualResetEventSlim> txWaiters = new ConcurrentDictionary<BigInteger, ManualResetEventSlim>();
-
         public FileSystemChainStore()
         {
             BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").AsEnumerable().Reverse().GetArray());
@@ -40,28 +37,60 @@ namespace Evercoin.Storage
                 };
                 this.PutBlock(genesisBlockIdentifier, genesisBlock);
             }
+            else
+            {
+                Dictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new Dictionary<BigInteger, BigInteger>();
+                foreach (string filePath in Directory.EnumerateFiles(BlockDirName))
+                {
+                    string name = Path.GetFileName(filePath);
+                    byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
+                    Array.Reverse(hexBytes);
+                    BigInteger blockId = new BigInteger(hexBytes);
+                    IBlock block = this.FindBlockCore(blockId);
+                    blockIdToNextBlockIdMapping[block.PreviousBlockIdentifier] = blockId;
+                }
+
+                BigInteger prevBlockId = BigInteger.Zero;
+                for (int i = 0; i < blockIdToNextBlockIdMapping.Count; i++)
+                {
+                    BigInteger blockId;
+                    if (!blockIdToNextBlockIdMapping.TryGetValue(prevBlockId, out blockId))
+                    {
+                        break;
+                    }
+
+                    Cheating.Add(i, blockId);
+                    prevBlockId = blockId;
+                }
+            }
         }
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
         {
+            SpinWait spinner = new SpinWait();
             string filePath = GetBlockFileName(blockIdentifier);
+            FileStream stream;
             do
             {
-                if (File.Exists(filePath))
+                if (!File.Exists(filePath))
                 {
-                    break;
+                    spinner.SpinOnce();
+                    continue;
                 }
 
-                ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, _ => new ManualResetEventSlim());
-                if (mres.Wait(10000) &&
-                    this.blockWaiters.TryRemove(blockIdentifier, out mres))
+                try
                 {
-                    mres.Dispose();
+                    stream = File.OpenRead(filePath);
+                    break;
+                }
+                catch
+                {
+                    spinner.SpinOnce();
                 }
             }
             while (true);
 
-            using (FileStream stream = File.OpenRead(filePath))
+            using (stream)
             {
                 BinaryFormatter binaryFormatter = new BinaryFormatter();
                 return (Block)binaryFormatter.Deserialize(stream);
@@ -70,24 +99,30 @@ namespace Evercoin.Storage
 
         protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
         {
+            SpinWait spinner = new SpinWait();
             string filePath = GetTransactionFileName(transactionIdentifier);
+            FileStream stream;
             do
             {
-                if (File.Exists(filePath))
+                if (!File.Exists(filePath))
                 {
-                    break;
+                    spinner.SpinOnce();
+                    continue;
                 }
 
-                ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, _ => new ManualResetEventSlim());
-                if (mres.Wait(10000) &&
-                    this.txWaiters.TryRemove(transactionIdentifier, out mres))
+                try
                 {
-                    mres.Dispose();
+                    stream = File.OpenRead(filePath);
+                    break;
+                }
+                catch
+                {
+                    spinner.SpinOnce();
                 }
             }
             while (true);
 
-            using (FileStream stream = File.OpenRead(filePath))
+            using (stream)
             {
                 BinaryFormatter binaryFormatter = new BinaryFormatter();
                 return (Transaction)binaryFormatter.Deserialize(stream);
@@ -104,12 +139,6 @@ namespace Evercoin.Storage
                 BinaryFormatter binaryFormatter = new BinaryFormatter();
                 binaryFormatter.Serialize(stream, typedBlock);
             }
-
-            ManualResetEventSlim mres;
-            if (this.blockWaiters.TryGetValue(blockIdentifier, out mres))
-            {
-                mres.Set();
-            }
         }
 
         protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
@@ -121,12 +150,6 @@ namespace Evercoin.Storage
             {
                 BinaryFormatter binaryFormatter = new BinaryFormatter();
                 binaryFormatter.Serialize(stream, typedTransaction);
-            }
-
-            ManualResetEventSlim mres;
-            if (this.txWaiters.TryGetValue(transactionIdentifier, out mres))
-            {
-                mres.Set();
             }
         }
 
@@ -148,60 +171,6 @@ namespace Evercoin.Storage
         protected override async Task<bool> ContainsTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
         {
             return await Task.Run(() => File.Exists(GetTransactionFileName(transactionIdentifier)), token);
-        }
-
-        protected override async Task<IBlock> FindBlockAsyncCore(BigInteger blockIdentifier, CancellationToken token)
-        {
-            string filePath = GetBlockFileName(blockIdentifier);
-            do
-            {
-                if (File.Exists(filePath))
-                {
-                    break;
-                }
-
-                ManualResetEventSlim mres = this.blockWaiters.GetOrAdd(blockIdentifier, _ => new ManualResetEventSlim());
-                bool success = await Task.Run(() => mres.Wait(10000, token), token);
-                if (success &&
-                    this.blockWaiters.TryRemove(blockIdentifier, out mres))
-                {
-                    mres.Dispose();
-                }
-            }
-            while (true);
-
-            using (FileStream stream = File.OpenRead(filePath))
-            {
-                BinaryFormatter binaryFormatter = new BinaryFormatter();
-                return (Block)binaryFormatter.Deserialize(stream);
-            }
-        }
-
-        protected override async Task<ITransaction> FindTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
-        {
-            string filePath = GetTransactionFileName(transactionIdentifier);
-            do
-            {
-                if (File.Exists(filePath))
-                {
-                    break;
-                }
-
-                ManualResetEventSlim mres = this.txWaiters.GetOrAdd(transactionIdentifier, _ => new ManualResetEventSlim());
-                bool success = await Task.Run(() => mres.Wait(10000, token), token);
-                if (success &&
-                    this.txWaiters.TryRemove(transactionIdentifier, out mres))
-                {
-                    mres.Dispose();
-                }
-            }
-            while (true);
-
-            using (FileStream stream = File.OpenRead(filePath))
-            {
-                BinaryFormatter binaryFormatter = new BinaryFormatter();
-                return (Transaction)binaryFormatter.Deserialize(stream);
-            }
         }
 
         private static string GetBlockFileName(BigInteger blockIdentifier)

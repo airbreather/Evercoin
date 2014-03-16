@@ -32,6 +32,7 @@ namespace Evercoin.Storage
                 TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").Reverse().GetArray() }
             };
             this.PutBlock(genesisBlockIdentifier, genesisBlock);
+            Cheating.Add(0, genesisBlockIdentifier);
         }
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)

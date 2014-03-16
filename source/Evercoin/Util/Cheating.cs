@@ -9,12 +9,12 @@ namespace Evercoin.Util
 {
     public static class Cheating
     {
-        private static int blockCount = 1;
+        private static int blockCount = 0;
         private static readonly object syncLock = new object();
-        private static readonly Dictionary<BigInteger, int> IdToHeight = new Dictionary<BigInteger, int>(300000) { { new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").Reverse().GetArray()), 0 } };
+        private static readonly Dictionary<BigInteger, int> IdToHeight = new Dictionary<BigInteger, int>(300000);
         private static readonly Dictionary<BigInteger, ManualResetEventSlim> IdWaiters = new Dictionary<BigInteger, ManualResetEventSlim>(300000);
 
-        private static BigInteger[] BlockIdentifiers = { new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").Reverse().GetArray()) };
+        private static BigInteger[] BlockIdentifiers = new BigInteger[0];
 
         public static void Add(int height, BigInteger blockIdentifier)
         {
