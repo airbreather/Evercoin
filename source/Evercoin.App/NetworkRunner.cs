@@ -136,7 +136,7 @@ namespace Evercoin.App
             Task<int> prevBlockHeightGetter = Cheating.GetBlockHeightAsync(block.PrevBlockId, token);
             byte[] dataToHash = block.HeaderData;
 
-            IHashAlgorithm blockHashAlgorithm = this.network.CurrencyParameters.HashAlgorithmStore.GetHashAlgorithm(this.network.CurrencyParameters.ChainParameters.BlockAlgorithmIdentifier);
+            IHashAlgorithm blockHashAlgorithm = this.network.CurrencyParameters.HashAlgorithmStore.GetHashAlgorithm(this.network.CurrencyParameters.ChainParameters.BlockHashAlgorithmIdentifier);
             IHashAlgorithm txHashAlgorithm = this.network.CurrencyParameters.HashAlgorithmStore.GetHashAlgorithm(this.network.CurrencyParameters.ChainParameters.TransactionHashAlgorithmIdentifier);
             byte[] blockHash = blockHashAlgorithm.CalculateHash(dataToHash);
             BigInteger blockIdentifier = new BigInteger(blockHash);

@@ -90,7 +90,6 @@
     <Compile Include="ConnectionDirection.cs" />
     <Compile Include="DisposableObject.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="HandledNetworkMessageResult.cs" />
     <Compile Include="ICoinbaseValueSource.cs" />
     <Compile Include="ICurrencyParameters.cs" />
     <Compile Include="ICurrencyNetwork.cs" />

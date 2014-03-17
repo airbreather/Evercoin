@@ -19,7 +19,8 @@ namespace Evercoin
 
         /// <summary>
         /// Gets the <see cref="Guid"/> that identifies which
-        /// <see cref="IHashAlgorithm"/> to use for calculating proof-of-work.
+        /// <see cref="IHashAlgorithm"/> to use for calculating
+        /// block identifiers.
         /// </summary>
         /// <remarks>
         /// It's likely that this will be one of the values from
@@ -27,8 +28,19 @@ namespace Evercoin
         /// aren't built-in could be used by implementing a custom
         /// <see cref="IHashAlgorithmStore"/>.
         /// </remarks>
-        Guid BlockAlgorithmIdentifier { get; }
+        Guid BlockHashAlgorithmIdentifier { get; }
 
+        /// <summary>
+        /// Gets the <see cref="Guid"/> that identifies which
+        /// <see cref="IHashAlgorithm"/> to use for calculating
+        /// transaction identifiers.
+        /// </summary>
+        /// <remarks>
+        /// It's likely that this will be one of the values from
+        /// <see cref="HashAlgorithmIdentifiers"/>, though algorithms that
+        /// aren't built-in could be used by implementing a custom
+        /// <see cref="IHashAlgorithmStore"/>.
+        /// </remarks>
         Guid TransactionHashAlgorithmIdentifier { get; }
 
         /// <summary>

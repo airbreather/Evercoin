@@ -13,7 +13,7 @@ namespace Evercoin.BaseImplementations
     {
         private readonly IBlock genesisBlock;
 
-        private readonly Guid blockAlgorithmIdentifier;
+        private readonly Guid blockHashAlgorithmIdentifier;
 
         private readonly Guid transactionHashAlgorithmIdentifier;
 
@@ -47,8 +47,8 @@ namespace Evercoin.BaseImplementations
         /// <param name="genesisBlock">
         /// The value for <see cref="GenesisBlock"/>.
         /// </param>
-        /// <param name="blockAlgorithmIdentifier">
-        /// The value for <see cref="BlockAlgorithmIdentifier"/>.
+        /// <param name="blockHashAlgorithmIdentifier">
+        /// The value for <see cref="BlockHashAlgorithmIdentifier"/>.
         /// </param>
         /// <param name="transactionHashAlgorithmIdentifier">
         /// The value for <see cref="TransactionHashAlgorithmIdentifier"/>.
@@ -90,7 +90,7 @@ namespace Evercoin.BaseImplementations
         /// The value for <see cref="MaximumDifficultyTarget"/>.
         /// </param>
         public ChainParameters(IBlock genesisBlock,
-                               Guid blockAlgorithmIdentifier,
+                               Guid blockHashAlgorithmIdentifier,
                                Guid transactionHashAlgorithmIdentifier,
                                Guid scriptHashAlgorithmIdentifier1,
                                Guid scriptHashAlgorithmIdentifier2,
@@ -106,7 +106,7 @@ namespace Evercoin.BaseImplementations
                                BigInteger maximumDifficultyTarget)
         {
             this.genesisBlock = genesisBlock;
-            this.blockAlgorithmIdentifier = blockAlgorithmIdentifier;
+            this.blockHashAlgorithmIdentifier = blockHashAlgorithmIdentifier;
             this.transactionHashAlgorithmIdentifier = transactionHashAlgorithmIdentifier;
             this.scriptHashAlgorithmIdentifier1 = scriptHashAlgorithmIdentifier1;
             this.scriptHashAlgorithmIdentifier2 = scriptHashAlgorithmIdentifier2;
@@ -137,7 +137,7 @@ namespace Evercoin.BaseImplementations
         /// aren't built-in could be used by implementing a custom
         /// <see cref="IHashAlgorithmStore"/>.
         /// </remarks>
-        public Guid BlockAlgorithmIdentifier { get { return this.blockAlgorithmIdentifier; } }
+        public Guid BlockHashAlgorithmIdentifier { get { return this.blockHashAlgorithmIdentifier; } }
 
         public Guid TransactionHashAlgorithmIdentifier { get { return this.transactionHashAlgorithmIdentifier; } }
 
@@ -283,7 +283,7 @@ namespace Evercoin.BaseImplementations
                    this.BlocksAtEachSubsidyLevel == other.BlocksAtEachSubsidyLevel &&
                    this.MaximumDifficultyTarget == other.MaximumDifficultyTarget &&
                    this.BlocksPerDifficultyRetarget == other.BlocksPerDifficultyRetarget &&
-                   this.BlockAlgorithmIdentifier == other.BlockAlgorithmIdentifier &&
+                   this.BlockHashAlgorithmIdentifier == other.BlockHashAlgorithmIdentifier &&
                    this.SubsidyLevelMultiplier == other.SubsidyLevelMultiplier &&
                    this.ScriptHashAlgorithmIdentifier1 == other.ScriptHashAlgorithmIdentifier1 &&
                    this.ScriptHashAlgorithmIdentifier2 == other.ScriptHashAlgorithmIdentifier2 &&
@@ -319,7 +319,7 @@ namespace Evercoin.BaseImplementations
                 .HashWith(this.BlocksAtEachSubsidyLevel)
                 .HashWith(this.MaximumDifficultyTarget)
                 .HashWith(this.BlocksPerDifficultyRetarget)
-                .HashWith(this.BlockAlgorithmIdentifier)
+                .HashWith(this.BlockHashAlgorithmIdentifier)
                 .HashWith(this.SubsidyLevelMultiplier)
                 .HashWith(this.ScriptHashAlgorithmIdentifier1)
                 .HashWith(this.ScriptHashAlgorithmIdentifier2)
