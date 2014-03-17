@@ -53,6 +53,9 @@
     <DocumentationFile>bin\Release\Evercoin.Storage.XML</DocumentationFile>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="FileDB">
+      <HintPath>..\packages\FileDB.1.0.1\lib\net35\FileDB.dll</HintPath>
+    </Reference>
     <Reference Include="Ionic.Zip">
       <HintPath>..\packages\DotNetZip.1.9.2\lib\net20\Ionic.Zip.dll</HintPath>
     </Reference>
@@ -64,6 +67,8 @@
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
+    <Reference Include="System.IO.Compression" />
+    <Reference Include="System.IO.Compression.FileSystem" />
     <Reference Include="System.Numerics" />
     <Reference Include="System.Runtime.Caching" />
     <Reference Include="System.Runtime.Serialization" />
@@ -76,6 +81,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Extensions.cs" />
+    <Compile Include="FileDBChainStore.cs" />
     <Compile Include="FileSystemChainStore.cs" />
     <Compile Include="MemoryChainStore.cs" />
     <Compile Include="Model\Block.cs" />
@@ -85,7 +91,7 @@
     <Compile Include="Model\TransactionValueSource.cs" />
     <Compile Include="Model\ValueSource.cs" />
     <Compile Include="Model\ValueSpender.cs" />
-    <Compile Include="ZipFileChainStore.cs" />
+    <Compile Include="DotNetZipFileChainStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

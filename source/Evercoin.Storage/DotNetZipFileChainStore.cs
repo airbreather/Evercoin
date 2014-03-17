@@ -19,7 +19,7 @@ namespace Evercoin.Storage
     // HINT: Don't use this.  It sucks.
     ////[Export(typeof(IChainStore))]
     ////[Export(typeof(IReadOnlyChainStore))]
-    public sealed class ZipFileChainStore : ReadWriteChainStoreBase
+    public sealed class DotNetZipFileChainStore : ReadWriteChainStoreBase
     {
         private const string ZipFileName = @"C:\Freedom\evercoin.zip";
 
@@ -32,7 +32,7 @@ namespace Evercoin.Storage
 
         private readonly ZipFile archive;
 
-        public ZipFileChainStore()
+        public DotNetZipFileChainStore()
         {
             try
             {

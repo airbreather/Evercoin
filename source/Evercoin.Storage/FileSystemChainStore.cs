@@ -15,8 +15,8 @@ using Evercoin.Util;
 
 namespace Evercoin.Storage
 {
-    [Export(typeof(IChainStore))]
-    [Export(typeof(IReadOnlyChainStore))]
+    ////[Export(typeof(IChainStore))]
+    ////[Export(typeof(IReadOnlyChainStore))]
     public sealed class FileSystemChainStore : ReadWriteChainStoreBase
     {
         private const string BlockDirName = @"C:\Freedom\blocks";
@@ -50,69 +50,67 @@ namespace Evercoin.Storage
                 this.PutBlock(genesisBlockIdentifier, genesisBlock);
                 Cheating.Add(0, genesisBlockIdentifier);
             }
-            else
+
+            ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+            ConcurrentDictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new ConcurrentDictionary<BigInteger, BigInteger>();
+            Parallel.ForEach(Directory.EnumerateFiles(BlockDirName), options, filePath =>
             {
-                ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
-                ConcurrentDictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new ConcurrentDictionary<BigInteger, BigInteger>();
-                Parallel.ForEach(Directory.EnumerateFiles(BlockDirName), options, filePath =>
+                string name = Path.GetFileName(filePath);
+                byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
+                Array.Reverse(hexBytes);
+                BigInteger blockId = new BigInteger(hexBytes);
+                try
                 {
-                    string name = Path.GetFileName(filePath);
-                    byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
-                    Array.Reverse(hexBytes);
-                    BigInteger blockId = new BigInteger(hexBytes);
-                    try
-                    {
-                        IBlock block = this.FindBlockCore(blockId);
-                        blockIdToNextBlockIdMapping[block.PreviousBlockIdentifier] = blockId;
-                    }
-                    catch
-                    {
-                    }
-                });
-
-                BigInteger prevBlockId = BigInteger.Zero;
-                for (int i = 0; i < blockIdToNextBlockIdMapping.Count; i++)
+                    IBlock block = this.FindBlockCore(blockId);
+                    blockIdToNextBlockIdMapping[block.PreviousBlockIdentifier] = blockId;
+                }
+                catch
                 {
-                    BigInteger blockId;
-                    if (!blockIdToNextBlockIdMapping.TryGetValue(prevBlockId, out blockId))
-                    {
-                        break;
-                    }
+                }
+            });
 
-                    Cheating.Add(i, blockId);
-                    prevBlockId = blockId;
+            BigInteger prevBlockId = BigInteger.Zero;
+            for (int i = 0; i < blockIdToNextBlockIdMapping.Count; i++)
+            {
+                BigInteger blockId;
+                if (!blockIdToNextBlockIdMapping.TryGetValue(prevBlockId, out blockId))
+                {
+                    break;
                 }
 
-                HashSet<BigInteger> goodBlockIds = new HashSet<BigInteger>(blockIdToNextBlockIdMapping.Values);
-                Parallel.ForEach(Directory.EnumerateFiles(BlockDirName), options, filePath =>
-                {
-                    string name = Path.GetFileName(filePath);
-                    byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
-                    Array.Reverse(hexBytes);
-                    BigInteger blockId = new BigInteger(hexBytes);
-                    if (!goodBlockIds.Contains(blockId) &&
-                        blockId != genesisBlockIdentifier)
-                    {
-                        File.Delete(filePath);
-                    }
-                });
-
-                Parallel.ForEach(Directory.EnumerateFiles(TxDirName), options, filePath =>
-                {
-                    string name = Path.GetFileName(filePath);
-                    byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
-                    Array.Reverse(hexBytes);
-                    BigInteger transactionIdentifier = new BigInteger(hexBytes);
-                    try
-                    {
-                        ITransaction tx = this.FindTransactionCore(transactionIdentifier);
-                    }
-                    catch
-                    {
-                        File.Delete(filePath);
-                    }
-                });
+                Cheating.Add(i, blockId);
+                prevBlockId = blockId;
             }
+
+            HashSet<BigInteger> goodBlockIds = new HashSet<BigInteger>(blockIdToNextBlockIdMapping.Values);
+            Parallel.ForEach(Directory.EnumerateFiles(BlockDirName), options, filePath =>
+            {
+                string name = Path.GetFileName(filePath);
+                byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
+                Array.Reverse(hexBytes);
+                BigInteger blockId = new BigInteger(hexBytes);
+                if (!goodBlockIds.Contains(blockId) &&
+                    blockId != genesisBlockIdentifier)
+                {
+                    File.Delete(filePath);
+                }
+            });
+
+            Parallel.ForEach(Directory.EnumerateFiles(TxDirName), options, filePath =>
+            {
+                string name = Path.GetFileName(filePath);
+                byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
+                Array.Reverse(hexBytes);
+                BigInteger transactionIdentifier = new BigInteger(hexBytes);
+                try
+                {
+                    ITransaction tx = this.FindTransactionCore(transactionIdentifier);
+                }
+                catch
+                {
+                    File.Delete(filePath);
+                }
+            });
         }
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
