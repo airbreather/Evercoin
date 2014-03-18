@@ -35,6 +35,21 @@ namespace Evercoin.BaseImplementations
             return hashAlgorithm;
         }
 
+        /// <summary>
+        /// Indicates whether this store contains
+        /// an algorithm with the given identifier, storing a found algorithm
+        /// to an out parameter on success.
+        /// </summary>
+        /// <param name="identifier">
+        /// The identifier of the hash algorithm to search for.
+        /// </param>
+        /// <param name="hashAlgorithm">
+        /// A location to store the algorithm, if it is found.
+        /// </param>
+        /// <returns>
+        /// A value indicating whether this store contains
+        /// an algorithm with the given identifier.
+        /// </returns>
         public abstract bool TryGetHashAlgorithm(Guid identifier, out IHashAlgorithm hashAlgorithm);
     }
 }

@@ -17,7 +17,7 @@ using Numeria.IO;
 namespace Evercoin.Storage
 {
     [Export(typeof(IChainStore))]
-    [Export(typeof(IReadOnlyChainStore))]
+    [Export(typeof(IReadableChainStore))]
     public sealed class FileDBChainStore : ReadWriteChainStoreBase
     {
         private const string BlockFileName = @"C:\Freedom\blocks.filedb";

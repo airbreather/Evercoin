@@ -105,7 +105,7 @@
     <Compile Include="IChainStore.cs" />
     <Compile Include="IHashAlgorithm.cs" />
     <Compile Include="IHashAlgorithmStore.cs" />
-    <Compile Include="IReadOnlyChainStore.cs" />
+    <Compile Include="IReadableChainStore.cs" />
     <Compile Include="ProtocolObjects\ProtocolCompactSize.cs" />
     <Compile Include="ProtocolObjects\ProtocolInventoryVector.cs" />
     <Compile Include="ProtocolObjects\ProtocolNetworkAddress.cs" />

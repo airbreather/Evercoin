@@ -87,7 +87,7 @@ namespace Evercoin
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
         /// <remarks>
-        /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
+        /// <see cref="INetworkMessage.RemotePeer"/> is ignored.
         /// </remarks>
         Task BroadcastMessageAsync(INetworkMessage message);
 
@@ -104,7 +104,7 @@ namespace Evercoin
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
         /// <remarks>
-        /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
+        /// <see cref="INetworkMessage.RemotePeer"/> is ignored.
         /// </remarks>
         Task BroadcastMessageAsync(INetworkMessage message, CancellationToken token);
 
@@ -121,7 +121,7 @@ namespace Evercoin
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
         /// <remarks>
-        /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
+        /// <see cref="INetworkMessage.RemotePeer"/> is ignored.
         /// </remarks>
         Task SendMessageToClientAsync(INetworkPeer peer, INetworkMessage message);
 
@@ -141,7 +141,7 @@ namespace Evercoin
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
         /// <remarks>
-        /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
+        /// <see cref="INetworkMessage.RemotePeer"/> is ignored.
         /// </remarks>
         Task SendMessageToClientAsync(INetworkPeer peer, INetworkMessage message, CancellationToken token);
     }

@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Evercoin
+﻿namespace Evercoin
 {
     /// <summary>
     /// Represents a message received or sent over the network.

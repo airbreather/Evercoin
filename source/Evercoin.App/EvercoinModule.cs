@@ -52,7 +52,7 @@ namespace Evercoin.App
             genesisBlock.Setup(x => x.Coinbase).Returns(coinbase.Object);
             genesisBlock.Setup(x => x.TransactionIdentifiers).Returns(transactionIdentifiers.Object);
 
-            this.Bind<IReadOnlyChainStore>().ToConstant(this.underlyingChainStorage);
+            this.Bind<IReadableChainStore>().ToConstant(this.underlyingChainStorage);
             this.Bind<IChainStore>().ToConstant(this.underlyingChainStorage);
             this.Bind<IRawNetwork>().To<RawNetwork>().InSingletonScope();
             this.Bind<ICurrencyNetwork>().To<CurrencyNetwork>().InSingletonScope();

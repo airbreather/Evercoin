@@ -9,14 +9,8 @@ namespace Evercoin
     /// </summary>
     public struct StackItem : IEquatable<StackItem>, IComparable<StackItem>, IComparable
     {
-        /// <summary>
-        /// The underlying data item being stored on the stack.
-        /// </summary>
         private byte[] data;
 
-        /// <summary>
-        /// The underlying data item being stored on the stack.
-        /// </summary>
         private BigInteger? value;
 
         public StackItem(BigInteger value)

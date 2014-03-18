@@ -303,6 +303,29 @@ namespace Evercoin
         /// <param name="peer">
         /// The peer to send the packet to.
         /// </param>
+        /// <param name="version">
+        /// The protocol version to announce to the peer that we support.
+        /// Note, this could be lower than the highest version we support.
+        /// </param>
+        /// <param name="services">
+        /// Expected to be a bitmask of services that we support.
+        /// </param>
+        /// <param name="timestamp">
+        /// The current time to announce.
+        /// </param>
+        /// <param name="nonce">
+        /// A random value to use for detect connections to ourself.
+        /// </param>
+        /// <param name="userAgent">
+        /// The user agent to announce.
+        /// </param>
+        /// <param name="startHeight">
+        /// The highest block to announce that we know.
+        /// </param>
+        /// <param name="pleaseRelayTransactionsToMe">
+        /// A value indicating whether or not we wish for the remote peer to
+        /// start relaying all the transactions it comes across.
+        /// </param>
         /// <returns>
         /// A task encapsulating the connection result.
         /// </returns>
@@ -314,6 +337,29 @@ namespace Evercoin
         /// <param name="peer">
         /// The peer to send the packet to.
         /// </param>
+        /// <param name="version">
+        /// The protocol version to announce to the peer that we support.
+        /// Note, this could be lower than the highest version we support.
+        /// </param>
+        /// <param name="services">
+        /// Expected to be a bitmask of services that we support.
+        /// </param>
+        /// <param name="timestamp">
+        /// The current time to announce.
+        /// </param>
+        /// <param name="nonce">
+        /// A random value to use for detect connections to ourself.
+        /// </param>
+        /// <param name="userAgent">
+        /// The user agent to announce.
+        /// </param>
+        /// <param name="startHeight">
+        /// The highest block to announce that we know.
+        /// </param>
+        /// <param name="pleaseRelayTransactionsToMe">
+        /// A value indicating whether or not we wish for the remote peer to
+        /// start relaying all the transactions it comes across.
+        /// </param>
         /// <param name="token">
         /// A <see cref="CancellationToken"/> to use to signal cancellation.
         /// </param>
@@ -322,8 +368,17 @@ namespace Evercoin
         /// </returns>
         Task AnnounceVersionToPeerAsync(INetworkPeer peer, int version, ulong services, Instant timestamp, ulong nonce, string userAgent, int startHeight, bool pleaseRelayTransactionsToMe, CancellationToken token);
 
+        /// <summary>
+        /// Starts listening for messages on the raw network.
+        /// </summary>
         void Start();
 
+        /// <summary>
+        /// Starts listening for messages on the raw network.
+        /// </summary>
+        /// <param name="token">
+        /// A <see cref="CancellationToken"/> to use to signal cancellation.
+        /// </param>
         void Start(CancellationToken token);
     }
 }

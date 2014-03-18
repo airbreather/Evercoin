@@ -13,13 +13,13 @@ namespace Evercoin.App
     internal sealed class CompositeChainStorage : ReadWriteChainStoreBase
     {
         private readonly Collection<IChainStore> underlyingChainStores = new Collection<IChainStore>();
-        private readonly Collection<IReadOnlyChainStore> underlyingReadOnlyChainStores = new Collection<IReadOnlyChainStore>();
+        private readonly Collection<IReadableChainStore> underlyingReadOnlyChainStores = new Collection<IReadableChainStore>();
 
         [ImportMany]
         public Collection<IChainStore> UnderlyingChainStores { get { return this.underlyingChainStores; } }
 
         [ImportMany]
-        public Collection<IReadOnlyChainStore> UnderlyingReadOnlyChainStores { get { return this.underlyingReadOnlyChainStores; } }
+        public Collection<IReadableChainStore> UnderlyingReadOnlyChainStores { get { return this.underlyingReadOnlyChainStores; } }
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
         {
@@ -79,7 +79,7 @@ namespace Evercoin.App
 
         protected override async Task<IBlock> FindBlockAsyncCore(BigInteger blockIdentifier, CancellationToken token)
         {
-            foreach (IReadOnlyChainStore chainStore in this.underlyingReadOnlyChainStores)
+            foreach (IReadableChainStore chainStore in this.underlyingReadOnlyChainStores)
             {
                 IBlock foundBlock = await chainStore.GetBlockAsync(blockIdentifier, token);
                 if (foundBlock != null)
@@ -93,7 +93,7 @@ namespace Evercoin.App
 
         protected override async Task<ITransaction> FindTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
         {
-            foreach (IReadOnlyChainStore chainStore in this.underlyingReadOnlyChainStores)
+            foreach (IReadableChainStore chainStore in this.underlyingReadOnlyChainStores)
             {
                 ITransaction foundTransaction = await chainStore.GetTransactionAsync(transactionIdentifier, token);
                 if (foundTransaction != null)

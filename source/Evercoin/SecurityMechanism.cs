@@ -4,6 +4,9 @@
     /// A value that indicates a mechanism used to keep the network secure in
     /// the face of untrusted entities.
     /// </summary>
+    /// <remarks>
+    /// Note: I do not intend to support proof-of-stake any time soon.
+    /// </remarks>
     public enum SecurityMechanism
     {
         /// <summary>

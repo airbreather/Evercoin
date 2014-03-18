@@ -16,7 +16,7 @@ using Evercoin.Util;
 namespace Evercoin.Storage
 {
     ////[Export(typeof(IChainStore))]
-    ////[Export(typeof(IReadOnlyChainStore))]
+    ////[Export(typeof(IReadableChainStore))]
     public sealed class FileSystemChainStore : ReadWriteChainStoreBase
     {
         private const string BlockDirName = @"C:\Freedom\blocks";

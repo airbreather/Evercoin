@@ -22,7 +22,8 @@ namespace Evercoin
         /// communication protocol for the network.
         /// </summary>
         /// <remarks>
-        /// For example, the magic number and seeds.
+        /// For example, the magic number, seeds, size of each message part,
+        /// message checksum hash algorithm identifier, etc.
         /// </remarks>
         INetworkParameters NetworkParameters { get; }
 
@@ -30,6 +31,11 @@ namespace Evercoin
         /// Gets the <see cref="IChainParameters"/> that lay out certain
         /// chain-specific rules.
         /// </summary>
+        /// <remarks>
+        /// For example, the block hash algorithm identifier, the number of
+        /// blocks at each difficulty target, the maximum difficulty target,
+        /// the desired amount of time between blocks, etc.
+        /// </remarks>
         IChainParameters ChainParameters { get; }
 
         /// <summary>

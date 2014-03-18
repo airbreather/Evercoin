@@ -26,18 +26,94 @@ namespace Evercoin
     /// <see cref="CancellationToken"/> values to be passed in.
     /// </para>
     /// </remarks>
-    public interface IChainStore : IReadOnlyChainStore
+    public interface IChainStore : IReadableChainStore
     {
+        /// <summary>
+        /// Stores a block with the given identifier in this chain store.
+        /// </summary>
+        /// <param name="blockIdentifier">
+        /// The identifier of the block to store.
+        /// </param>
+        /// <param name="block">
+        /// The block to store.
+        /// </param>
         void PutBlock(BigInteger blockIdentifier, IBlock block);
 
+        /// <summary>
+        /// Stores a transaction with the given identifier in this chain store.
+        /// </summary>
+        /// <param name="transactionIdentifier">
+        /// The identifier of the transaction to store.
+        /// </param>
+        /// <param name="transaction">
+        /// The transaction to store.
+        /// </param>
         void PutTransaction(BigInteger transactionIdentifier, ITransaction transaction);
 
+        /// <summary>
+        /// Stores a block with the given identifier in this chain store,
+        /// asynchronously.
+        /// </summary>
+        /// <param name="blockIdentifier">
+        /// The identifier of the block to store.
+        /// </param>
+        /// <param name="block">
+        /// The block to store.
+        /// </param>
+        /// <returns>
+        /// A <see cref="Task"/> encapsulating the asynchronous operation.
+        /// </returns>
         Task PutBlockAsync(BigInteger blockIdentifier, IBlock block);
 
+        /// <summary>
+        /// Stores a block with the given identifier in this chain store,
+        /// asynchronously.
+        /// </summary>
+        /// <param name="blockIdentifier">
+        /// The identifier of the block to store.
+        /// </param>
+        /// <param name="block">
+        /// The block to store.
+        /// </param>
+        /// <param name="token">
+        /// A <see cref="CancellationToken"/> to use to signal cancellation.
+        /// </param>
+        /// <returns>
+        /// A <see cref="Task"/> encapsulating the asynchronous operation.
+        /// </returns>
         Task PutBlockAsync(BigInteger blockIdentifier, IBlock block, CancellationToken token);
 
+        /// <summary>
+        /// Stores a transaction with the given identifier in this chain store,
+        /// asynchronously.
+        /// </summary>
+        /// <param name="transactionIdentifier">
+        /// The identifier of the transaction to store.
+        /// </param>
+        /// <param name="transaction">
+        /// The transaction to store.
+        /// </param>
+        /// <returns>
+        /// A <see cref="Task"/> encapsulating the asynchronous operation.
+        /// </returns>
         Task PutTransactionAsync(BigInteger transactionIdentifier, ITransaction transaction);
 
+        /// <summary>
+        /// Stores a transaction with the given identifier in this chain store,
+        /// asynchronously.
+        /// </summary>
+        /// <param name="transactionIdentifier">
+        /// The identifier of the transaction to store.
+        /// </param>
+        /// <param name="transaction">
+        /// The transaction to store.
+        /// </param>
+        /// <param name="token">
+        /// A <see cref="CancellationToken"/> to use to signal cancellation.
+        /// </param>
+        /// <returns>
+        /// A <see cref="Task"/> encapsulating the asynchronous operation.
+        /// </returns>
         Task PutTransactionAsync(BigInteger transactionIdentifier, ITransaction transaction, CancellationToken token);
     }
 }

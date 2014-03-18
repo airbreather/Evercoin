@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net;
-using System.Numerics;
-
-using NodaTime;
 
 namespace Evercoin
 {
+    /// <summary>
+    /// Represents a network peer that we're connected to.
+    /// </summary>
     public interface INetworkPeer
     {
         /// <summary>
@@ -24,34 +23,15 @@ namespace Evercoin
         Guid Identifier { get; }
 
         /// <summary>
-        /// Gets a value indicating whether we've successfully exchanged version
-        /// information with this peer at this point in time.
+        /// Gets the endpoint of the local peer.
+        /// TODO: abstraction!
         /// </summary>
-        bool NegotiatedProtocolVersion { get; }
-
-        /// <summary>
-        /// Gets the version of the protocol to use when communicating
-        /// with this peer.
-        /// </summary>
-        int ProtocolVersion { get; }
-
-        /// <summary>
-        /// Gets the identifiers of blocks that this peer is aware of.
-        /// </summary>
-        HashSet<BigInteger> KnownBlockIdentifiers { get; }
-
-        /// <summary>
-        /// Gets the identifiers of transactions that this peer is aware of.
-        /// </summary>
-        HashSet<BigInteger> KnownTransactionIdentifiers { get; }
-
-        /// <summary>
-        /// Gets the timestamp of the last message we received from this peer.
-        /// </summary>
-        Instant LastMessageReceivedTime { get; }
-
         IPEndPoint LocalEndPoint { get; }
 
+        /// <summary>
+        /// Gets the endpoint of the remote peer.
+        /// TODO: abstraction!
+        /// </summary>
         IPEndPoint RemoteEndPoint { get; }
     }
 }

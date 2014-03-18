@@ -4,8 +4,6 @@ namespace Evercoin
 {
     public sealed class ScriptEvaluationResult
     {
-        public static readonly ScriptEvaluationResult False = new ScriptEvaluationResult(new Stack<StackItem>(), new Stack<StackItem>());
-
         private readonly Stack<StackItem> mainStack;
 
         private readonly Stack<StackItem> alternateStack;
@@ -15,6 +13,8 @@ namespace Evercoin
             this.mainStack = mainStack;
             this.alternateStack = alternateStack;
         }
+
+        public static ScriptEvaluationResult False { get { return new ScriptEvaluationResult(new Stack<StackItem>(), new Stack<StackItem>()); } }
 
         public Stack<StackItem> MainStack { get { return this.mainStack; } }
 
