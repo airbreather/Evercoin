@@ -78,9 +78,7 @@
     <Compile Include="BaseImplementations\CurrencyNetworkBase.cs" />
     <Compile Include="BaseImplementations\CurrencyParameters.cs" />
     <Compile Include="BaseImplementations\TypedBlock.cs" />
-    <Compile Include="BaseImplementations\TypedCoinbaseValueSource.cs" />
     <Compile Include="BaseImplementations\TypedTransaction.cs" />
-    <Compile Include="BaseImplementations\TypedTransactionValueSource.cs" />
     <Compile Include="BaseImplementations\TypedValueSource.cs" />
     <Compile Include="BaseImplementations\TypedValueSpender.cs" />
     <Compile Include="BaseImplementations\ReadOnlyChainStoreBase.cs" />
@@ -90,7 +88,6 @@
     <Compile Include="ConnectionDirection.cs" />
     <Compile Include="DisposableObject.cs" />
     <Compile Include="Extensions.cs" />
-    <Compile Include="ICoinbaseValueSource.cs" />
     <Compile Include="ICurrencyParameters.cs" />
     <Compile Include="ICurrencyNetwork.cs" />
     <Compile Include="IMerkleTreeNode.cs" />
@@ -123,7 +120,6 @@
     <Compile Include="ISignatureChecker.cs" />
     <Compile Include="ITransaction.cs" />
     <Compile Include="ITransactionScriptRunner.cs" />
-    <Compile Include="ITransactionValueSource.cs" />
     <Compile Include="IValueSource.cs" />
     <Compile Include="IRawNetwork.cs" />
     <Compile Include="INetworkParameters.cs" />

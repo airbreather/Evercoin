@@ -20,7 +20,7 @@ namespace Evercoin
         /// <summary>
         /// Gets the outputs of this transaction.
         /// </summary>
-        ITransactionValueSource[] Outputs { get; }
+        IValueSource[] Outputs { get; }
 
         /// <summary>
         /// Gets a value that represents the time (see remarks)
@@ -36,9 +36,9 @@ namespace Evercoin
         /// %gt;= 500000000: UNIX timestamp at which this transaction is locked.
         /// </para>
         /// <para>
-        /// TODO: this could be encapsulated by a slightly intelligent struct.
+        /// TODO: this could be encapsulated by a slightly intelligent struct,
         /// i.e., something that can say "does this block come before this
-        /// timestamp?", and check the timestamp accordingly.
+        /// locktime?", and check the timestamp or height accordingly.
         /// </para>
         /// </remarks>
         uint LockTime { get; }

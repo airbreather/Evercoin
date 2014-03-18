@@ -7,8 +7,6 @@ using System.Runtime.Serialization;
 namespace Evercoin.Storage.Model
 {
     [DataContract(Name = "ValueSpender", Namespace = "Evercoin.Storage.Model")]
-    [KnownType(typeof(CoinbaseValueSource))]
-    [KnownType(typeof(TransactionValueSource))]
     internal sealed class ValueSpender : IValueSpender
     {
         private const string SerializationName_SpendingTransactionIdentifier = "SpendingTransactionIdentifier";
@@ -29,18 +27,7 @@ namespace Evercoin.Storage.Model
             this.SpendingTransactionInputIndex = copyFrom.SpendingTransactionInputIndex;
             this.SequenceNumber = copyFrom.SequenceNumber;
             this.ScriptSignatureCollection.AddRange(copyFrom.ScriptSignature);
-
-            ITransactionValueSource transactionValueSource = copyFrom.SpendingValueSource as ITransactionValueSource;
-
-            if (transactionValueSource != null)
-            {
-                this.TypedSpendingValueSource = new TransactionValueSource(transactionValueSource);
-            }
-            else
-            {
-                ICoinbaseValueSource coinbaseValueSource = copyFrom.SpendingValueSource as ICoinbaseValueSource;
-                this.TypedSpendingValueSource = new CoinbaseValueSource(coinbaseValueSource);
-            }
+            this.TypedSpendingValueSource = new ValueSource(copyFrom.SpendingValueSource);
         }
 
         /// <summary>

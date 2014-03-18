@@ -72,17 +72,17 @@ namespace Evercoin.ProtocolObjects
                                                           SequenceNumber = x.Sequence,
                                                           SpendingTransactionIdentifier = this.TxId,
                                                           SpendingTransactionInputIndex = (uint)n,
-                                                          SpendingValueSource = x.PrevOutTxId.IsZero ? 
-                                                                                (IValueSource)spendingBlock.Coinbase :
+                                                          SpendingValueSource = x.PrevOutTxId.IsZero ?
+                                                                                spendingBlock.Coinbase :
                                                                                 prevTransactions[x.PrevOutTxId].Outputs[(int)x.PrevOutN]
                                                       }).GetArray<IValueSpender>(),
-                Outputs = this.Outputs.Select((x, n) => new TypedTransactionValueSource 
+                Outputs = this.Outputs.Select((x, n) => new TypedValueSource
                                                         {
                                                             AvailableValue = x.ValueInSatoshis,
                                                             OriginatingTransactionIdentifier = this.TxId,
                                                             OriginatingTransactionOutputIndex = (uint)n,
                                                             ScriptPublicKey = x.ScriptPubKey
-                                                        }).GetArray<ITransactionValueSource>()
+                                                        }).GetArray<IValueSource>()
             };
         }
     }

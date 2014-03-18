@@ -16,7 +16,7 @@ namespace Evercoin.Storage.Model
         private const string SerializationName_LockTime = "LockTime";
 
         private Lazy<Collection<ValueSpender>> typedInputs = new Lazy<Collection<ValueSpender>>();
-        private Lazy<Collection<TransactionValueSource>> typedOutputs = new Lazy<Collection<TransactionValueSource>>();
+        private Lazy<Collection<ValueSource>> typedOutputs = new Lazy<Collection<ValueSource>>();
 
         public Transaction()
         {
@@ -29,7 +29,7 @@ namespace Evercoin.Storage.Model
             this.Version = copyFrom.Version;
             this.LockTime = copyFrom.LockTime;
             this.TypedInputs.AddRange(copyFrom.Inputs.Select(x => new ValueSpender(x)));
-            this.TypedOutputs.AddRange(copyFrom.Outputs.Select(x => new TransactionValueSource(x)));
+            this.TypedOutputs.AddRange(copyFrom.Outputs.Select(x => new ValueSource(x)));
         }
 
         /// <summary>
@@ -54,14 +54,14 @@ namespace Evercoin.Storage.Model
         /// Gets the outputs of this transaction.
         /// </summary>
         [DataMember(Name = SerializationName_Outputs)]
-        public Collection<TransactionValueSource> TypedOutputs { get { return this.typedOutputs.Value; } }
+        public Collection<ValueSource> TypedOutputs { get { return this.typedOutputs.Value; } }
 
         public IValueSpender[] Inputs { get { return this.typedInputs.Value.GetArray<IValueSpender>(); } }
 
         /// <summary>
         /// Gets the outputs of this transaction.
         /// </summary>
-        public ITransactionValueSource[] Outputs { get { return this.typedOutputs.Value.GetArray<ITransactionValueSource>(); } }
+        public IValueSource[] Outputs { get { return this.typedOutputs.Value.GetArray<IValueSource>(); } }
 
         [DataMember(Name = SerializationName_LockTime)]
         public uint LockTime { get; set; }
@@ -91,7 +91,7 @@ namespace Evercoin.Storage.Model
         private void OnDeserializing(StreamingContext ctx)
         {
             this.typedInputs = new Lazy<Collection<ValueSpender>>();
-            this.typedOutputs = new Lazy<Collection<TransactionValueSource>>();
+            this.typedOutputs = new Lazy<Collection<ValueSource>>();
         }
     }
 }

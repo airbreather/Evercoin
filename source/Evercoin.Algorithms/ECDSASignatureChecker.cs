@@ -38,21 +38,23 @@ namespace Evercoin.Algorithms
             {
                 IValueSpender spender = this.transaction.Inputs[i];
                 IValueSource valueSource = spender.SpendingValueSource;
-                ITransactionValueSource transactionValueSource = valueSource as ITransactionValueSource;
-                if (transactionValueSource != null)
+
+                if (valueSource.IsCoinbase)
                 {
-                    BigInteger originatingTransactionIdentifier = transactionValueSource.OriginatingTransactionIdentifier;
-                    uint originatingTransactionOutputIndex = transactionValueSource.OriginatingTransactionOutputIndex;
-                    IEnumerable<byte> scriptSig = i == this.outputIndex ? script.SelectMany(ScriptOpToBytes) : Enumerable.Empty<byte>();
-                    uint seq = spender.SequenceNumber;
-                    inputs[i] = new ProtocolTxIn(originatingTransactionIdentifier, originatingTransactionOutputIndex, scriptSig, seq);
+                    continue;
                 }
-            }
+
+                BigInteger originatingTransactionIdentifier = valueSource.OriginatingTransactionIdentifier;
+                uint originatingTransactionOutputIndex = valueSource.OriginatingTransactionOutputIndex;
+                IEnumerable<byte> scriptSig = i == this.outputIndex ? script.SelectMany(ScriptOpToBytes) : Enumerable.Empty<byte>();
+                uint seq = spender.SequenceNumber;
+                inputs[i] = new ProtocolTxIn(originatingTransactionIdentifier, originatingTransactionOutputIndex, scriptSig, seq);
+            } 
 
             ProtocolTxOut[] outputs = new ProtocolTxOut[this.transaction.Outputs.Length];
             for (int i = 0; i < outputs.Length; i++)
             {
-                ITransactionValueSource valueSource = this.transaction.Outputs[i];
+                IValueSource valueSource = this.transaction.Outputs[i];
                 long availableValue = (long)valueSource.AvailableValue;
                 byte[] scriptPubKey = valueSource.ScriptPublicKey;
 

@@ -183,10 +183,8 @@ namespace Evercoin.App
 
                     var input = tx.Inputs[i];
 
-                    ITransactionValueSource inputValueSource = input.SpendingValueSource as ITransactionValueSource;
-                    if (inputValueSource == null)
+                    if (input.SpendingValueSource.IsCoinbase)
                     {
-                        // probably coinbase -- no script to validate.
                         return;
                     }
 
@@ -205,7 +203,7 @@ namespace Evercoin.App
                         return;
                     }
 
-                    byte[] scriptPubKey = allValidInputTransactions[inputValueSource.OriginatingTransactionIdentifier].Outputs[(int)inputValueSource.OriginatingTransactionOutputIndex].ScriptPublicKey;
+                    byte[] scriptPubKey = allValidInputTransactions[input.SpendingValueSource.OriginatingTransactionIdentifier].Outputs[(int)input.SpendingValueSource.OriginatingTransactionOutputIndex].ScriptPublicKey;
 
                     if (!this.scriptRunner.EvaluateScript(scriptPubKey, signatureChecker, result.MainStack, result.AlternateStack))
                     {

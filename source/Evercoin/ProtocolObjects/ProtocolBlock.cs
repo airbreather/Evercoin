@@ -90,7 +90,7 @@ namespace Evercoin.ProtocolObjects
 
             return new TypedBlock
             {
-                Coinbase = new TypedCoinbaseValueSource { AvailableValue = this.IncludedTransactions[0].Outputs.Sum(x => x.ValueInSatoshis), OriginatingBlockIdentifier = blockIdentifier },
+                Coinbase = new TypedValueSource { AvailableValue = this.IncludedTransactions[0].Outputs.Sum(x => x.ValueInSatoshis) },
                 DifficultyTarget = TargetFromBits(this.Bits),
                 Nonce = this.Nonce,
                 PreviousBlockIdentifier = this.PrevBlockId,

@@ -32,7 +32,7 @@ namespace Evercoin.Storage.Model
             this.DifficultyTarget = copyFrom.DifficultyTarget;
             this.TransactionIdentifiers = new MerkleTreeNode(copyFrom.TransactionIdentifiers);
             this.Version = copyFrom.Version;
-            this.TypedCoinbase = new CoinbaseValueSource(copyFrom.Coinbase);
+            this.TypedCoinbase = new ValueSource(copyFrom.Coinbase);
         }
 
         /// <summary>
@@ -92,9 +92,9 @@ namespace Evercoin.Storage.Model
         public uint Nonce { get; set; }
 
         [DataMember(Name = SerializationName_TypedCoinbase)]
-        public CoinbaseValueSource TypedCoinbase { get; set; }
+        public ValueSource TypedCoinbase { get; set; }
 
-        public ICoinbaseValueSource Coinbase { get { return this.TypedCoinbase; } }
+        public IValueSource Coinbase { get { return this.TypedCoinbase; } }
 
         [DataMember(Name = SerializationName_DifficultyTarget)]
         public BigInteger DifficultyTarget { get; set; }

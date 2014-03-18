@@ -38,7 +38,7 @@ namespace Evercoin.App
             BigInteger maximumTarget = BigInteger.Parse("00000000FFFF0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
             const decimal InitialBlockSubsidyInSatoshis = 5000000000;
 
-            Mock<ICoinbaseValueSource> coinbase = new Mock<ICoinbaseValueSource>();
+            Mock<IValueSource> coinbase = new Mock<IValueSource>();
             coinbase.Setup(x => x.AvailableValue).Returns(InitialBlockSubsidyInSatoshis);
 
             Mock<IMerkleTreeNode> transactionIdentifiers = new Mock<IMerkleTreeNode>();

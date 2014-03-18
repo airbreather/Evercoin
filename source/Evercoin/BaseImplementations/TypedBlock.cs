@@ -31,10 +31,10 @@ namespace Evercoin.BaseImplementations
         public uint Nonce { get; set; }
 
         /// <summary>
-        /// Gets the <see cref="ICoinbaseValueSource"/> that represents the
+        /// Gets the <see cref="IValueSource"/> that represents the
         /// reward for mining this block.
         /// </summary>
-        public ICoinbaseValueSource Coinbase { get; set; }
+        public IValueSource Coinbase { get; set; }
 
         /// <summary>
         /// Gets the difficulty target being used for this block.

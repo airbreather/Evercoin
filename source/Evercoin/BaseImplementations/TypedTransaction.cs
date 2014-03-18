@@ -19,7 +19,7 @@ namespace Evercoin.BaseImplementations
         /// <summary>
         /// Gets the outputs of this transaction.
         /// </summary>
-        public ITransactionValueSource[] Outputs { get; set; }
+        public IValueSource[] Outputs { get; set; }
 
         public uint LockTime { get; set; }
 
