@@ -1,8 +1,11 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <xunit>
   <assemblies>
-    <assembly filename="Evercoin.TransactionScript.Tests\bin\Release\Evercoin.TransactionScript.Tests.dll" shadow-copy="true" />
-    <assembly filename="Evercoin.Algorithms.Tests\bin\Release\Evercoin.Algorithms.Tests.dll" shadow-copy="true" />
-    <assembly filename="Evercoin.Tests\bin\Release\Evercoin.Tests.dll" shadow-copy="true" />
+    <assembly filename="Evercoin.TransactionScript.Tests\bin\x64\Release\Evercoin.TransactionScript.Tests.dll" shadow-copy="true" />
+    <assembly filename="Evercoin.Algorithms.Tests\bin\x64\Release\Evercoin.Algorithms.Tests.dll" shadow-copy="true" />
+    <assembly filename="Evercoin.Tests\bin\x64\Release\Evercoin.Tests.dll" shadow-copy="true" />
+    <assembly filename="Evercoin.TransactionScript.Tests\bin\IL\Release\Evercoin.TransactionScript.Tests.dll" shadow-copy="true" />
+    <assembly filename="Evercoin.Algorithms.Tests\bin\IL\Release\Evercoin.Algorithms.Tests.dll" shadow-copy="true" />
+    <assembly filename="Evercoin.Tests\bin\IL\Release\Evercoin.Tests.dll" shadow-copy="true" />
   </assemblies>
 </xunit>
