@@ -17,37 +17,37 @@
     <DebugSymbols>true</DebugSymbols>
     <DebugType>full</DebugType>
     <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
+    <OutputPath>bin\IL\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Debug\Evercoin.Algorithms.XML</DocumentationFile>
-    <PlatformTarget>x64</PlatformTarget>
+    <DocumentationFile>bin\IL\Debug\Evercoin.Algorithms.XML</DocumentationFile>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
     <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>bin\IL\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
-    <DocumentationFile>bin\Release\Evercoin.Algorithms.XML</DocumentationFile>
-    <PlatformTarget>x64</PlatformTarget>
+    <DocumentationFile>bin\IL\Release\Evercoin.Algorithms.XML</DocumentationFile>
+    <PlatformTarget>AnyCPU</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
     <DebugSymbols>true</DebugSymbols>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <DocumentationFile>bin\Debug\Evercoin.Algorithms.XML</DocumentationFile>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>TRACE;DEBUG;X64</DefineConstants>
+    <DocumentationFile>bin\x64\Debug\Evercoin.Algorithms.XML</DocumentationFile>
     <DebugType>full</DebugType>
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
-    <OutputPath>bin\Release\</OutputPath>
+    <OutputPath>bin\x64\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
-    <DocumentationFile>bin\Release\Evercoin.Algorithms.XML</DocumentationFile>
+    <DocumentationFile>bin\x64\Release\Evercoin.Algorithms.XML</DocumentationFile>
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x64</PlatformTarget>
@@ -83,13 +83,15 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\external\Secp256k1.NET\Secp256k1.NET.vcxproj">
-      <Project>{fc8f0bd7-6066-4e47-aa84-e48dd0beb46d}</Project>
-      <Name>Secp256k1.NET</Name>
-    </ProjectReference>
     <ProjectReference Include="..\Evercoin\Evercoin.csproj">
       <Project>{C10F2413-4E30-421A-BCFF-2DD813239323}</Project>
       <Name>Evercoin</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup Condition=" '$(Platform)' == 'x64' ">
+    <ProjectReference Include="..\..\external\Secp256k1.NET\Secp256k1.NET.vcxproj">
+      <Project>{fc8f0bd7-6066-4e47-aa84-e48dd0beb46d}</Project>
+      <Name>Secp256k1.NET</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

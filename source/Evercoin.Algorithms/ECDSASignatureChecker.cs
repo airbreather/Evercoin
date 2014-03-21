@@ -6,7 +6,14 @@ using System.Numerics;
 using Evercoin.ProtocolObjects;
 using Evercoin.Util;
 
+using Org.BouncyCastle.Asn1;
+using Org.BouncyCastle.Asn1.Sec;
+using Org.BouncyCastle.Crypto.Parameters;
+using Org.BouncyCastle.Crypto.Signers;
+
+#if X64
 using Secp256k1;
+#endif
 
 namespace Evercoin.Algorithms
 {
@@ -65,8 +72,26 @@ namespace Evercoin.Algorithms
 
             var dataToHash = ByteTwiddling.ConcatenateData(tx.Data, hashTypeBytes);
             var hashedData = this.hashAlgorithm.CalculateHash(dataToHash);
+
+#if X64
             Signatures.VerifyResult result = Signatures.Verify(hashedData, signatureBytes, publicKey.GetArray());
             return result == Signatures.VerifyResult.Verified;
+#else
+            var secp256k1 = SecNamedCurves.GetByName("secp256k1");
+            var ecParams = new ECDomainParameters(secp256k1.Curve, secp256k1.G, secp256k1.N, secp256k1.H);
+            ECPublicKeyParameters par = new ECPublicKeyParameters(secp256k1.Curve.DecodePoint(publicKey.ToArray()), ecParams);
+            ECDsaSigner signer = new ECDsaSigner();
+            signer.Init(false, par);
+            DerInteger r, s;
+            using (Asn1InputStream decoder = new Asn1InputStream(signatureBytes.ToArray()))
+            {
+                DerSequence seq = (DerSequence)decoder.ReadObject();
+                r = (DerInteger)seq[0];
+                s = (DerInteger)seq[1];
+            }
+
+            return signer.VerifySignature(hashedData.ToArray(), r.Value, s.Value);
+#endif
         }
 
         private static byte[] ScriptOpToBytes(TransactionScriptOperation op)
