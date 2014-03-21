@@ -7,10 +7,6 @@ environment, not things related to the current work-in-progress implementations.
 
 1.  Too much repetition in translating byte arrays to/from BigInteger.
     -   A specialized struct should encapsulate this.
-1.  This is currently x64-only.
-    -   I could easily add MSIL support back in if I took advantage of
-        conditional compilation and used platform symbols in
-        ECDSASignatureChecker.
 1.  The version of Rx I use is technically released under a restrictive license.
     -   It's possible to just pull in the Apache-licensed source and build it
         myself.
