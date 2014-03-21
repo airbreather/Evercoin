@@ -79,18 +79,18 @@ namespace Evercoin.Algorithms
 #else
             var secp256k1 = SecNamedCurves.GetByName("secp256k1");
             var ecParams = new ECDomainParameters(secp256k1.Curve, secp256k1.G, secp256k1.N, secp256k1.H);
-            ECPublicKeyParameters par = new ECPublicKeyParameters(secp256k1.Curve.DecodePoint(publicKey.ToArray()), ecParams);
+            ECPublicKeyParameters par = new ECPublicKeyParameters(secp256k1.Curve.DecodePoint(publicKey.GetArray()), ecParams);
             ECDsaSigner signer = new ECDsaSigner();
             signer.Init(false, par);
             DerInteger r, s;
-            using (Asn1InputStream decoder = new Asn1InputStream(signatureBytes.ToArray()))
+            using (Asn1InputStream decoder = new Asn1InputStream(signatureBytes))
             {
                 DerSequence seq = (DerSequence)decoder.ReadObject();
                 r = (DerInteger)seq[0];
                 s = (DerInteger)seq[1];
             }
 
-            return signer.VerifySignature(hashedData.ToArray(), r.Value, s.Value);
+            return signer.VerifySignature(hashedData, r.Value, s.Value);
 #endif
         }
 
