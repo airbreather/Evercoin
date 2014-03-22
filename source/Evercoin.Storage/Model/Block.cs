@@ -16,7 +16,6 @@ namespace Evercoin.Storage.Model
         private const string SerializationName_DifficultyTarget = "DifficultyTarget";
         private const string SerializationName_TransactionIdentifiers = "TransactionIdentifiers";
         private const string SerializationName_Version = "Version";
-        private const string SerializationName_TypedCoinbase = "TypedCoinbase";
 
         public Block()
         {
@@ -32,7 +31,6 @@ namespace Evercoin.Storage.Model
             this.DifficultyTarget = copyFrom.DifficultyTarget;
             this.TransactionIdentifiers = new MerkleTreeNode(copyFrom.TransactionIdentifiers);
             this.Version = copyFrom.Version;
-            this.TypedCoinbase = new ValueSource(copyFrom.Coinbase);
         }
 
         /// <summary>
@@ -90,11 +88,6 @@ namespace Evercoin.Storage.Model
         /// </summary>
         [DataMember(Name = SerializationName_Nonce)]
         public uint Nonce { get; set; }
-
-        [DataMember(Name = SerializationName_TypedCoinbase)]
-        public ValueSource TypedCoinbase { get; set; }
-
-        public IValueSource Coinbase { get { return this.TypedCoinbase; } }
 
         [DataMember(Name = SerializationName_DifficultyTarget)]
         public BigInteger DifficultyTarget { get; set; }

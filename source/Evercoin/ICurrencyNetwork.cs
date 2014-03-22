@@ -90,6 +90,9 @@ namespace Evercoin
         /// <param name="peer">
         /// The peer to request the block offers from.
         /// </param>
+        /// <param name="requestType">
+        /// The request type (headers only or include transactions).
+        /// </param>
         /// <param name="knownBlockIdentifiers">
         /// The blocks that we already know about.
         /// </param>
@@ -101,7 +104,7 @@ namespace Evercoin
         /// completes, observe <see cref="ReceivedInventoryOffers"/>
         /// for responses.
         /// </remarks>
-        Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers);
+        Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, BlockRequestType requestType);
 
         /// <summary>
         /// Asks a connected client to offer us a new pack of blocks.
@@ -111,6 +114,9 @@ namespace Evercoin
         /// </param>
         /// <param name="knownBlockIdentifiers">
         /// The blocks that we already know about.
+        /// </param>
+        /// <param name="requestType">
+        /// The request type (headers only or include transactions).
         /// </param>
         /// <param name="token">
         /// A <see cref="CancellationToken"/> to use to signal cancellation.
@@ -123,7 +129,7 @@ namespace Evercoin
         /// completes, observe <see cref="ReceivedInventoryOffers"/>
         /// for responses.
         /// </remarks>
-        Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, CancellationToken token);
+        Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, BlockRequestType requestType, CancellationToken token);
 
         /// <summary>
         /// Asks connected clients to offer us a new pack

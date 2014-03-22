@@ -18,6 +18,15 @@ namespace Evercoin.ProtocolObjects
             this.LockTime = lockTime;
         }
 
+        public ProtocolTransaction(ProtocolTransaction transaction, BigInteger containingBlockIdentifier)
+        {
+            this.Version = transaction.Version;
+            this.Inputs = transaction.Inputs;
+            this.Outputs = transaction.Outputs.GetArray();
+            this.LockTime = transaction.LockTime;
+            this.ContainingBlockIdentifier = containingBlockIdentifier;
+        }
+
         public uint Version { get; private set; }
 
         public ProtocolTxIn[] Inputs { get; private set; }
@@ -27,6 +36,8 @@ namespace Evercoin.ProtocolObjects
         public uint LockTime { get; private set; }
 
         public BigInteger TxId { get; private set; }
+
+        public BigInteger ContainingBlockIdentifier { get; private set; }
 
         public void CalculateTxId(IHashAlgorithm alg)
         {
@@ -60,7 +71,7 @@ namespace Evercoin.ProtocolObjects
             }
         }
 
-        public ITransaction ToTransaction(IDictionary<BigInteger, ITransaction> prevTransactions, IBlock spendingBlock)
+        public ITransaction ToTransaction(IDictionary<BigInteger, ITransaction> prevTransactions)
         {
             return new TypedTransaction
             {
@@ -73,7 +84,13 @@ namespace Evercoin.ProtocolObjects
                                                           SpendingTransactionIdentifier = this.TxId,
                                                           SpendingTransactionInputIndex = (uint)n,
                                                           SpendingValueSource = x.PrevOutTxId.IsZero ?
-                                                                                spendingBlock.Coinbase :
+                                                                                new TypedValueSource
+                                                                                {
+                                                                                    AvailableValue = this.Outputs.Sum(o => o.ValueInSatoshis),
+                                                                                    OriginatingTransactionIdentifier = BigInteger.Zero,
+                                                                                    OriginatingTransactionOutputIndex = 0,
+                                                                                    ScriptPublicKey = new byte[0]
+                                                                                } :
                                                                                 prevTransactions[x.PrevOutTxId].Outputs[(int)x.PrevOutN]
                                                       }).GetArray<IValueSpender>(),
                 Outputs = this.Outputs.Select((x, n) => new TypedValueSource
@@ -84,6 +101,23 @@ namespace Evercoin.ProtocolObjects
                                                             ScriptPublicKey = x.ScriptPubKey
                                                         }).GetArray<IValueSource>()
             };
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(this, obj))
+            {
+                return true;
+            }
+
+            ProtocolTransaction other = obj as ProtocolTransaction;
+            return other != null &&
+                   this.Data.SequenceEqual(other.Data);
+        }
+
+        public override int GetHashCode()
+        {
+            return this.Data.Aggregate(new HashCodeBuilder(), (prevBuilder, nextByte) => prevBuilder.HashWith(nextByte));
         }
     }
 }

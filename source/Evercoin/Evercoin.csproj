@@ -85,6 +85,7 @@
     <Compile Include="BaseImplementations\HashAlgorithmStoreBase.cs" />
     <Compile Include="BaseImplementations\ReadWriteChainStoreBase.cs" />
     <Compile Include="BaseImplementations\TransactionScriptRunnerBase.cs" />
+    <Compile Include="BlockRequestType.cs" />
     <Compile Include="ConnectionDirection.cs" />
     <Compile Include="DisposableObject.cs" />
     <Compile Include="Extensions.cs" />
@@ -127,6 +128,7 @@
     <Compile Include="SecurityMechanism.cs" />
     <Compile Include="Util\Cheating.cs" />
     <Compile Include="Util\HashCodeBuilder.cs" />
+    <Compile Include="Util\Waiter.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

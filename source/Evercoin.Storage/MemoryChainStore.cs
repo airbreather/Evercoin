@@ -1,9 +1,8 @@
-﻿using System.Collections.Concurrent;
+﻿using System;
+using System.Collections.Concurrent;
 using System.ComponentModel.Composition;
 using System.Linq;
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 
 using Evercoin.BaseImplementations;
 using Evercoin.Storage.Model;
@@ -11,12 +10,14 @@ using Evercoin.Util;
 
 namespace Evercoin.Storage
 {
-    ////[Export(typeof(IChainStore))]
-    ////[Export(typeof(IReadableChainStore))]
+    [Export(typeof(IChainStore))]
+    [Export(typeof(IReadableChainStore))]
     public sealed class MemoryChainStore : ReadWriteChainStoreBase
     {
         private readonly ConcurrentDictionary<BigInteger, IBlock> blocks = new ConcurrentDictionary<BigInteger, IBlock>();
         private readonly ConcurrentDictionary<BigInteger, ITransaction> transactions = new ConcurrentDictionary<BigInteger, ITransaction>();
+        private readonly Waiter<BigInteger> blockWaiter = new Waiter<BigInteger>();
+        private readonly Waiter<BigInteger> txWaiter = new Waiter<BigInteger>();
 
         public MemoryChainStore()
         {
@@ -24,38 +25,22 @@ namespace Evercoin.Storage
             Block genesisBlock = new Block
             {
                 Identifier = genesisBlockIdentifier,
-                TypedCoinbase = new ValueSource
-                {
-                    AvailableValue = 50
-                },
                 TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").Reverse().GetArray() }
             };
             this.PutBlock(genesisBlockIdentifier, genesisBlock);
-            Cheating.Add(0, genesisBlockIdentifier);
+            Cheating.AddBlock(0, genesisBlockIdentifier);
         }
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
         {
-            SpinWait waiter = new SpinWait();
-            IBlock block;
-            while (!this.blocks.TryGetValue(blockIdentifier, out block))
-            {
-                waiter.SpinOnce();
-            }
-
-            return block;
+            this.blockWaiter.WaitFor(blockIdentifier);
+            return this.blocks[blockIdentifier];
         }
 
         protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
         {
-            SpinWait waiter = new SpinWait();
-            ITransaction transaction;
-            while (!this.transactions.TryGetValue(transactionIdentifier, out transaction))
-            {
-                waiter.SpinOnce();
-            }
-
-            return transaction;
+            this.txWaiter.WaitFor(transactionIdentifier);
+            return this.transactions[transactionIdentifier];
         }
 
         protected override bool ContainsBlockCore(BigInteger blockIdentifier)
@@ -68,19 +53,10 @@ namespace Evercoin.Storage
             return this.transactions.ContainsKey(transactionIdentifier);
         }
 
-        protected override async Task<bool> ContainsBlockAsyncCore(BigInteger blockIdentifier, CancellationToken token)
-        {
-            return await Task.Run(() => this.ContainsBlockCore(blockIdentifier), token);
-        }
-
-        protected override async Task<bool> ContainsTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
-        {
-            return await Task.Run(() => this.ContainsTransactionCore(transactionIdentifier), token);
-        }
-
         protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
         {
             this.blocks[blockIdentifier] = block;
+            this.blockWaiter.SetEventFor(blockIdentifier);
         }
 
         protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
@@ -88,6 +64,18 @@ namespace Evercoin.Storage
             // TODO: coinbases can have duplicate transaction IDs before version 2.
             // TODO: Figure that shiz out!
             this.transactions[transactionIdentifier] = transaction;
+            this.txWaiter.SetEventFor(transactionIdentifier);
+        }
+
+        /// <summary>
+        /// When overridden in a derived class, releases managed resources that
+        /// implement the <see cref="IDisposable"/> interface.
+        /// </summary>
+        protected override void DisposeManagedResources()
+        {
+            this.blockWaiter.Dispose();
+            this.txWaiter.Dispose();
+            base.DisposeManagedResources();
         }
     }
 }

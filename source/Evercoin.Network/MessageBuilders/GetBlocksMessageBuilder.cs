@@ -12,6 +12,7 @@ namespace Evercoin.Network.MessageBuilders
     internal sealed class GetBlocksMessageBuilder
     {
         private const string GetBlocksText = "getblocks";
+        private const string GetHeadersText = "getheaders";
         private static readonly Encoding CommandEncoding = Encoding.ASCII;
 
         private readonly IRawNetwork network;
@@ -25,18 +26,35 @@ namespace Evercoin.Network.MessageBuilders
                 throw new ArgumentException("Command length is too short for the \"getblocks\" command.", "network");
             }
 
+            if (network.Parameters.CommandLengthInBytes < CommandEncoding.GetByteCount(GetHeadersText))
+            {
+                throw new ArgumentException("Command length is too short for the \"getheaders\" command.", "network");
+            }
+
             this.network = network;
             this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
         public INetworkMessage BuildGetBlocksMessage(INetworkPeer peer,
                                                      IEnumerable<BigInteger> knownHashes,
-                                                     BigInteger lastKnownHash)
+                                                     BigInteger lastKnownHash,
+                                                     BlockRequestType requestType)
         {
             Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, peer);
 
             byte[] commandBytes = new byte[this.network.Parameters.CommandLengthInBytes];
-            byte[] unpaddedCommandBytes = CommandEncoding.GetBytes(GetBlocksText);
+            byte[] unpaddedCommandBytes;
+            switch (requestType)
+            {
+                case BlockRequestType.HeadersOnly:
+                    unpaddedCommandBytes = CommandEncoding.GetBytes(GetHeadersText);
+                    break;
+
+                default:
+                    unpaddedCommandBytes = CommandEncoding.GetBytes(GetBlocksText);
+                    break;
+            }
+
             Array.Copy(unpaddedCommandBytes, commandBytes, unpaddedCommandBytes.Length);
 
             uint protocolVersion = (uint)this.network.Parameters.ProtocolVersion;

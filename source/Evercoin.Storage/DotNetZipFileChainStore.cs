@@ -59,15 +59,11 @@ namespace Evercoin.Storage
                     Block genesisBlock = new Block
                                          {
                                              Identifier = genesisBlockIdentifier,
-                                             TypedCoinbase = new ValueSource
-                                                             {
-                                                                 AvailableValue = 50
-                                                             },
                                              TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").Reverse().GetArray() }
                                          };
                     this.PutBlock(genesisBlockIdentifier, genesisBlock);
                     this.Save();
-                    Cheating.Add(0, genesisBlockIdentifier);
+                    Cheating.AddBlock(0, genesisBlockIdentifier);
                 }
                 else
                 {
@@ -93,7 +89,7 @@ namespace Evercoin.Storage
                             break;
                         }
 
-                        Cheating.Add(i, blockId);
+                        Cheating.AddBlock(i, blockId);
                         prevBlockId = blockId;
                     }
                 }

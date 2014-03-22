@@ -4,11 +4,14 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Numerics;
+using System.Reactive.Concurrency;
+using System.Reactive.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Evercoin.ProtocolObjects;
 using Evercoin.Util;
+
 
 using NodaTime;
 
@@ -34,11 +37,65 @@ namespace Evercoin.App
 
         public async Task Run(CancellationToken token)
         {
+            token.Register(Cheating.DisposeThings);
             ConcurrentDictionary<ProtocolInventoryVector, ProtocolInventoryVector> knownInventory = new ConcurrentDictionary<ProtocolInventoryVector, ProtocolInventoryVector>(Cheating.GetBlockIdentifiers().ToDictionary(x => new ProtocolInventoryVector(ProtocolInventoryVector.InventoryType.Block, x), x => new ProtocolInventoryVector(ProtocolInventoryVector.InventoryType.Block, x)));
             List<IPEndPoint> endPoints = new List<IPEndPoint>
                                          {
                                              new IPEndPoint(IPAddress.Loopback, 8333),
                                          };
+
+            this.network.ReceivedVersionPackets.Subscribe(async x => await this.network.AcknowledgePeerVersionAsync(x.Item1, token));
+            this.network.ReceivedInventoryOffers.Subscribe(async x => await this.network.RequestInventoryAsync(x.Item2.Where(y => knownInventory.TryAdd(y, y)), token));
+            this.network.ReceivedBlocks.ObserveOn(TaskPoolScheduler.Default).Subscribe(async x => await this.HandleBlock(x.Item2, token));
+            this.network.ReceivedTransactions.ObserveOn(TaskPoolScheduler.Default).Subscribe(async x => await this.HandleTransaction(x.Item2, token));
+
+            this.network.ReceivedVersionAcknowledgements.Subscribe
+            (
+                async x =>
+                {
+                    int startingBlockHeight = Cheating.GetHighestBlock();
+                    int currentBlockHeight = startingBlockHeight;
+                    bool started = false;
+                    const int CurrentHighestBlockBecauseIAmCheating = 291890;
+
+                    // Start by pulling all the headers
+                    while (!token.IsCancellationRequested &&
+                           currentBlockHeight < CurrentHighestBlockBecauseIAmCheating)
+                    {
+                        if (started)
+                        {
+                            await Task.Run(() => SpinWait.SpinUntil(() => token.IsCancellationRequested ||
+                                                                          currentBlockHeight >= CurrentHighestBlockBecauseIAmCheating ||
+                                                                          (startingBlockHeight - (currentBlockHeight = Cheating.GetHighestBlock())) % 2000 == 0),
+                                token);
+                        }
+
+                        started = true;
+                        await this.network.RequestBlockOffersAsync(x, Cheating.GetBlockIdentifiers(), BlockRequestType.HeadersOnly, token);
+
+                        if (currentBlockHeight >= CurrentHighestBlockBecauseIAmCheating)
+                        {
+                            break;
+                        }
+
+                        await Task.Run(() => SpinWait.SpinUntil(() => token.IsCancellationRequested || currentBlockHeight >= CurrentHighestBlockBecauseIAmCheating || currentBlockHeight != (currentBlockHeight = Cheating.GetHighestBlock())), token);
+                    }
+
+                    // Now, get all the transactions.
+                    int i = 1;
+                    while (true)
+                    {
+                        await this.network.RequestBlockOffersAsync(x, Cheating.GetBlockIdentifiers().Take(i), BlockRequestType.IncludeTransactions, token);
+                        if (i == Cheating.GetHighestBlock())
+                        {
+                            break;
+                        }
+
+                        i += 500;
+                        i = Math.Min(i, Cheating.GetHighestBlock());
+                    }
+                }
+            );
 
             this.network.PeerConnections.Subscribe
             (
@@ -53,184 +110,133 @@ namespace Evercoin.App
                 }
             );
 
-            this.network.ReceivedVersionPackets.Subscribe
-            (
-                async x =>
-                {
-                    INetworkPeer peer = x.Item1;
-                    ////ProtocolVersionPacket versionPacket = x.Item2;
-
-                    await this.network.AcknowledgePeerVersionAsync(peer, token);
-                }
-            );
-
-            this.network.ReceivedVersionAcknowledgements.Subscribe
-            (
-                async x =>
-                {
-                    SpinWait spinner = new SpinWait();
-                    int startingCount = Cheating.GetBlockIdentifierCount();
-                    int prev = -1;
-                    try
-                    {
-                        while (!token.IsCancellationRequested)
-                        {
-                            var blidCount = Cheating.GetBlockIdentifierCount();
-                            if ((blidCount - startingCount) % 500 == 0 &&
-                                blidCount != prev)
-                            {
-                                prev = blidCount;
-                                await this.network.RequestBlockOffersAsync(x, Cheating.GetBlockIdentifiers(), token);
-                                spinner.Reset();
-                            }
-
-                            spinner.SpinOnce();
-                        }
-                    }
-                    catch (OperationCanceledException)
-                    {
-                    }
-                }
-            );
-
-            this.network.ReceivedInventoryOffers.Subscribe(async x => await this.network.RequestInventoryAsync(x.Item2.Where(y => knownInventory.TryAdd(y, y)), token));
-
-            this.network.ReceivedBlocks.Subscribe(async x =>
-            {
-                bool isHandled = await this.HandleBlock(x.Item2, token);
-                if (isHandled)
-                {
-                    Console.Write("\r({0})", Cheating.GetBlockIdentifierCount());
-                }
-            });
-
             try
             {
                 this.network.Start(token);
                 await Task.WhenAll(endPoints.Select(endPoint => this.network.ConnectToPeerAsync(new ProtocolNetworkAddress(null, 1, endPoint.Address, (ushort)endPoint.Port), token)));
+                await Task.Run
+                (
+                    async () =>
+                    {
+                        int prevBlockIdCount = -1;
+                        int prevTransactionIdCount = -1;
+                        while (!token.IsCancellationRequested)
+                        {
+                            Console.Write("\rBlocks: ({0,8}) // Transactions: ({1,8})", Cheating.GetHighestBlock(), Cheating.GetTransactionIdentifierCount());
+                            await Task.Run(() => SpinWait.SpinUntil(() => token.IsCancellationRequested || prevTransactionIdCount != (prevTransactionIdCount = Cheating.GetTransactionIdentifierCount()) || prevBlockIdCount != (prevBlockIdCount = Cheating.GetBlockIdentifierCount())), token);
+                        }
+                    },
+                    token
+                );
             }
             catch (OperationCanceledException)
             {
             }
         }
 
-        private async Task<bool> HandleBlock(ProtocolBlock block, CancellationToken token)
+        private async Task HandleBlock(ProtocolBlock block, CancellationToken token)
         {
-            // This is important to do now -- for some reason, the Satoshi client gives us recent blocks even when we're building from the genesis block!
-            // So, one thing we REALLY don't want to do is to fetch all the old transactions!
-            ProtocolTxIn cb = block.IncludedTransactions[0].Inputs[0];
-            if (block.Version > 1 && cb.ScriptSig[0] == 3)
-            {
-                byte[] serializedHeight = cb.ScriptSig.Skip(1).Take(3).GetArray();
-                Array.Resize(ref serializedHeight, 4);
-
-                uint probableHeight = BitConverter.ToUInt32(serializedHeight.LittleEndianToOrFromBitConverterEndianness(), 0);
-                if (probableHeight - Cheating.GetBlockIdentifierCount() > 1000)
-                {
-                    // So we've got a block message from a recent block.
-                    // Don't waste any more time on it than we have.
-                    return false;
-                }
-            }
-
             Task<int> prevBlockHeightGetter = Cheating.GetBlockHeightAsync(block.PrevBlockId, token);
             byte[] dataToHash = block.HeaderData;
-
             IHashAlgorithm blockHashAlgorithm = this.network.CurrencyParameters.HashAlgorithmStore.GetHashAlgorithm(this.network.CurrencyParameters.ChainParameters.BlockHashAlgorithmIdentifier);
-            IHashAlgorithm txHashAlgorithm = this.network.CurrencyParameters.HashAlgorithmStore.GetHashAlgorithm(this.network.CurrencyParameters.ChainParameters.TransactionHashAlgorithmIdentifier);
             byte[] blockHash = blockHashAlgorithm.CalculateHash(dataToHash);
             BigInteger blockIdentifier = new BigInteger(blockHash);
 
-            HashSet<BigInteger> includedTxIds = new HashSet<BigInteger>();
-            foreach (ProtocolTransaction includedTransaction in block.IncludedTransactions)
+            if (this.chainStore.ContainsBlock(blockIdentifier))
             {
-                includedTransaction.CalculateTxId(txHashAlgorithm);
-                includedTxIds.Add(includedTransaction.TxId);
+                return;
             }
 
-            List<BigInteger> neededTxIds = block.IncludedTransactions.SelectMany(x => x.Inputs).Select(x => x.PrevOutTxId).Where(x => !x.IsZero && !includedTxIds.Contains(x)).Distinct().ToList();
-            Dictionary<BigInteger, Task<ITransaction>> neededTransactionFetchers = neededTxIds.ToDictionary(x => x, x => this.chainStore.GetTransactionAsync(x, token));
-
-            IBlock typedBlock = block.ToBlock(blockIdentifier, blockHashAlgorithm);
+            IHashAlgorithm txHashAlgorithm = this.network.CurrencyParameters.HashAlgorithmStore.GetHashAlgorithm(this.network.CurrencyParameters.ChainParameters.TransactionHashAlgorithmIdentifier);
+            IBlock typedBlock = block.ToBlock(txHashAlgorithm);
             if (blockIdentifier >= typedBlock.DifficultyTarget)
             {
-                return false;
+                return;
             }
 
-            if (!typedBlock.TransactionIdentifiers.Data.SequenceEqual(block.MerkleRoot.ToLittleEndianUInt256Array()))
+            await this.chainStore.PutBlockAsync(blockIdentifier, typedBlock, token);
+            int prevBlockHeight = await prevBlockHeightGetter;
+
+            Cheating.AddBlock(prevBlockHeight + 1, blockIdentifier);
+        }
+
+        private async Task HandleTransaction(ProtocolTransaction transaction, CancellationToken token)
+        {
+            if (transaction.ContainingBlockIdentifier.IsZero)
             {
-                return false;
+                // TODO: obviously, this will fail on transactions not yet in the blockchain.
+                return;
             }
 
-            Dictionary<BigInteger, ITransaction> allValidInputTransactions = neededTransactionFetchers.ToDictionary(x => x.Key, x => x.Value.Result);
-            foreach (ProtocolTransaction protoTransaction in block.IncludedTransactions)
+            if (!this.chainStore.ContainsBlock(transaction.ContainingBlockIdentifier) ||
+                !Cheating.GetBlockIdentifiers().Contains(transaction.ContainingBlockIdentifier))
             {
-                ITransaction tx = protoTransaction.ToTransaction(allValidInputTransactions, typedBlock);
-                allValidInputTransactions[protoTransaction.TxId] = tx;
+                // I don't think this will actually happen...
+                return;
             }
+
+            Dictionary<BigInteger, ITransaction> allValidInputTransactions = new Dictionary<BigInteger, ITransaction>();
+            foreach (BigInteger neededTxId in transaction.Inputs.Select(x => x.PrevOutTxId).Where(x => !x.IsZero).Distinct())
+            {
+                Task<ITransaction> prevTransaction = this.chainStore.GetTransactionAsync(neededTxId, token);
+                allValidInputTransactions[neededTxId] = await prevTransaction;
+            }
+
+            IHashAlgorithm txHashAlgorithm = this.network.CurrencyParameters.HashAlgorithmStore.GetHashAlgorithm(this.network.CurrencyParameters.ChainParameters.TransactionHashAlgorithmIdentifier);
+            transaction.CalculateTxId(txHashAlgorithm);
+            BigInteger transactionIdentifier = transaction.TxId;
+
+            if (this.chainStore.ContainsTransaction(transactionIdentifier))
+            {
+                return;
+            }
+
+            ITransaction tx = transaction.ToTransaction(allValidInputTransactions);
 
             ParallelOptions options = new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = Environment.ProcessorCount };
-            ParallelLoopResult validationResult = Parallel.ForEach(block.IncludedTransactions, options, (protoTransaction, loopStateOuter) =>
+            ParallelLoopResult validationResult = Parallel.For(0, tx.Inputs.Length, options, (i, loopState) =>
             {
-                ITransaction tx = allValidInputTransactions[protoTransaction.TxId];
-
-                Parallel.For(0, tx.Inputs.Length, options, (i, loopStateInner) =>
-                {
-                    if (loopStateOuter.IsStopped)
-                    {
-                        return;
-                    }
-
-                    var input = tx.Inputs[i];
-
-                    if (input.SpendingValueSource.IsCoinbase)
-                    {
-                        return;
-                    }
-
-                    byte[] scriptSig = input.ScriptSignature;
-                    ISignatureChecker signatureChecker = this.signatureCheckerFactory.CreateSignatureChecker(tx, i);
-                    var result = this.scriptRunner.EvaluateScript(scriptSig, signatureChecker);
-                    if (!result)
-                    {
-                        loopStateOuter.Stop();
-                        loopStateInner.Stop();
-                        return;
-                    }
-
-                    if (loopStateOuter.IsStopped)
-                    {
-                        return;
-                    }
-
-                    byte[] scriptPubKey = allValidInputTransactions[input.SpendingValueSource.OriginatingTransactionIdentifier].Outputs[(int)input.SpendingValueSource.OriginatingTransactionOutputIndex].ScriptPublicKey;
-
-                    if (!this.scriptRunner.EvaluateScript(scriptPubKey, signatureChecker, result.MainStack, result.AlternateStack))
-                    {
-                        loopStateOuter.Stop();
-                        loopStateInner.Stop();
-                    }
-                });
-
-                if (loopStateOuter.IsStopped)
+                if (loopState.IsStopped)
                 {
                     return;
                 }
 
-                this.chainStore.PutTransactionAsync(protoTransaction.TxId, tx, token);
+                var input = tx.Inputs[i];
+
+                if (input.SpendingValueSource.IsCoinbase)
+                {
+                    return;
+                }
+
+                byte[] scriptSig = input.ScriptSignature;
+                ISignatureChecker signatureChecker = this.signatureCheckerFactory.CreateSignatureChecker(tx, i);
+                var result = this.scriptRunner.EvaluateScript(scriptSig, signatureChecker);
+                if (!result)
+                {
+                    loopState.Stop();
+                }
+
+                if (loopState.IsStopped)
+                {
+                    return;
+                }
+
+                byte[] scriptPubKey = allValidInputTransactions[input.SpendingValueSource.OriginatingTransactionIdentifier].Outputs[(int)input.SpendingValueSource.OriginatingTransactionOutputIndex].ScriptPublicKey;
+
+                if (!this.scriptRunner.EvaluateScript(scriptPubKey, signatureChecker, result.MainStack, result.AlternateStack))
+                {
+                    loopState.Stop();
+                }
             });
 
             if (!validationResult.IsCompleted)
             {
-                return false;
+                Console.WriteLine("Invalid transaction in the blockchain!  Alert!  Alert!");
+                return;
             }
 
-            int prevBlockHeight = await prevBlockHeightGetter;
-            Cheating.Add(prevBlockHeight + 1, blockIdentifier);
-
-            await this.chainStore.PutBlockAsync(blockIdentifier, typedBlock, token);
-
-            return true;
+            await this.chainStore.PutTransactionAsync(transactionIdentifier, tx, token);
+            Cheating.AddTransaction(transactionIdentifier);
         }
     }
 }

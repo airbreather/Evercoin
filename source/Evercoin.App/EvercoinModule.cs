@@ -49,7 +49,6 @@ namespace Evercoin.App
             genesisBlock.Setup(x => x.DifficultyTarget).Returns(maximumTarget);
             genesisBlock.Setup(x => x.Nonce).Returns(2083236893);
             genesisBlock.Setup(x => x.Timestamp).Returns(Instant.FromSecondsSinceUnixEpoch(1231006505));
-            genesisBlock.Setup(x => x.Coinbase).Returns(coinbase.Object);
             genesisBlock.Setup(x => x.TransactionIdentifiers).Returns(transactionIdentifiers.Object);
 
             this.Bind<IReadableChainStore>().ToConstant(this.underlyingChainStorage);

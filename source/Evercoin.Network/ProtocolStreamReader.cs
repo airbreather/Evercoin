@@ -77,7 +77,7 @@ namespace Evercoin.Network
             return this.ReadTransactionAsyncCore(token);
         }
 
-        public Task<ProtocolBlock> ReadBlockAsync(CancellationToken token)
+        public Task<Tuple<ProtocolBlock, IEnumerable<ProtocolTransaction>>> ReadBlockAsync(CancellationToken token)
         {
             return this.ReadBlockAsyncCore(token);
         }
@@ -286,7 +286,7 @@ namespace Evercoin.Network
             return new ProtocolTxOut(valueInSatoshis, scriptPubKey);
         }
 
-        private async Task<ProtocolBlock> ReadBlockAsyncCore(CancellationToken token)
+        private async Task<Tuple<ProtocolBlock, IEnumerable<ProtocolTransaction>>> ReadBlockAsyncCore(CancellationToken token)
         {
             uint version = await this.ReadUInt32AsyncCore(token);
             BigInteger prevBlockId = await this.ReadUInt256AsyncCore(token);
@@ -305,7 +305,7 @@ namespace Evercoin.Network
                 includedTransactions[transactionIndex++] = nextTransaction;
             }
 
-            return new ProtocolBlock(version, prevBlockId, merkleRoot, timestamp, bits, nonce, includedTransactions);
+            return Tuple.Create(new ProtocolBlock(version, prevBlockId, merkleRoot, timestamp, bits, nonce), includedTransactions.AsEnumerable());
         }
 
         private async Task<ProtocolTransaction> ReadTransactionAsyncCore(CancellationToken token)

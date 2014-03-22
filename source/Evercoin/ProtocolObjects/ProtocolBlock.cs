@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
@@ -24,9 +23,7 @@ namespace Evercoin.ProtocolObjects
 
         private readonly uint nonce;
 
-        private readonly ProtocolTransaction[] includedTransactions;
-
-        public ProtocolBlock(uint version, BigInteger prevBlockId, BigInteger merkleRoot, uint timestamp, uint bits, uint nonce, IEnumerable<ProtocolTransaction> includedTransactions)
+        public ProtocolBlock(uint version, BigInteger prevBlockId, BigInteger merkleRoot, uint timestamp, uint bits, uint nonce)
         {
             this.version = version;
             this.prevBlockId = prevBlockId;
@@ -34,7 +31,6 @@ namespace Evercoin.ProtocolObjects
             this.timestamp = timestamp;
             this.bits = bits;
             this.nonce = nonce;
-            this.includedTransactions = includedTransactions.GetArray();
         }
 
         public byte[] HeaderData
@@ -52,21 +48,6 @@ namespace Evercoin.ProtocolObjects
             }
         }
 
-        public byte[] Data
-        {
-            get
-            {
-                byte[] headerData = this.HeaderData;
-
-                byte[] transactionCountBytes = ((ProtocolCompactSize)(ulong)this.IncludedTransactions.Length).Data;
-                IEnumerable<byte[]> transactionDataSources = this.IncludedTransactions.Select(x => x.Data);
-
-                byte[] transactionData = ByteTwiddling.ConcatenateData(transactionDataSources);
-
-                return ByteTwiddling.ConcatenateData(headerData, transactionCountBytes, transactionData);
-            }
-        }
-
         public uint Version { get { return this.version; } }
 
         public BigInteger PrevBlockId  { get { return this.prevBlockId; } }
@@ -79,23 +60,15 @@ namespace Evercoin.ProtocolObjects
 
         public uint Nonce { get { return this.nonce; } }
 
-        public ProtocolTransaction[] IncludedTransactions { get { return this.includedTransactions; } }
-
-        public IBlock ToBlock(BigInteger blockIdentifier, IHashAlgorithm transactionHashAlgorithm)
+        public IBlock ToBlock(IHashAlgorithm transactionHashAlgorithm)
         {
-            foreach (ProtocolTransaction transaction in this.includedTransactions)
-            {
-                transaction.CalculateTxId(transactionHashAlgorithm);
-            }
-
             return new TypedBlock
             {
-                Coinbase = new TypedValueSource { AvailableValue = this.IncludedTransactions[0].Outputs.Sum(x => x.ValueInSatoshis) },
                 DifficultyTarget = TargetFromBits(this.Bits),
                 Nonce = this.Nonce,
                 PreviousBlockIdentifier = this.PrevBlockId,
                 Timestamp = Instant.FromSecondsSinceUnixEpoch(this.Timestamp),
-                TransactionIdentifiers = this.IncludedTransactions.Select(x => x.TxId.ToLittleEndianUInt256Array()).ToMerkleTree(transactionHashAlgorithm),
+                TransactionIdentifiers = new[] { this.MerkleRoot.ToLittleEndianUInt256Array() }.ToMerkleTree(transactionHashAlgorithm),
                 Version = this.Version
             };
         }
@@ -124,6 +97,23 @@ namespace Evercoin.ProtocolObjects
             }
 
             return result;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(this, obj))
+            {
+                return true;
+            }
+
+            ProtocolBlock other = obj as ProtocolBlock;
+            return other != null &&
+                   this.HeaderData.SequenceEqual(other.HeaderData);
+        }
+
+        public override int GetHashCode()
+        {
+            return this.HeaderData.Aggregate(new HashCodeBuilder(), (prevBuilder, nextByte) => prevBuilder.HashWith(nextByte));
         }
     }
 }

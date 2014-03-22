@@ -10,32 +10,48 @@ namespace Evercoin.Util
     public static class Cheating
     {
         private static int blockCount = 0;
+        private static int txCount = 0;
+        private static int highestBlock = 0;
+
         private static readonly object syncLock = new object();
-        private static readonly Dictionary<BigInteger, int> IdToHeight = new Dictionary<BigInteger, int>(300000);
-        private static readonly Dictionary<BigInteger, ManualResetEventSlim> IdWaiters = new Dictionary<BigInteger, ManualResetEventSlim>(300000);
+        private static readonly Dictionary<BigInteger, int> IdToHeight = new Dictionary<BigInteger, int>();
+        private static readonly Waiter<BigInteger> BlockWaiter = new Waiter<BigInteger>();
 
         private static BigInteger[] BlockIdentifiers = new BigInteger[0];
+        private static BigInteger[] TransactionIdentifiers = new BigInteger[0];
 
-        public static void Add(int height, BigInteger blockIdentifier)
+        public static void AddBlock(int height, BigInteger blockIdentifier)
         {
             lock (syncLock)
             {
                 if (BlockIdentifiers.Length < height + 1)
                 {
-                    Array.Resize(ref BlockIdentifiers, height + 300000);
+                    Array.Resize(ref BlockIdentifiers, height + 600000);
                 }
+
+                highestBlock = Math.Max(highestBlock, height);
 
                 BlockIdentifiers[height] = blockIdentifier;
                 IdToHeight[blockIdentifier] = height;
 
-                ManualResetEventSlim mres;
-                if (!IdWaiters.TryGetValue(blockIdentifier, out mres))
+                BlockWaiter.SetEventFor(blockIdentifier);
+
+                blockCount++;
+            }
+        }
+
+        public static void AddTransaction(BigInteger transactionIdentifier)
+        {
+            lock (syncLock)
+            {
+                txCount++;
+
+                if (TransactionIdentifiers.Length < txCount + 1)
                 {
-                    IdWaiters[blockIdentifier] = mres = new ManualResetEventSlim();
+                    Array.Resize(ref TransactionIdentifiers, txCount + 600000);
                 }
 
-                mres.Set();
-                blockCount++;
+                TransactionIdentifiers[txCount] = transactionIdentifier;
             }
         }
 
@@ -52,28 +68,29 @@ namespace Evercoin.Util
             return blockCount;
         }
 
+        public static int GetHighestBlock()
+        {
+            return highestBlock;
+        }
+
+        public static int GetTransactionIdentifierCount()
+        {
+            return txCount;
+        }
+
         public static async Task<int> GetBlockHeightAsync(BigInteger blockIdentifier, CancellationToken token)
         {
-            int height;
-            if (IdToHeight.TryGetValue(blockIdentifier, out height))
-            {
-                return height;
-            }
+            await Task.Run(() => BlockWaiter.WaitFor(blockIdentifier, token), token);
 
-            ManualResetEventSlim mres;
-            lock (syncLock)
-            {
-                if (!IdWaiters.TryGetValue(blockIdentifier, out mres))
-                {
-                    IdWaiters[blockIdentifier] = mres = new ManualResetEventSlim();
-                }
-            }
-
-            await Task.Run(() => mres.Wait(token), token);
             lock (syncLock)
             {
                 return IdToHeight[blockIdentifier];
             }
+        }
+
+        public static void DisposeThings()
+        {
+            BlockWaiter.Dispose();
         }
 
         public static IMerkleTreeNode ToMerkleTree(this IEnumerable<IEnumerable<byte>> inputs, IHashAlgorithm hashAlgorithm)

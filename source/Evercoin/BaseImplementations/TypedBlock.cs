@@ -31,12 +31,6 @@ namespace Evercoin.BaseImplementations
         public uint Nonce { get; set; }
 
         /// <summary>
-        /// Gets the <see cref="IValueSource"/> that represents the
-        /// reward for mining this block.
-        /// </summary>
-        public IValueSource Coinbase { get; set; }
-
-        /// <summary>
         /// Gets the difficulty target being used for this block.
         /// </summary>
         public BigInteger DifficultyTarget { get; set; }
@@ -73,7 +67,6 @@ namespace Evercoin.BaseImplementations
             }
 
             return other != null &&
-                   Equals(this.Coinbase, other.Coinbase) &&
                    this.Timestamp == other.Timestamp &&
                    this.Nonce == other.Nonce &&
                    this.PreviousBlockIdentifier == other.PreviousBlockIdentifier &&
@@ -91,7 +84,6 @@ namespace Evercoin.BaseImplementations
         public override int GetHashCode()
         {
             HashCodeBuilder builder = new HashCodeBuilder()
-                .HashWith(this.Coinbase)
                 .HashWith(this.Timestamp)
                 .HashWith(this.Nonce)
                 .HashWith(this.PreviousBlockIdentifier)

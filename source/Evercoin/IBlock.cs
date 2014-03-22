@@ -35,12 +35,6 @@ namespace Evercoin
         uint Nonce { get; }
 
         /// <summary>
-        /// Gets the <see cref="IValueSource"/> that represents the
-        /// reward for mining this block.
-        /// </summary>
-        IValueSource Coinbase { get; }
-
-        /// <summary>
         /// Gets the difficulty target being used for this block.
         /// </summary>
         BigInteger DifficultyTarget { get; }

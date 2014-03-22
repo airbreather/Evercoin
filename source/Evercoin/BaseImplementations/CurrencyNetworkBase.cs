@@ -78,6 +78,9 @@ namespace Evercoin.BaseImplementations
         /// <param name="knownBlockIdentifiers">
         /// The blocks that we already know about.
         /// </param>
+        /// <param name="requestType">
+        /// The request type (headers only or include transactions).
+        /// </param>
         /// <returns>
         /// A task that encapsulates the request.
         /// </returns>
@@ -86,9 +89,9 @@ namespace Evercoin.BaseImplementations
         /// completes, observe <see cref="ReceivedInventoryOffers"/>
         /// for responses.
         /// </remarks>
-        public virtual Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers)
+        public virtual Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, BlockRequestType requestType)
         {
-            return this.RequestBlockOffersAsync(peer, knownBlockIdentifiers, CancellationToken.None);
+            return this.RequestBlockOffersAsync(peer, knownBlockIdentifiers, requestType, CancellationToken.None);
         }
 
         /// <summary>
@@ -99,6 +102,9 @@ namespace Evercoin.BaseImplementations
         /// </param>
         /// <param name="knownBlockIdentifiers">
         /// The blocks that we already know about.
+        /// </param>
+        /// <param name="requestType">
+        /// The request type (headers only or include transactions).
         /// </param>
         /// <param name="token">
         /// A <see cref="CancellationToken"/> to use to signal cancellation.
@@ -111,7 +117,7 @@ namespace Evercoin.BaseImplementations
         /// completes, observe <see cref="ReceivedInventoryOffers"/>
         /// for responses.
         /// </remarks>
-        public abstract Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, CancellationToken token);
+        public abstract Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, BlockRequestType requestType, CancellationToken token);
 
         /// <summary>
         /// Asks connected clients to offer us a new pack

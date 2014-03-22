@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Runtime.Serialization;
-using System.Threading;
 
 using Evercoin.BaseImplementations;
 using Evercoin.Storage.Model;
@@ -16,8 +15,8 @@ using Numeria.IO;
 
 namespace Evercoin.Storage
 {
-    [Export(typeof(IChainStore))]
-    [Export(typeof(IReadableChainStore))]
+    ////[Export(typeof(IChainStore))]
+    ////[Export(typeof(IReadableChainStore))]
     public sealed class FileDBChainStore : ReadWriteChainStoreBase
     {
         private const string BlockFileName = @"C:\Freedom\blocks.filedb";
@@ -33,6 +32,9 @@ namespace Evercoin.Storage
         private readonly ConcurrentDictionary<BigInteger, Guid> blockIdToFileIdIndex = new ConcurrentDictionary<BigInteger, Guid>();
         private readonly ConcurrentDictionary<Guid, BigInteger> fileIdToTxIdIndex = new ConcurrentDictionary<Guid, BigInteger>();
         private readonly ConcurrentDictionary<BigInteger, Guid> txIdToFileIdIndex = new ConcurrentDictionary<BigInteger, Guid>();
+
+        private readonly Waiter<BigInteger> blockWaiter = new Waiter<BigInteger>();
+        private readonly Waiter<BigInteger> txWaiter = new Waiter<BigInteger>();
 
         public FileDBChainStore()
         {
@@ -61,6 +63,7 @@ namespace Evercoin.Storage
                             Block block = (Block)serializer.ReadObject(ms);
                             this.fileIdToBlockIdIndex[entry.ID] = blockIdToNextBlockIdMapping[block.PreviousBlockIdentifier] = block.Identifier;
                             this.blockIdToFileIdIndex[block.Identifier] = entry.ID;
+                            this.blockWaiter.SetEventFor(block.Identifier);
                         }
                     }
                     catch
@@ -78,14 +81,10 @@ namespace Evercoin.Storage
                     Block genesisBlock = new Block
                                          {
                                              Identifier = genesisBlockIdentifier,
-                                             TypedCoinbase = new ValueSource
-                                                             {
-                                                                 AvailableValue = 50
-                                                             },
                                              TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").AsEnumerable().Reverse().GetArray() }
                                          };
                     this.PutBlockCore(genesisBlockIdentifier, genesisBlock);
-                    Cheating.Add(0, genesisBlockIdentifier);
+                    Cheating.AddBlock(0, genesisBlockIdentifier);
                 }
 
                 BigInteger prevBlockId = BigInteger.Zero;
@@ -97,7 +96,7 @@ namespace Evercoin.Storage
                         break;
                     }
 
-                    Cheating.Add(i, blockId);
+                    Cheating.AddBlock(i, blockId);
                     prevBlockId = blockId;
                 }
 
@@ -117,6 +116,7 @@ namespace Evercoin.Storage
 
                 foreach (EntryInfo entry in this.txDb.ListFiles())
                 {
+                    // TODO: Cheating.AddBlock on the containing block once we've found all its transactions.
                     try
                     {
                         using (var ms = new MemoryStream())
@@ -131,6 +131,7 @@ namespace Evercoin.Storage
                             Transaction transaction = (Transaction)serializer.ReadObject(ms);
                             this.fileIdToTxIdIndex[entry.ID] = transaction.Identifier;
                             this.txIdToFileIdIndex[transaction.Identifier] = entry.ID;
+                            this.txWaiter.SetEventFor(transaction.Identifier);
                         }
                     }
                     catch
@@ -158,12 +159,8 @@ namespace Evercoin.Storage
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
         {
-            SpinWait spinner = new SpinWait();
-            Guid fileId;
-            while (!this.blockIdToFileIdIndex.TryGetValue(blockIdentifier, out fileId))
-            {
-                spinner.SpinOnce();
-            }
+            this.blockWaiter.WaitFor(blockIdentifier);
+            Guid fileId = this.blockIdToFileIdIndex[blockIdentifier];
 
             using (var ms = new MemoryStream())
             {
@@ -180,12 +177,8 @@ namespace Evercoin.Storage
 
         protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
         {
-            SpinWait spinner = new SpinWait();
-            Guid fileId;
-            while (!this.txIdToFileIdIndex.TryGetValue(transactionIdentifier, out fileId))
-            {
-                spinner.SpinOnce();
-            }
+            this.txWaiter.WaitFor(transactionIdentifier);
+            Guid fileId = this.txIdToFileIdIndex[transactionIdentifier];
 
             using (var ms = new MemoryStream())
             {
@@ -218,6 +211,7 @@ namespace Evercoin.Storage
 
             this.blockIdToFileIdIndex[blockIdentifier] = fileId;
             this.fileIdToBlockIdIndex[fileId] = blockIdentifier;
+            this.blockWaiter.SetEventFor(blockIdentifier);
         }
 
         protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
@@ -238,6 +232,7 @@ namespace Evercoin.Storage
 
             this.txIdToFileIdIndex[transactionIdentifier] = fileId;
             this.fileIdToTxIdIndex[fileId] = transactionIdentifier;
+            this.txWaiter.SetEventFor(transactionIdentifier);
         }
 
         protected override bool ContainsBlockCore(BigInteger blockIdentifier)
@@ -254,6 +249,9 @@ namespace Evercoin.Storage
         {
             this.blockDb.Dispose();
             this.txDb.Dispose();
+            this.blockWaiter.Dispose();
+            this.txWaiter.Dispose();
+            base.DisposeManagedResources();
         }
     }
 }
