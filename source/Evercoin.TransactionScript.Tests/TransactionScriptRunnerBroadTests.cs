@@ -23,15 +23,8 @@ namespace Evercoin.TransactionScript
         [Fact]
         public void ConstructorShouldThrowOnNullHashAlgorithmStore()
         {
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => new TransactionScriptRunner(null, Mock.Of<ITransactionScriptParser>()));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => new TransactionScriptRunner(null));
             Assert.Equal("hashAlgorithmStore", thrownException.ParamName);
-        }
-
-        [Fact]
-        public void ConstructorShouldThrowOnNullTransactionScriptParser()
-        {
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => new TransactionScriptRunner(Mock.Of<IHashAlgorithmStore>(), null));
-            Assert.Equal("transactionScriptParser", thrownException.ParamName);
         }
 
         [Fact]
@@ -39,14 +32,14 @@ namespace Evercoin.TransactionScript
         {
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
             ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(null, Mock.Of<ISignatureChecker>(), new Stack<StackItem>(), new Stack<StackItem>()));
-            Assert.Equal("serializedScript", thrownException.ParamName);
+            Assert.Equal("scriptOperations", thrownException.ParamName);
         }
 
         [Fact]
         public void EvaluateScriptShouldThrowOnNullSignatureChecker()
         {
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<byte>(), null, new Stack<StackItem>(), new Stack<StackItem>()));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<TransactionScriptOperation>(), null, new Stack<StackItem>(), new Stack<StackItem>()));
             Assert.Equal("signatureChecker", thrownException.ParamName);
         }
 
@@ -54,7 +47,7 @@ namespace Evercoin.TransactionScript
         public void EvaluateScriptShouldThrowOnNullMainStack()
         {
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<byte>(), Mock.Of<ISignatureChecker>(), null, new Stack<StackItem>()));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<TransactionScriptOperation>(), Mock.Of<ISignatureChecker>(), null, new Stack<StackItem>()));
             Assert.Equal("mainStack", thrownException.ParamName);
         }
 
@@ -62,7 +55,7 @@ namespace Evercoin.TransactionScript
         public void EvaluateScriptShouldThrowOnNullAlternateStack()
         {
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<byte>(), Mock.Of<ISignatureChecker>(), new Stack<StackItem>(), null));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<TransactionScriptOperation>(), Mock.Of<ISignatureChecker>(), new Stack<StackItem>(), null));
             Assert.Equal("alternateStack", thrownException.ParamName);
         }
 
@@ -100,11 +93,9 @@ namespace Evercoin.TransactionScript
                 (byte)ScriptOpcode.OP_ENDIF
             };
 
-            byte[] scriptBytes = Guid.NewGuid().ToByteArray();
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
-                .WithParsedScript(scriptBytes, script);
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
 
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>(), stack));
+            Assert.False(sut.EvaluateScript(script, Mock.Of<ISignatureChecker>(), stack));
         }
 
         [Theory]
@@ -123,11 +114,9 @@ namespace Evercoin.TransactionScript
                 (byte)reservedOpcode
             };
 
-            byte[] scriptBytes = Guid.NewGuid().ToByteArray();
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
-                .WithParsedScript(scriptBytes, script);
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
 
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>(), stack));
+            Assert.False(sut.EvaluateScript(script, Mock.Of<ISignatureChecker>(), stack));
         }
 
         [Theory]
@@ -150,11 +139,9 @@ namespace Evercoin.TransactionScript
                 (byte)ScriptOpcode.OP_ENDIF
             };
 
-            byte[] scriptBytes = Guid.NewGuid().ToByteArray();
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
-                .WithParsedScript(scriptBytes, script);
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
 
-            Assert.True(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>(), stack));
+            Assert.True(sut.EvaluateScript(script, Mock.Of<ISignatureChecker>(), stack));
         }
 
         [Theory]
@@ -222,11 +209,9 @@ namespace Evercoin.TransactionScript
                 (byte)opcode
             };
 
-            byte[] scriptBytes = Guid.NewGuid().ToByteArray();
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
-                .WithParsedScript(scriptBytes, script);
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
 
-            Assert.False(sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>(), stack));
+            Assert.False(sut.EvaluateScript(script, Mock.Of<ISignatureChecker>(), stack));
         }
     }
 }

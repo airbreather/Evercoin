@@ -41,11 +41,9 @@ namespace Evercoin.TransactionScript
                 new TransactionScriptOperation((byte)opcode, dataArray)
             };
 
-            byte[] scriptBytes = Guid.NewGuid().ToByteArray();
-            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder()
-                .WithParsedScript(scriptBytes, script);
+            TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
 
-            ScriptEvaluationResult result = sut.EvaluateScript(scriptBytes, Mock.Of<ISignatureChecker>());
+            ScriptEvaluationResult result = sut.EvaluateScript(script, Mock.Of<ISignatureChecker>());
 
             Stack<StackItem> mainStack = result.MainStack;
             Assert.Equal(1, mainStack.Count);
