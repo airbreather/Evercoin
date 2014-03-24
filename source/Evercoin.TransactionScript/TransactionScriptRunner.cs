@@ -106,29 +106,21 @@ namespace Evercoin.TransactionScript
 
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
-        private readonly ITransactionScriptParser transactionScriptParser;
-
-        public TransactionScriptRunner(IHashAlgorithmStore hashAlgorithmStore, ITransactionScriptParser transactionScriptParser)
+        public TransactionScriptRunner(IHashAlgorithmStore hashAlgorithmStore)
         {
             if (hashAlgorithmStore == null)
             {
                 throw new ArgumentNullException("hashAlgorithmStore");
             }
 
-            if (transactionScriptParser == null)
-            {
-                throw new ArgumentNullException("transactionScriptParser");
-            }
-
             this.hashAlgorithmStore = hashAlgorithmStore;
-            this.transactionScriptParser = transactionScriptParser;
         }
 
-        public override ScriptEvaluationResult EvaluateScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker, Stack<StackItem> mainStack, Stack<StackItem> alternateStack)
+        public override ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<StackItem> mainStack, Stack<StackItem> alternateStack)
         {
-            if (serializedScript == null)
+            if (scriptOperations == null)
             {
-                throw new ArgumentNullException("serializedScript");
+                throw new ArgumentNullException("scriptOperations");
             }
 
             if (signatureChecker == null)
@@ -146,15 +138,15 @@ namespace Evercoin.TransactionScript
                 throw new ArgumentNullException("alternateStack");
             }
 
-            TransactionScriptOperation[] scriptOperations = this.transactionScriptParser.Parse(serializedScript);
-
             int afterLastSep = 0;
             Stack<bool> conditionalStack = new Stack<bool>();
             int i = 0;
-            return scriptOperations.All(scriptOperation => scriptOperation.IsValid &&
-                                                           this.Eval(scriptOperations, i++, ref afterLastSep, mainStack, alternateStack, conditionalStack, signatureChecker)) ?
-                new ScriptEvaluationResult(mainStack, alternateStack) :
-                ScriptEvaluationResult.False;
+
+            TransactionScriptOperation[] ops = scriptOperations.GetArray();
+            return ops.All(scriptOperation => scriptOperation.IsValid &&
+                                              this.Eval(ops, i++, ref afterLastSep, mainStack, alternateStack, conditionalStack, signatureChecker)) ?
+                   new ScriptEvaluationResult(mainStack, alternateStack) :
+                   ScriptEvaluationResult.False;
         }
 
         private bool Eval(TransactionScriptOperation[] ops, int pos, ref int lastSep, Stack<StackItem> mainStack, Stack<StackItem> alternateStack, Stack<bool> conditionalStack, ISignatureChecker signatureChecker)
@@ -187,7 +179,7 @@ namespace Evercoin.TransactionScript
                 opcode >= ScriptOpcode.BEGIN_OP_DATA)
             {
                 // Next {n} bytes contain the data to push.
-                mainStack.Push(new StackItem(op.Data));
+                mainStack.Push(op.Data);
                 return true;
             }
 
@@ -204,7 +196,7 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_PUSHDATA1:
                 case ScriptOpcode.OP_PUSHDATA2:
                 case ScriptOpcode.OP_PUSHDATA4:
-                    mainStack.Push(new StackItem(op.Data));
+                    mainStack.Push(op.Data);
                     return true;
 
                 #region NOOP
@@ -276,7 +268,7 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_16:
                 {
                     BigInteger valueToPush = opcode - ScriptOpcode.OPCODE_IMMEDIATELY_BEFORE_OP_1;
-                    mainStack.Push(valueToPush);
+                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(valueToPush, Endianness.LittleEndian));
                     return true;
                 }
 
@@ -347,7 +339,7 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_DEPTH:
                 {
                     BigInteger depth = mainStack.Count;
-                    mainStack.Push(depth);
+                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(depth, Endianness.LittleEndian));
                     return true;
                 }
 
@@ -356,7 +348,7 @@ namespace Evercoin.TransactionScript
                     byte[] item = mainStack.Peek();
                     BigInteger size = item.Length;
 
-                    mainStack.Push(size);
+                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(size, Endianness.LittleEndian));
                     return true;
                 }
 
@@ -548,28 +540,28 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_1ADD:
                 {
                     BigInteger item = mainStack.Pop();
-                    mainStack.Push(item + 1);
+                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(item + 1, Endianness.LittleEndian));
                     return true;
                 }
 
                 case ScriptOpcode.OP_1SUB:
                 {
                     BigInteger item = mainStack.Pop();
-                    mainStack.Push(item - 1);
+                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(item - 1, Endianness.LittleEndian));
                     return true;
                 }
 
                 case ScriptOpcode.OP_NEGATE:
                 {
                     BigInteger item = mainStack.Pop();
-                    mainStack.Push(-item);
+                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(-item, Endianness.LittleEndian));
                     return true;
                 }
 
                 case ScriptOpcode.OP_ABS:
                 {
                     BigInteger item = mainStack.Pop();
-                    mainStack.Push(item.Sign < 0 ? -item : item);
+                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(item.Sign < 0 ? -item : item, Endianness.LittleEndian));
                     return true;
                 }
 
@@ -591,7 +583,7 @@ namespace Evercoin.TransactionScript
                 {
                     BigInteger firstValue = mainStack.Pop();
                     BigInteger secondValue = mainStack.Pop();
-                    mainStack.Push(firstValue + secondValue);
+                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(firstValue + secondValue, Endianness.LittleEndian));
                     return true;
                 }
 
@@ -599,7 +591,7 @@ namespace Evercoin.TransactionScript
                 {
                     BigInteger firstValue = mainStack.Pop();
                     BigInteger secondValue = mainStack.Pop();
-                    mainStack.Push(firstValue - secondValue);
+                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(firstValue - secondValue, Endianness.LittleEndian));
                     return true;
                 }
 
@@ -672,7 +664,7 @@ namespace Evercoin.TransactionScript
                 {
                     BigInteger firstValue = mainStack.Pop();
                     BigInteger secondValue = mainStack.Pop();
-                    mainStack.Push(BigInteger.Min(firstValue, secondValue));
+                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(BigInteger.Min(firstValue, secondValue), Endianness.LittleEndian));
                     return true;
                 }
 
@@ -680,7 +672,7 @@ namespace Evercoin.TransactionScript
                 {
                     BigInteger firstValue = mainStack.Pop();
                     BigInteger secondValue = mainStack.Pop();
-                    mainStack.Push(BigInteger.Max(firstValue, secondValue));
+                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(BigInteger.Max(firstValue, secondValue), Endianness.LittleEndian));
                     return true;
                 }
 

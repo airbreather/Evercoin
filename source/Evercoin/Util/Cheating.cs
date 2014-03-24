@@ -59,7 +59,7 @@ namespace Evercoin.Util
         {
             lock (syncLock)
             {
-                return new ArraySegment<BigInteger>(BlockIdentifiers, 0, blockCount);
+                return BlockIdentifiers.GetRange(0, blockCount);
             }
         }
 

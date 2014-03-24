@@ -149,12 +149,12 @@ namespace Evercoin.Network
                     throw new ArgumentOutOfRangeException("requestType", requestType, "Unrecognized value.");
             }
 
-            BigInteger[] blockIdentifierCollection = knownBlockIdentifiers.GetArray();
+            IReadOnlyList<BigInteger> blockIdentifierCollection = knownBlockIdentifiers as IReadOnlyList<BigInteger> ?? knownBlockIdentifiers.GetArray();
             List<BigInteger> listToRequest = new List<BigInteger>();
 
             int step = 1;
             int start = 0;
-            for (int i = blockIdentifierCollection.Length - 1; i > 0; start++, i -= step)
+            for (int i = blockIdentifierCollection.Count - 1; i > 0; start++, i -= step)
             {
                 if (start >= 10)
                 {

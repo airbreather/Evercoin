@@ -25,13 +25,16 @@ namespace Evercoin.App
 
         private readonly ISignatureCheckerFactory signatureCheckerFactory;
 
+        private readonly ITransactionScriptParser scriptParser;
+
         private readonly ITransactionScriptRunner scriptRunner;
 
-        public NetworkRunner(ICurrencyNetwork network, IChainStore chainStore, ISignatureCheckerFactory signatureCheckerFactory, ITransactionScriptRunner scriptRunner)
+        public NetworkRunner(ICurrencyNetwork network, IChainStore chainStore, ISignatureCheckerFactory signatureCheckerFactory, ITransactionScriptParser scriptParser, ITransactionScriptRunner scriptRunner)
         {
             this.network = network;
             this.chainStore = chainStore;
             this.signatureCheckerFactory = signatureCheckerFactory;
+            this.scriptParser = scriptParser;
             this.scriptRunner = scriptRunner;
         }
 
@@ -85,7 +88,7 @@ namespace Evercoin.App
                     int i = 1;
                     while (true)
                     {
-                        await this.network.RequestBlockOffersAsync(x, Cheating.GetBlockIdentifiers().Take(i), BlockRequestType.IncludeTransactions, token);
+                        await this.network.RequestBlockOffersAsync(x, Cheating.GetBlockIdentifiers().GetRange(0, i), BlockRequestType.IncludeTransactions, token);
                         if (i == Cheating.GetHighestBlock())
                         {
                             break;
@@ -168,12 +171,12 @@ namespace Evercoin.App
                 return;
             }
 
-            if (!this.chainStore.ContainsBlock(transaction.ContainingBlockIdentifier) ||
-                !Cheating.GetBlockIdentifiers().Contains(transaction.ContainingBlockIdentifier))
-            {
-                // I don't think this will actually happen...
-                return;
-            }
+            // I don't think this will actually happen with the above TODO check.
+            ////if (!this.chainStore.ContainsBlock(transaction.ContainingBlockIdentifier) ||
+            ////    !Cheating.GetBlockIdentifiers().Contains(transaction.ContainingBlockIdentifier))
+            ////{
+            ////    return;
+            ////}
 
             Dictionary<BigInteger, ITransaction> allValidInputTransactions = new Dictionary<BigInteger, ITransaction>();
             foreach (BigInteger neededTxId in transaction.Inputs.Select(x => x.PrevOutTxId).Where(x => !x.IsZero).Distinct())
@@ -193,14 +196,10 @@ namespace Evercoin.App
 
             ITransaction tx = transaction.ToTransaction(allValidInputTransactions);
 
+            int valid = 1;
             ParallelOptions options = new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = Environment.ProcessorCount };
-            ParallelLoopResult validationResult = Parallel.For(0, tx.Inputs.Length, options, (i, loopState) =>
+            Parallel.For(0, tx.Inputs.Length, options, i =>
             {
-                if (loopState.IsStopped)
-                {
-                    return;
-                }
-
                 var input = tx.Inputs[i];
 
                 if (input.SpendingValueSource.IsCoinbase)
@@ -209,27 +208,25 @@ namespace Evercoin.App
                 }
 
                 byte[] scriptSig = input.ScriptSignature;
+                IEnumerable<TransactionScriptOperation> parsedScriptSig = this.scriptParser.Parse(scriptSig);
                 ISignatureChecker signatureChecker = this.signatureCheckerFactory.CreateSignatureChecker(tx, i);
-                var result = this.scriptRunner.EvaluateScript(scriptSig, signatureChecker);
+                var result = this.scriptRunner.EvaluateScript(parsedScriptSig, signatureChecker);
                 if (!result)
                 {
-                    loopState.Stop();
-                }
-
-                if (loopState.IsStopped)
-                {
+                    Interlocked.CompareExchange(ref valid, 0, 1);
                     return;
                 }
 
                 byte[] scriptPubKey = allValidInputTransactions[input.SpendingValueSource.OriginatingTransactionIdentifier].Outputs[(int)input.SpendingValueSource.OriginatingTransactionOutputIndex].ScriptPublicKey;
+                IEnumerable<TransactionScriptOperation> parsedScriptPubKey = this.scriptParser.Parse(scriptPubKey);
 
-                if (!this.scriptRunner.EvaluateScript(scriptPubKey, signatureChecker, result.MainStack, result.AlternateStack))
+                if (!this.scriptRunner.EvaluateScript(parsedScriptPubKey, signatureChecker, result.MainStack, result.AlternateStack))
                 {
-                    loopState.Stop();
+                    Interlocked.CompareExchange(ref valid, 0, 1);
                 }
             });
 
-            if (!validationResult.IsCompleted)
+            if (valid == 0)
             {
                 Console.WriteLine("Invalid transaction in the blockchain!  Alert!  Alert!");
                 return;
@@ -240,3 +237,4 @@ namespace Evercoin.App
         }
     }
 }
+;

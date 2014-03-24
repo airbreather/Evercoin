@@ -15,6 +15,3 @@ environment, not things related to the current work-in-progress implementations.
     -   A specialized struct should encapsulate this.
 1.  INetworkPeer has stuff that's useful to IRawNetwork, but there's no
     equivalent for things useful to ICurrencyNetwork.
-1.  ITransactionScriptRunner accepts a serialized script, effectively forcing
-    implementations to depend on ITransactionScriptParser.
-    -   It could just accept a parsed script.

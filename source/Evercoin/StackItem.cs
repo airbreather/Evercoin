@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Numerics;
 
 namespace Evercoin
@@ -9,38 +8,30 @@ namespace Evercoin
     /// </summary>
     public struct StackItem : IEquatable<StackItem>, IComparable<StackItem>, IComparable
     {
-        private byte[] data;
+        private readonly FancyByteArray data;
 
-        private BigInteger? value;
-
-        public StackItem(BigInteger value)
+        public StackItem(FancyByteArray data)
             : this()
         {
-            this.value = value;
-        }
-
-        public StackItem(IEnumerable<byte> data)
-            : this()
-        {
-            this.data = data.GetArray();
+            this.data = data;
         }
 
         public static implicit operator BigInteger(StackItem item)
         {
-            return item.value ?? (item.value = new BigInteger(item.data)).Value;
+            return item.data.NumericValue;
         }
 
         public static implicit operator bool(StackItem item)
         {
-            return !((BigInteger)item).IsZero;
+            return !item.data.NumericValue.IsZero;
         }
 
         public static implicit operator byte[](StackItem item)
         {
-            return item.data ?? (item.data = item.value.Value.ToLittleEndianUInt256Array());
+            return item.data.Value;
         }
 
-        public static implicit operator StackItem(BigInteger data)
+        public static implicit operator StackItem(FancyByteArray data)
         {
             return new StackItem(data);
         }
@@ -52,7 +43,7 @@ namespace Evercoin
 
         public static implicit operator StackItem(bool value)
         {
-            return new StackItem(value ? 1 : 0);
+            return new StackItem(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(value ? 1 : 0, Endianness.LittleEndian));
         }
 
         public bool Equals(StackItem other)
@@ -73,7 +64,7 @@ namespace Evercoin
 
         public int CompareTo(StackItem other)
         {
-            return ((BigInteger)this).CompareTo(other);
+            return this.data.CompareTo(other.data);
         }
 
         public int CompareTo(object obj)

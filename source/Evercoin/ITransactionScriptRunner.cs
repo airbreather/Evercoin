@@ -14,7 +14,7 @@ namespace Evercoin
         /// <summary>
         /// Runs a script and returns the results of execution.
         /// </summary>
-        /// <param name="serializedScript">
+        /// <param name="scriptOperations">
         /// The serialized script.
         /// </param>
         /// <param name="signatureChecker">
@@ -23,12 +23,12 @@ namespace Evercoin
         /// <returns>
         /// The results of executing the given script.
         /// </returns>
-        ScriptEvaluationResult EvaluateScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker);
+        ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker);
 
         /// <summary>
         /// Runs a script and returns the results of execution.
         /// </summary>
-        /// <param name="serializedScript">
+        /// <param name="scriptOperations">
         /// The serialized script.
         /// </param>
         /// <param name="signatureChecker">
@@ -40,12 +40,12 @@ namespace Evercoin
         /// <returns>
         /// The results of executing the given script.
         /// </returns>
-        ScriptEvaluationResult EvaluateScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker, Stack<StackItem> mainStack);
+        ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<StackItem> mainStack);
 
         /// <summary>
         /// Runs a script and returns the results of execution.
         /// </summary>
-        /// <param name="serializedScript">
+        /// <param name="scriptOperations">
         /// The serialized script.
         /// </param>
         /// <param name="signatureChecker">
@@ -60,6 +60,6 @@ namespace Evercoin
         /// <returns>
         /// The results of executing the given script.
         /// </returns>
-        ScriptEvaluationResult EvaluateScript(IEnumerable<byte> serializedScript, ISignatureChecker signatureChecker, Stack<StackItem> mainStack, Stack<StackItem> alternateStack);
+        ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<StackItem> mainStack, Stack<StackItem> alternateStack);
     }
 }

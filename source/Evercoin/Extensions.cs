@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
 
+using Evercoin.Util;
+
 namespace Evercoin
 {
     /// <summary>
@@ -229,13 +231,13 @@ namespace Evercoin
         }
 
         /// <summary>
-        /// Gets a subset of the input array.
+        /// Gets a subset of the input list.
         /// </summary>
         /// <typeparam name="T">
-        /// The type of the array.
+        /// The type of the elements in the list.
         /// </typeparam>
         /// <param name="source">
-        /// The array to get a subset of.
+        /// The list to get a subset of.
         /// </param>
         /// <param name="offset">
         /// The zero-based offset into <paramref name="source"/> to start.
@@ -244,32 +246,11 @@ namespace Evercoin
         /// The number of elements in <paramref name="source"/> to take.
         /// </param>
         /// <returns>
-        /// An <see cref="ArraySegment{T}"/> that acts as a subset
-        /// of <paramref name="source"/>.
+        /// A subset of <paramref name="source"/>.
         /// </returns>
-        public static ArraySegment<T> GetRange<T>(this T[] source, int offset, int count)
+        public static IReadOnlyList<T> GetRange<T>(this IReadOnlyList<T> source, int offset, int count)
         {
-            if (source == null)
-            {
-                throw new ArgumentNullException("source");
-            }
-
-            if (count < 0)
-            {
-                throw new ArgumentOutOfRangeException("count", count, "count can't be negative");
-            }
-
-            if (offset < 0)
-            {
-                throw new ArgumentOutOfRangeException("offset", offset, "offset can't be negative");
-            }
-
-            if (offset + count > source.Length)
-            {
-                throw new ArgumentException("the subset of <source> beginning at <offset> contains fewer than <count> elements.", "count");
-            }
-
-            return new ArraySegment<T>(source, offset, count);
+            return new ReadOnlySubList<T>(source, offset, count);
         }
 
         /// <summary>
