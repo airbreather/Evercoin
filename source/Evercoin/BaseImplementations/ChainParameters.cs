@@ -325,8 +325,10 @@ namespace Evercoin.BaseImplementations
                 .HashWith(this.ScriptHashAlgorithmIdentifier2)
                 .HashWith(this.ScriptHashAlgorithmIdentifier3)
                 .HashWith(this.ScriptHashAlgorithmIdentifier4)
-                .HashWith(this.ScriptHashAlgorithmIdentifier5);
-            return this.SecurityMechanisms.OrderBy(x => x).Aggregate(builder, (prevBuilder, nextSecurityMechanism) => prevBuilder.HashWith(nextSecurityMechanism));
+                .HashWith(this.ScriptHashAlgorithmIdentifier5)
+                .HashWithEnumerable(this.securityMechanisms.OrderBy(x => x));
+
+            return builder;
         }
     }
 }

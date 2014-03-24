@@ -82,8 +82,8 @@ namespace Evercoin.BaseImplementations
                 .HashWith(this.SpendingValueSource)
                 .HashWith(this.SpendingTransactionIdentifier)
                 .HashWith(this.SpendingTransactionInputIndex)
-                .HashWith(this.SequenceNumber);
-            builder = this.ScriptSignature.Aggregate(builder, (prevBuilder, nextByte) => prevBuilder.HashWith(nextByte));
+                .HashWith(this.SequenceNumber)
+                .HashWithEnumerable(this.ScriptSignature);
 
             return builder;
         }

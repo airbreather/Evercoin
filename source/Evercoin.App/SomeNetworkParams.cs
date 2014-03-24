@@ -132,9 +132,11 @@ namespace Evercoin.App
                 .HashWith(this.ProtocolVersionBeforeNegotiation)
                 .HashWith(this.PayloadChecksumAlgorithmIdentifier)
                 .HashWith(this.PayloadChecksumLengthInBytes)
-                .HashWith(this.CommandLengthInBytes);
-            builder = this.StaticMessagePrefixData.Aggregate(builder, (prevBuilder, nextByte) => prevBuilder.HashWith(nextByte));
-            return this.Seeds.OrderBy(x => x.ToString(), StringComparer.OrdinalIgnoreCase).Aggregate(builder, (prevBuilder, nextSeed) => prevBuilder.HashWith(nextSeed));
+                .HashWith(this.CommandLengthInBytes)
+                .HashWithEnumerable(this.StaticMessagePrefixData)
+                .HashWithEnumerable(this.Seeds.OrderBy(x => x.ToString(), StringComparer.OrdinalIgnoreCase));
+
+            return builder;
         }
     }
 }

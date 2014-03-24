@@ -95,11 +95,10 @@ namespace Evercoin
         {
             HashCodeBuilder builder = new HashCodeBuilder()
                 .HashWith(this.isValid)
-                .HashWith(this.opcode);
+                .HashWith(this.opcode)
+                .HashWithEnumerable(this.data);
 
-            return this.data == null ?
-                   builder.HashWith(this.data) :
-                   this.data.Aggregate(builder, (prevBuilder, nextByte) => prevBuilder.HashWith(nextByte));
+            return builder;
         }
     }
 }

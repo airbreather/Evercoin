@@ -113,7 +113,10 @@ namespace Evercoin.ProtocolObjects
 
         public override int GetHashCode()
         {
-            return this.HeaderData.Aggregate(new HashCodeBuilder(), (prevBuilder, nextByte) => prevBuilder.HashWith(nextByte));
+            HashCodeBuilder builder = new HashCodeBuilder()
+                .HashWithEnumerable(this.HeaderData);
+
+            return builder;
         }
     }
 }

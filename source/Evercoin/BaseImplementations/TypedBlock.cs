@@ -88,8 +88,8 @@ namespace Evercoin.BaseImplementations
                 .HashWith(this.Nonce)
                 .HashWith(this.PreviousBlockIdentifier)
                 .HashWith(this.Version)
-                .HashWith(this.DifficultyTarget);
-            builder = this.TransactionIdentifiers.Data.Aggregate(builder, (prevBuilder, nextByte) => prevBuilder.HashWith(nextByte));
+                .HashWith(this.DifficultyTarget)
+                .HashWithEnumerable(this.TransactionIdentifiers.Data);
 
             return builder;
         }

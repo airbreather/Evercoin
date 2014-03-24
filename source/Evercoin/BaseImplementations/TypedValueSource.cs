@@ -59,8 +59,8 @@ namespace Evercoin.BaseImplementations
             HashCodeBuilder builder = new HashCodeBuilder()
                 .HashWith(this.AvailableValue)
                 .HashWith(this.OriginatingTransactionIdentifier)
-                .HashWith(this.OriginatingTransactionOutputIndex);
-            builder = this.ScriptPublicKey.Aggregate(builder, (prevBuilder, nextByte) => builder.HashWith(nextByte));
+                .HashWith(this.OriginatingTransactionOutputIndex)
+                .HashWithEnumerable(this.ScriptPublicKey);
 
             return builder;
         }

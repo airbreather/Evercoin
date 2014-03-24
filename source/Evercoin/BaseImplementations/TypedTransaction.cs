@@ -66,10 +66,9 @@ namespace Evercoin.BaseImplementations
         {
             HashCodeBuilder builder = new HashCodeBuilder()
                 .HashWith(this.Version)
-                .HashWith(this.LockTime);
-
-            builder = this.Inputs.Aggregate(builder, (prevBuilder, nextInput) => prevBuilder.HashWith(nextInput));
-            builder = this.Outputs.Aggregate(builder, (prevBuilder, nextOutput) => prevBuilder.HashWith(nextOutput));
+                .HashWith(this.LockTime)
+                .HashWithEnumerable(this.Inputs)
+                .HashWithEnumerable(this.Outputs);
 
             return builder;
         }

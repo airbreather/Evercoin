@@ -1,4 +1,6 @@
-﻿namespace Evercoin.Util
+﻿using System.Collections.Generic;
+
+namespace Evercoin.Util
 {
     public sealed class HashCodeBuilder
     {
@@ -25,7 +27,38 @@
 
         public HashCodeBuilder HashWith<T>(T obj)
         {
+            int newHash = Accumulate(this.hash, obj);
+            return new HashCodeBuilder(newHash);
+        }
+
+        public HashCodeBuilder HashWithEnumerable<T>(IEnumerable<T> obj)
+        {
+            if (obj == null)
+            {
+                return this.HashWith(obj);
+            }
+
             int newHash = this.hash;
+
+            int count = 0;
+            foreach (T element in obj)
+            {
+                newHash = Accumulate(newHash, element);
+                count++;
+            }
+
+            // Accumulate with the count to ensure that
+            // accumulating with an empty enumerable doesn't have
+            // the same result as not accumulating at all.
+            newHash = Accumulate(newHash, count);
+
+            return new HashCodeBuilder(newHash);
+        }
+
+        private static int Accumulate<T>(int oldHash, T obj)
+        {
+            int newHash = oldHash;
+
             unchecked
             {
                 newHash *= Mult;
@@ -35,7 +68,7 @@
                 }
             }
 
-            return new HashCodeBuilder(newHash);
+            return newHash;
         }
     }
 }
