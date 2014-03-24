@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 using Evercoin.Util;
@@ -15,7 +14,7 @@ namespace Evercoin
 
         private readonly byte opcode;
 
-        private readonly byte[] data;
+        private readonly FancyByteArray data;
 
         public TransactionScriptOperation(byte opcode)
             : this(opcode, Enumerable.Empty<byte>())
@@ -27,28 +26,14 @@ namespace Evercoin
         {
             this.isValid = true;
             this.opcode = opcode;
-            this.data = data.GetArray();
+            this.data = FancyByteArray.CreateFromBytes(data);
         }
 
         public bool IsValid { get { return this.isValid; } }
 
-        public byte Opcode
-        {
-            get
-            {
-                Debug.Assert(this.IsValid, "Script operation is not valid.");
-                return this.opcode;
-            }
-        }
+        public byte Opcode { get { return this.opcode; } }
 
-        public byte[] Data
-        {
-            get
-            {
-                Debug.Assert(this.IsValid, "Script operation is not valid.");
-                return this.data;
-            }
-        }
+        public FancyByteArray Data { get { return this.data; } }
 
         public static implicit operator TransactionScriptOperation(byte opcode)
         {
@@ -64,11 +49,8 @@ namespace Evercoin
         /// <param name="other">An object to compare with this object.</param>
         public bool Equals(TransactionScriptOperation other)
         {
-            return this.isValid == other.isValid &&
-                   this.opcode == other.opcode &&
-                   (this.data == null) == (other.data == null) &&
-                   (this.data != null && other.data != null &&
-                    this.data.SequenceEqual(other.data));
+            return this.opcode == other.opcode &&
+                   this.data == other.data;
         }
 
         /// <summary>
@@ -94,9 +76,8 @@ namespace Evercoin
         public override int GetHashCode()
         {
             HashCodeBuilder builder = new HashCodeBuilder()
-                .HashWith(this.isValid)
                 .HashWith(this.opcode)
-                .HashWithEnumerable(this.data);
+                .HashWith(this.data);
 
             return builder;
         }

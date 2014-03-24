@@ -345,8 +345,8 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOpcode.OP_SIZE:
                 {
-                    byte[] item = mainStack.Peek();
-                    BigInteger size = item.Length;
+                    FancyByteArray item = mainStack.Peek();
+                    BigInteger size = item.Value.Length;
 
                     mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(size, Endianness.LittleEndian));
                     return true;
@@ -521,10 +521,10 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_EQUAL:
                 case ScriptOpcode.OP_EQUALVERIFY:
                 {
-                    byte[] firstItem = mainStack.Pop();
-                    byte[] secondItem = mainStack.Pop();
+                    FancyByteArray firstItem = mainStack.Pop();
+                    FancyByteArray secondItem = mainStack.Pop();
 
-                    mainStack.Push(firstItem.SequenceEqual(secondItem));
+                    mainStack.Push(firstItem == secondItem);
 
                     return opcode == ScriptOpcode.OP_EQUAL ||
                            mainStack.Pop();
@@ -721,8 +721,8 @@ namespace Evercoin.TransactionScript
 
                     IHashAlgorithm hashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(hashAlgorithmIdentifier);
 
-                    byte[] dataToHash = mainStack.Pop();
-                    byte[] hash = hashAlgorithm.CalculateHash(dataToHash);
+                    FancyByteArray dataToHash = mainStack.Pop();
+                    FancyByteArray hash = hashAlgorithm.CalculateHash(dataToHash.Value);
                     mainStack.Push(hash);
                     return true;
                 }
@@ -736,15 +736,13 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_CHECKSIG:
                 case ScriptOpcode.OP_CHECKSIGVERIFY:
                 {
-                    byte[] publicKey = mainStack.Pop();
-                    byte[] signature = mainStack.Pop();
-
-                    TransactionScriptOperation sigOp = GetDataPushOp(signature);
+                    FancyByteArray publicKey = mainStack.Pop();
+                    FancyByteArray signature = mainStack.Pop();
 
                     IEnumerable<TransactionScriptOperation> subscript = ops.GetRange(lastSep, ops.Length - lastSep)
-                                                                           .ExceptWhere(o => o.Opcode == (byte)ScriptOpcode.OP_CODESEPARATOR || sigOp.Equals(o));
+                                                                           .ExceptWhere(o => o.Opcode == (byte)ScriptOpcode.OP_CODESEPARATOR || signature.Equals(o.Data));
 
-                    mainStack.Push(signatureChecker.CheckSignature(signature, publicKey, subscript));
+                    mainStack.Push(signatureChecker.CheckSignature(signature.Value, publicKey.Value, subscript));
                     return opcode == ScriptOpcode.OP_CHECKSIG ||
                            mainStack.Pop();
                 }
@@ -758,7 +756,7 @@ namespace Evercoin.TransactionScript
                         return false;
                     }
 
-                    LinkedList<byte[]> publicKeys = new LinkedList<byte[]>();
+                    LinkedList<FancyByteArray> publicKeys = new LinkedList<FancyByteArray>();
                     for (int i = 0; i < keyCount; i++)
                     {
                         publicKeys.AddLast(mainStack.Pop());
@@ -770,7 +768,7 @@ namespace Evercoin.TransactionScript
                         return false;
                     }
 
-                    LinkedList<byte[]> signatures = new LinkedList<byte[]>();
+                    LinkedList<FancyByteArray> signatures = new LinkedList<FancyByteArray>();
                     for (int i = 0; i < signatureCount; i++)
                     {
                         signatures.AddLast(mainStack.Pop());
@@ -786,22 +784,23 @@ namespace Evercoin.TransactionScript
 
                     mainStack.Pop();
 
-                    HashSet<TransactionScriptOperation> signatureOperations = new HashSet<TransactionScriptOperation>(signatures.Select(GetDataPushOp));
-                    IEnumerable<TransactionScriptOperation> subscript = ops.GetRange(lastSep, ops.Length - lastSep)
-                                                                           .ExceptWhere(o => o.Opcode == (byte)ScriptOpcode.OP_CODESEPARATOR || signatureOperations.Contains(o));
+                    HashSet<FancyByteArray> signatureSet = new HashSet<FancyByteArray>(signatures);
+                    List<TransactionScriptOperation> subscript = ops.GetRange(lastSep, ops.Length - lastSep)
+                                                                    .ExceptWhere(o => o.Opcode == (byte)ScriptOpcode.OP_CODESEPARATOR || signatureSet.Contains(o.Data))
+                                                                    .ToList();
 
                     int validSignatureCount = 0;
 
-                    LinkedListNode<byte[]> signatureToValidate = signatures.First;
-                    LinkedListNode<byte[]> publicKeyToAttempt = publicKeys.First;
+                    LinkedListNode<FancyByteArray> signatureToValidate = signatures.First;
+                    LinkedListNode<FancyByteArray> publicKeyToAttempt = publicKeys.First;
 
                     while (publicKeyToAttempt != null &&
                            signatureToValidate != null)
                     {
-                        byte[] signature = signatureToValidate.Value;
-                        byte[] publicKey = publicKeyToAttempt.Value;
+                        FancyByteArray signature = signatureToValidate.Value;
+                        FancyByteArray publicKey = publicKeyToAttempt.Value;
 
-                        if (signatureChecker.CheckSignature(signature, publicKey, subscript))
+                        if (signatureChecker.CheckSignature(signature.Value, publicKey.Value, subscript))
                         {
                             validSignatureCount++;
                             signatureToValidate = signatureToValidate.Next;
@@ -832,26 +831,6 @@ namespace Evercoin.TransactionScript
             T item = sourceStack.Pop();
             destinationStack.Push(item);
             return true;
-        }
-
-        private static TransactionScriptOperation GetDataPushOp(byte[] dataToPush)
-        {
-            if (dataToPush.Length <= (byte)ScriptOpcode.END_OP_DATA)
-            {
-                return new TransactionScriptOperation((byte)dataToPush.Length, dataToPush);
-            }
-
-            if (dataToPush.Length <= 0xff)
-            {
-                return new TransactionScriptOperation((byte)ScriptOpcode.OP_PUSHDATA1, dataToPush);
-            }
-
-            if (dataToPush.Length <= 0xffff)
-            {
-                return new TransactionScriptOperation((byte)ScriptOpcode.OP_PUSHDATA2, dataToPush);
-            }
-
-            return new TransactionScriptOperation((byte)ScriptOpcode.OP_PUSHDATA4, dataToPush);
         }
     }
 }

@@ -26,6 +26,11 @@ namespace Evercoin
             return !item.data.NumericValue.IsZero;
         }
 
+        public static implicit operator FancyByteArray(StackItem item)
+        {
+            return item.data;
+        }
+
         public static implicit operator byte[](StackItem item)
         {
             return item.data.Value;

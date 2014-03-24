@@ -34,6 +34,7 @@ namespace Evercoin.Algorithms
 
         public bool CheckSignature(IEnumerable<byte> signature, IEnumerable<byte> publicKey, IEnumerable<TransactionScriptOperation> script)
         {
+            byte[] scriptBytes = ByteTwiddling.ConcatenateData(script.SelectMany(ScriptOpToBytes));
             byte[] signatureBytes = signature.GetArray();
             byte hashType = signatureBytes.Last();
             Array.Resize(ref signatureBytes, signatureBytes.Length - 1);
@@ -41,6 +42,7 @@ namespace Evercoin.Algorithms
             byte[] hashTypeBytes = { hashType, 0, 0, 0 };
 
             ProtocolTxIn[] inputs = new ProtocolTxIn[this.transaction.Inputs.Length];
+
             for (int i = 0; i < inputs.Length; i++)
             {
                 IValueSpender spender = this.transaction.Inputs[i];
@@ -53,7 +55,7 @@ namespace Evercoin.Algorithms
 
                 BigInteger originatingTransactionIdentifier = valueSource.OriginatingTransactionIdentifier;
                 uint originatingTransactionOutputIndex = valueSource.OriginatingTransactionOutputIndex;
-                IEnumerable<byte> scriptSig = i == this.outputIndex ? script.SelectMany(ScriptOpToBytes) : Enumerable.Empty<byte>();
+                IEnumerable<byte> scriptSig = i == this.outputIndex ? scriptBytes : Enumerable.Empty<byte>();
                 uint seq = spender.SequenceNumber;
                 inputs[i] = new ProtocolTxIn(originatingTransactionIdentifier, originatingTransactionOutputIndex, scriptSig, seq);
             } 
@@ -98,28 +100,30 @@ namespace Evercoin.Algorithms
         {
             byte[] opcodeBytes = { op.Opcode };
             byte[] sizeBytes = new byte[0];
+            byte[] data = op.Data;
+
             switch (op.Opcode)
             {
                 case (0x4c):
                 {
-                    sizeBytes = new[] { (byte)op.Data.Length };
+                    sizeBytes = new[] { (byte)data.Length };
                     break;
                 }
 
                 case (0x4d):
                 {
-                    sizeBytes = BitConverter.GetBytes((ushort)op.Data.Length).LittleEndianToOrFromBitConverterEndianness();
+                    sizeBytes = BitConverter.GetBytes((ushort)data.Length).LittleEndianToOrFromBitConverterEndianness();
                     break;
                 }
 
                 case (0x4e):
                 {
-                    sizeBytes = BitConverter.GetBytes((uint)op.Data.Length).LittleEndianToOrFromBitConverterEndianness();
+                    sizeBytes = BitConverter.GetBytes((uint)data.Length).LittleEndianToOrFromBitConverterEndianness();
                     break;
                 }
             }
 
-            return ByteTwiddling.ConcatenateData(opcodeBytes, sizeBytes, op.Data);
+            return ByteTwiddling.ConcatenateData(opcodeBytes, sizeBytes, data);
         }
     }
 }
