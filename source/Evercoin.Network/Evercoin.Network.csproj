@@ -62,18 +62,6 @@
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
     <Reference Include="System.Numerics" />
-    <Reference Include="System.Reactive.Core">
-      <HintPath>..\packages\Rx-Core.2.2.2\lib\net45\System.Reactive.Core.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Reactive.Interfaces">
-      <HintPath>..\packages\Rx-Interfaces.2.2.2\lib\net45\System.Reactive.Interfaces.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Reactive.Linq">
-      <HintPath>..\packages\Rx-Linq.2.2.2\lib\net45\System.Reactive.Linq.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Reactive.PlatformServices">
-      <HintPath>..\packages\Rx-PlatformServices.2.2.2\lib\net45\System.Reactive.PlatformServices.dll</HintPath>
-    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -98,6 +86,22 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\external\rx\Rx.NET\Source\System.Reactive.Core\System.Reactive.Core.csproj">
+      <Project>{4e516f10-da7a-4d43-963e-a93865abea5b}</Project>
+      <Name>System.Reactive.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\external\rx\Rx.NET\Source\System.Reactive.Interfaces\System.Reactive.Interfaces.csproj">
+      <Project>{9e9b9c60-98b0-40fa-9c2b-1218d417caa4}</Project>
+      <Name>System.Reactive.Interfaces</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\external\rx\Rx.NET\Source\System.Reactive.Linq\System.Reactive.Linq.csproj">
+      <Project>{63252ae9-5186-45ca-bfcd-fa51c6b66a43}</Project>
+      <Name>System.Reactive.Linq</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\external\rx\Rx.NET\Source\System.Reactive.PlatformServices\System.Reactive.PlatformServices.csproj">
+      <Project>{0cccf009-763f-40d2-8655-7a94828023bf}</Project>
+      <Name>System.Reactive.PlatformServices</Name>
+    </ProjectReference>
     <ProjectReference Include="..\Evercoin\Evercoin.csproj">
       <Project>{C10F2413-4E30-421A-BCFF-2DD813239323}</Project>
       <Name>Evercoin</Name>
