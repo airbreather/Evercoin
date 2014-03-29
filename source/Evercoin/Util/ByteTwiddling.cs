@@ -81,19 +81,23 @@ namespace Evercoin.Util
             return result;
         }
 
-        public static byte[] ConcatenateData(params IEnumerable<byte>[] sources)
-        {
-            return ConcatenateData(sources.AsEnumerable());
-        }
-
         public static byte[] ConcatenateData(IEnumerable<IEnumerable<byte>> sources)
         {
-            byte[][] sourceArrays = sources.Select(Extensions.GetArray).GetArray();
-            int length = sourceArrays.Sum(x => x.Length);
+            return ConcatenateData(sources.Select(Extensions.GetArray));
+        }
+
+        public static byte[] ConcatenateData(IEnumerable<byte[]> sources)
+        {
+            return ConcatenateData(sources.GetArray());
+        }
+
+        public static byte[] ConcatenateData(params byte[][] sources)
+        {
+            int length = sources.Sum(x => x.Length);
             byte[] result = new byte[length];
 
             int index = 0;
-            foreach (byte[] sourceArray in sourceArrays)
+            foreach (byte[] sourceArray in sources)
             {
                 Buffer.BlockCopy(sourceArray, 0, result, index, sourceArray.Length);
                 index += sourceArray.Length;

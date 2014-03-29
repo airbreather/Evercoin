@@ -25,15 +25,14 @@ namespace Evercoin.App
             AssemblyCatalog catalog5 = new AssemblyCatalog(Assembly.GetExecutingAssembly());
             AggregateCatalog catalog = new AggregateCatalog(catalog1, catalog2, catalog3, catalog4, catalog5);
             using (CompositeChainStorage chainStorage = new CompositeChainStorage())
+            using (CachingChainStorage cachingChainStorage = new CachingChainStorage(chainStorage))
             using (CompositionContainer container = new CompositionContainer(catalog))
             {
                 CompositeHashAlgorithmStore hashAlgorithmStore = new CompositeHashAlgorithmStore();
                 container.ComposeParts(chainStorage, hashAlgorithmStore);
-                using (EvercoinModule module = new EvercoinModule(chainStorage, hashAlgorithmStore))
+                using (EvercoinModule module = new EvercoinModule(/*caching*/chainStorage, hashAlgorithmStore))
                 using (StandardKernel kernel = new StandardKernel(module))
                 {
-                    NetworkRunner runner = kernel.Get<NetworkRunner>();
-
                     Console.WriteLine("=== Hash Algorithms ===");
                     Random random = new Random(Guid.NewGuid().GetHashCode());
                     byte[] randomBytes = new byte[42];
@@ -62,6 +61,7 @@ namespace Evercoin.App
                     {
                         try
                         {
+                            NetworkRunner runner = kernel.Get<NetworkRunner>();
                             Task t = runner.Run(cts.Token);
                             Console.ReadLine();
                             cts.Cancel();

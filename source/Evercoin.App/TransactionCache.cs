@@ -1,13 +1,11 @@
-﻿using System;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Runtime.Caching;
-
-using Evercoin.Util;
 
 namespace Evercoin.App
 {
     internal sealed class TransactionCache
     {
+        private static readonly CacheItemPolicy StandardCacheItemPolicy = new CacheItemPolicy();
         private readonly MemoryCache underlyingCache;
 
         public TransactionCache(MemoryCache underlyingCache)
@@ -31,15 +29,13 @@ namespace Evercoin.App
         public void PutTransaction(BigInteger transactionIdentifier, ITransaction transaction)
         {
             string cacheKey = CreateCacheKey(transactionIdentifier);
-            this.underlyingCache.Add(cacheKey, transaction, new CacheItemPolicy());
+            this.underlyingCache.Add(cacheKey, transaction, StandardCacheItemPolicy);
         }
 
         private static string CreateCacheKey(BigInteger identifier)
         {
-            byte[] littleEndianUInt256Array = identifier.ToLittleEndianUInt256Array();
-            Array.Reverse(littleEndianUInt256Array);
-            string canonicalTxIdentifier = ByteTwiddling.ByteArrayToHexString(littleEndianUInt256Array);
-            return "T;" + canonicalTxIdentifier;
+            FancyByteArray fancyByteArray = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(identifier, 32, Endianness.LittleEndian);
+            return "T;" + fancyByteArray;
         }
     }
 }

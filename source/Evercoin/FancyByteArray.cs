@@ -39,6 +39,25 @@ namespace Evercoin
             return CreateFromBytes(data);
         }
 
+        public static FancyByteArray CreateLittleEndianFromHexString(string hexString, Endianness sourceEndianness)
+        {
+            byte[] data = ByteTwiddling.HexStringToByteArray(hexString);
+            switch (sourceEndianness)
+            {
+                case Endianness.BigEndian:
+                    Array.Reverse(data);
+                    break;
+
+                case Endianness.LittleEndian:
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException("sourceEndianness", sourceEndianness, "Unrecognized value");
+            }
+
+            return CreateFromBytes(data);
+        }
+
         public static FancyByteArray CreateFromBytes(IEnumerable<byte> bytes)
         {
             bytes = bytes ?? Enumerable.Empty<byte>();

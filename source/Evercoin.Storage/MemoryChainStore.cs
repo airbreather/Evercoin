@@ -8,8 +8,8 @@ using Evercoin.Util;
 
 namespace Evercoin.Storage
 {
-    [Export(typeof(IChainStore))]
-    [Export(typeof(IReadableChainStore))]
+    ////[Export(typeof(IChainStore))]
+    ////[Export(typeof(IReadableChainStore))]
     public sealed class MemoryChainStore : ReadWriteChainStoreBase
     {
         private readonly ConcurrentDictionary<BigInteger, byte[]> blocks = new ConcurrentDictionary<BigInteger, byte[]>();

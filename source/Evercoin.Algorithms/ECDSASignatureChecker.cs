@@ -6,13 +6,13 @@ using System.Numerics;
 using Evercoin.ProtocolObjects;
 using Evercoin.Util;
 
+#if X64
+using Secp256k1;
+#else
 using Org.BouncyCastle.Asn1;
 using Org.BouncyCastle.Asn1.Sec;
 using Org.BouncyCastle.Crypto.Parameters;
 using Org.BouncyCastle.Crypto.Signers;
-
-#if X64
-using Secp256k1;
 #endif
 
 namespace Evercoin.Algorithms
@@ -34,7 +34,7 @@ namespace Evercoin.Algorithms
 
         public bool CheckSignature(IEnumerable<byte> signature, IEnumerable<byte> publicKey, IEnumerable<TransactionScriptOperation> script)
         {
-            byte[] scriptBytes = ByteTwiddling.ConcatenateData(script.SelectMany(ScriptOpToBytes));
+            byte[] scriptBytes = ByteTwiddling.ConcatenateData(script.Select(ScriptOpToBytes));
             byte[] signatureBytes = signature.GetArray();
             byte hashType = signatureBytes.Last();
             Array.Resize(ref signatureBytes, signatureBytes.Length - 1);

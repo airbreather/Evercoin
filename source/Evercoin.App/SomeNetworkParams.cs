@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 
@@ -8,7 +7,6 @@ using Evercoin.Util;
 
 namespace Evercoin.App
 {
-    [Export(typeof(INetworkParameters))]
     internal sealed class SomeNetworkParams : INetworkParameters
     {
         private readonly HashSet<DnsEndPoint> seeds = new HashSet<DnsEndPoint>();

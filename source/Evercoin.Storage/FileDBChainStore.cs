@@ -1,4 +1,5 @@
-﻿using System;
+﻿#if !X64
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
@@ -14,8 +15,8 @@ using Numeria.IO;
 
 namespace Evercoin.Storage
 {
-    ////[Export(typeof(IChainStore))]
-    ////[Export(typeof(IReadableChainStore))]
+    [Export(typeof(IChainStore))]
+    [Export(typeof(IReadableChainStore))]
     public sealed class FileDBChainStore : ReadWriteChainStoreBase
     {
         private const string BlockFileName = @"C:\Freedom\blocks.filedb";
@@ -275,3 +276,4 @@ namespace Evercoin.Storage
         }
     }
 }
+#endif
