@@ -43,5 +43,7 @@ namespace Evercoin
         /// algorithms to use for this currency.
         /// </summary>
         IHashAlgorithmStore HashAlgorithmStore { get; }
+
+        IChainSerializer ChainSerializer { get; }
     }
 }

@@ -59,17 +59,17 @@ namespace Evercoin.App
                     int startingBlockHeight = Cheating.GetHighestBlock();
                     int currentBlockHeight = startingBlockHeight;
                     bool started = false;
-                    const int CurrentHighestBlockBecauseIAmCheating = 291890;
+                    const int CurrentHighestBlockBecauseIAmCheating = 293069;
 
                     // Start by pulling all the headers
                     while (!token.IsCancellationRequested &&
-                           currentBlockHeight < CurrentHighestBlockBecauseIAmCheating)
+                            currentBlockHeight < CurrentHighestBlockBecauseIAmCheating)
                     {
                         if (started)
                         {
                             await Task.Run(() => SpinWait.SpinUntil(() => token.IsCancellationRequested ||
-                                                                          currentBlockHeight >= CurrentHighestBlockBecauseIAmCheating ||
-                                                                          (startingBlockHeight - (currentBlockHeight = Cheating.GetHighestBlock())) % 2000 == 0),
+                                                                            currentBlockHeight >= CurrentHighestBlockBecauseIAmCheating ||
+                                                                            (startingBlockHeight - (currentBlockHeight = Cheating.GetHighestBlock())) % 2000 == 0),
                                 token);
                         }
 
@@ -113,28 +113,22 @@ namespace Evercoin.App
                 }
             );
 
-            try
-            {
-                this.network.Start(token);
-                await Task.WhenAll(endPoints.Select(endPoint => this.network.ConnectToPeerAsync(new ProtocolNetworkAddress(null, 1, endPoint.Address, (ushort)endPoint.Port), token)));
-                await Task.Run
-                (
-                    async () =>
+            this.network.Start(token);
+            await Task.WhenAll(endPoints.Select(endPoint => this.network.ConnectToPeerAsync(new ProtocolNetworkAddress(null, 1, endPoint.Address, (ushort)endPoint.Port), token)));
+            await Task.Run
+            (
+                async () =>
+                {
+                    int prevBlockIdCount = -1;
+                    int prevTransactionIdCount = -1;
+                    while (!token.IsCancellationRequested)
                     {
-                        int prevBlockIdCount = -1;
-                        int prevTransactionIdCount = -1;
-                        while (!token.IsCancellationRequested)
-                        {
-                            Console.Write("\rBlocks: ({0,8}) // Transactions: ({1,8})", Cheating.GetHighestBlock(), Cheating.GetTransactionIdentifierCount());
-                            await Task.Run(() => SpinWait.SpinUntil(() => token.IsCancellationRequested || prevTransactionIdCount != (prevTransactionIdCount = Cheating.GetTransactionIdentifierCount()) || prevBlockIdCount != (prevBlockIdCount = Cheating.GetBlockIdentifierCount())), token);
-                        }
-                    },
-                    token
-                );
-            }
-            catch (OperationCanceledException)
-            {
-            }
+                        Console.Write("\rBlocks: ({0,8}) // Transactions: ({1,8})", Cheating.GetHighestBlock(), Cheating.GetTransactionIdentifierCount());
+                        await Task.Run(() => SpinWait.SpinUntil(() => token.IsCancellationRequested || prevTransactionIdCount != (prevTransactionIdCount = Cheating.GetTransactionIdentifierCount()) || prevBlockIdCount != (prevBlockIdCount = Cheating.GetBlockIdentifierCount())), token);
+                    }
+                },
+                token
+            );
         }
 
         private async Task HandleBlock(ProtocolBlock block, CancellationToken token)
@@ -194,18 +188,20 @@ namespace Evercoin.App
                 return;
             }
 
-            ITransaction tx = transaction.ToTransaction(allValidInputTransactions);
+            ITransaction tx = transaction.ToTransaction();
 
             int valid = 1;
             ParallelOptions options = new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = Environment.ProcessorCount };
             Parallel.For(0, tx.Inputs.Length, options, i =>
             {
                 var input = tx.Inputs[i];
-
-                if (input.SpendingValueSource.IsCoinbase)
+                if (input.SpentTransactionIdentifier.IsZero)
                 {
                     return;
                 }
+
+                ITransaction prevTransaction = allValidInputTransactions[input.SpentTransactionIdentifier];
+                IValueSource spentValueSource = prevTransaction.Outputs[input.SpentTransactionOutputIndex];
 
                 byte[] scriptSig = input.ScriptSignature;
                 IEnumerable<TransactionScriptOperation> parsedScriptSig = this.scriptParser.Parse(scriptSig);
@@ -217,7 +213,7 @@ namespace Evercoin.App
                     return;
                 }
 
-                byte[] scriptPubKey = allValidInputTransactions[input.SpendingValueSource.OriginatingTransactionIdentifier].Outputs[(int)input.SpendingValueSource.OriginatingTransactionOutputIndex].ScriptPublicKey;
+                byte[] scriptPubKey = spentValueSource.ScriptPublicKey;
                 IEnumerable<TransactionScriptOperation> parsedScriptPubKey = this.scriptParser.Parse(scriptPubKey);
 
                 if (!this.scriptRunner.EvaluateScript(parsedScriptPubKey, signatureChecker, result.MainStack, result.AlternateStack))

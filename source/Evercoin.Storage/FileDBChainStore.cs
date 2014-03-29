@@ -5,10 +5,9 @@ using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.Serialization;
+using System.Security.Cryptography;
 
 using Evercoin.BaseImplementations;
-using Evercoin.Storage.Model;
 using Evercoin.Util;
 
 using Numeria.IO;
@@ -36,21 +35,143 @@ namespace Evercoin.Storage
         private readonly Waiter<BigInteger> blockWaiter = new Waiter<BigInteger>();
         private readonly Waiter<BigInteger> txWaiter = new Waiter<BigInteger>();
 
+        private IChainSerializer chainSerializer;
+
         public FileDBChainStore()
         {
             FileDB.CreateEmptyFile(BlockFileName, ignoreIfExists: true);
             FileDB.CreateEmptyFile(TxFileName, ignoreIfExists: true);
+            this.blockDb = new FileDB(BlockFileName, FileAccess.ReadWrite);
+            this.txDb = new FileDB(TxFileName, FileAccess.ReadWrite);
+        }
 
+        [Import]
+        public IChainSerializer ChainSerializer
+        {
+            get
+            {
+                return this.chainSerializer;
+            }
+
+            set
+            {
+                this.chainSerializer = value;
+                this.OnChainSerializerSet();
+            }
+        }
+
+        protected override IBlock FindBlockCore(BigInteger blockIdentifier)
+        {
+            this.blockWaiter.WaitFor(blockIdentifier);
+            Guid fileId = this.blockIdToFileIdIndex[blockIdentifier];
+
+            byte[] serializedBlock;
+            using (var ms = new MemoryStream())
+            {
+                lock (this.blockLock)
+                {
+                    this.blockDb.Read(fileId, ms);
+                }
+
+                serializedBlock = ms.ToArray();
+            }
+
+            return this.chainSerializer.GetBlockForBytes(serializedBlock);
+        }
+
+        protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
+        {
+            this.txWaiter.WaitFor(transactionIdentifier);
+            Guid fileId = this.txIdToFileIdIndex[transactionIdentifier];
+
+            byte[] serializedTransaction;
+            using (var ms = new MemoryStream())
+            {
+                lock (this.txLock)
+                {
+                    this.txDb.Read(fileId, ms);
+                }
+
+                serializedTransaction = ms.ToArray();
+            }
+
+            return this.chainSerializer.GetTransactionForBytes(serializedTransaction);
+        }
+
+        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
+        {
+            Guid fileId;
+
+            using (var ms = new MemoryStream())
+            {
+                byte[] serializedBlock = this.chainSerializer.GetBytesForBlock(block);
+                ms.Write(serializedBlock, 0, serializedBlock.Length);
+
+                ms.Seek(0, SeekOrigin.Begin);
+                lock (this.blockLock)
+                {
+                    fileId = this.blockDb.Store(Guid.NewGuid().ToString(), ms).ID;
+                }
+            }
+
+            this.blockIdToFileIdIndex[blockIdentifier] = fileId;
+            this.fileIdToBlockIdIndex[fileId] = blockIdentifier;
+            this.blockWaiter.SetEventFor(blockIdentifier);
+        }
+
+        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
+        {
+            Guid fileId;
+
+            using (var ms = new MemoryStream())
+            {
+                byte[] serializedTransaction = this.chainSerializer.GetBytesForTransaction(transaction);
+                ms.Write(serializedTransaction, 0, serializedTransaction.Length);
+
+                ms.Seek(0, SeekOrigin.Begin);
+                lock (this.txLock)
+                {
+                    fileId = this.txDb.Store(Guid.NewGuid().ToString(), ms).ID;
+                }
+            }
+
+            this.txIdToFileIdIndex[transactionIdentifier] = fileId;
+            this.fileIdToTxIdIndex[fileId] = transactionIdentifier;
+            this.txWaiter.SetEventFor(transactionIdentifier);
+        }
+
+        protected override bool ContainsBlockCore(BigInteger blockIdentifier)
+        {
+            return this.blockIdToFileIdIndex.ContainsKey(blockIdentifier);
+        }
+
+        protected override bool ContainsTransactionCore(BigInteger transactionIdentifier)
+        {
+            return this.txIdToFileIdIndex.ContainsKey(transactionIdentifier);
+        }
+
+        protected override void DisposeManagedResources()
+        {
+            this.blockDb.Dispose();
+            this.txDb.Dispose();
+            this.blockWaiter.Dispose();
+            this.txWaiter.Dispose();
+            base.DisposeManagedResources();
+        }
+
+        private void OnChainSerializerSet()
+        {
             try
             {
                 ConcurrentDictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new ConcurrentDictionary<BigInteger, BigInteger>();
-                this.blockDb = new FileDB(BlockFileName, FileAccess.ReadWrite);
-                this.txDb = new FileDB(TxFileName, FileAccess.ReadWrite);
 
+                // OOH, CHEATING
+                SHA256 hasher = SHA256.Create();
                 foreach (EntryInfo entry in this.blockDb.ListFiles())
                 {
                     try
                     {
+                        byte[] serializedBlock;
                         using (var ms = new MemoryStream())
                         {
                             lock (this.blockLock)
@@ -58,13 +179,17 @@ namespace Evercoin.Storage
                                 this.blockDb.Read(entry.ID, ms);
                             }
 
-                            ms.Seek(0, SeekOrigin.Begin);
-                            var serializer = new DataContractSerializer(typeof(Block));
-                            Block block = (Block)serializer.ReadObject(ms);
-                            this.fileIdToBlockIdIndex[entry.ID] = blockIdToNextBlockIdMapping[block.PreviousBlockIdentifier] = block.Identifier;
-                            this.blockIdToFileIdIndex[block.Identifier] = entry.ID;
-                            this.blockWaiter.SetEventFor(block.Identifier);
+                            serializedBlock = ms.ToArray();
                         }
+
+                        IBlock block = this.chainSerializer.GetBlockForBytes(serializedBlock);
+
+                        // OOH, CHEATING
+                        FancyByteArray hash = hasher.ComputeHash(hasher.ComputeHash(serializedBlock));
+
+                        this.fileIdToBlockIdIndex[entry.ID] = blockIdToNextBlockIdMapping[block.PreviousBlockIdentifier] = hash;
+                        this.blockIdToFileIdIndex[hash] = entry.ID;
+                        this.blockWaiter.SetEventFor(hash);
                     }
                     catch
                     {
@@ -76,16 +201,6 @@ namespace Evercoin.Storage
                 }
 
                 BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").AsEnumerable().Reverse().GetArray());
-                if (!this.ContainsBlockCore(genesisBlockIdentifier))
-                {
-                    Block genesisBlock = new Block
-                                         {
-                                             Identifier = genesisBlockIdentifier,
-                                             TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").AsEnumerable().Reverse().GetArray() }
-                                         };
-                    this.PutBlockCore(genesisBlockIdentifier, genesisBlock);
-                    Cheating.AddBlock(0, genesisBlockIdentifier);
-                }
 
                 BigInteger prevBlockId = BigInteger.Zero;
                 for (int i = 0; i < blockIdToNextBlockIdMapping.Count; i++)
@@ -119,6 +234,7 @@ namespace Evercoin.Storage
                     // TODO: Cheating.AddBlock on the containing block once we've found all its transactions.
                     try
                     {
+                        byte[] serializedTransaction;
                         using (var ms = new MemoryStream())
                         {
                             lock (this.txLock)
@@ -126,13 +242,14 @@ namespace Evercoin.Storage
                                 this.txDb.Read(entry.ID, ms);
                             }
 
-                            ms.Seek(0, SeekOrigin.Begin);
-                            var serializer = new DataContractSerializer(typeof(Transaction));
-                            Transaction transaction = (Transaction)serializer.ReadObject(ms);
-                            this.fileIdToTxIdIndex[entry.ID] = transaction.Identifier;
-                            this.txIdToFileIdIndex[transaction.Identifier] = entry.ID;
-                            this.txWaiter.SetEventFor(transaction.Identifier);
+                            serializedTransaction = ms.ToArray();
                         }
+
+                        FancyByteArray hash = hasher.ComputeHash(hasher.ComputeHash(serializedTransaction));
+
+                        this.fileIdToTxIdIndex[entry.ID] = hash;
+                        this.txIdToFileIdIndex[hash] = entry.ID;
+                        this.txWaiter.SetEventFor(hash);
                     }
                     catch
                     {
@@ -155,103 +272,6 @@ namespace Evercoin.Storage
                     this.blockDb.Dispose();
                 }
             }
-        }
-
-        protected override IBlock FindBlockCore(BigInteger blockIdentifier)
-        {
-            this.blockWaiter.WaitFor(blockIdentifier);
-            Guid fileId = this.blockIdToFileIdIndex[blockIdentifier];
-
-            using (var ms = new MemoryStream())
-            {
-                lock (this.blockLock)
-                {
-                    this.blockDb.Read(fileId, ms);
-                }
-
-                ms.Seek(0, SeekOrigin.Begin);
-                var serializer = new DataContractSerializer(typeof(Block));
-                return (Block)serializer.ReadObject(ms);
-            }
-        }
-
-        protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
-        {
-            this.txWaiter.WaitFor(transactionIdentifier);
-            Guid fileId = this.txIdToFileIdIndex[transactionIdentifier];
-
-            using (var ms = new MemoryStream())
-            {
-                lock (this.txLock)
-                {
-                    this.txDb.Read(fileId, ms);
-                }
-
-                ms.Seek(0, SeekOrigin.Begin);
-                var serializer = new DataContractSerializer(typeof(Transaction));
-                return (Transaction)serializer.ReadObject(ms);
-            }
-        }
-
-        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
-        {
-            Block typedBlock = new Block(blockIdentifier, block);
-            Guid fileId;
-
-            using (var ms = new MemoryStream())
-            {
-                var serializer = new DataContractSerializer(typeof(Block));
-                serializer.WriteObject(ms, typedBlock);
-                ms.Seek(0, SeekOrigin.Begin);
-                lock (this.blockLock)
-                {
-                    fileId = this.blockDb.Store(Guid.NewGuid().ToString(), ms).ID;
-                }
-            }
-
-            this.blockIdToFileIdIndex[blockIdentifier] = fileId;
-            this.fileIdToBlockIdIndex[fileId] = blockIdentifier;
-            this.blockWaiter.SetEventFor(blockIdentifier);
-        }
-
-        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
-        {
-            Transaction typedTransaction = new Transaction(transactionIdentifier, transaction);
-            Guid fileId;
-
-            using (var ms = new MemoryStream())
-            {
-                var serializer = new DataContractSerializer(typeof(Transaction));
-                serializer.WriteObject(ms, typedTransaction);
-                ms.Seek(0, SeekOrigin.Begin);
-                lock (this.txLock)
-                {
-                    fileId = this.txDb.Store(Guid.NewGuid().ToString(), ms).ID;
-                }
-            }
-
-            this.txIdToFileIdIndex[transactionIdentifier] = fileId;
-            this.fileIdToTxIdIndex[fileId] = transactionIdentifier;
-            this.txWaiter.SetEventFor(transactionIdentifier);
-        }
-
-        protected override bool ContainsBlockCore(BigInteger blockIdentifier)
-        {
-            return this.blockIdToFileIdIndex.ContainsKey(blockIdentifier);
-        }
-
-        protected override bool ContainsTransactionCore(BigInteger transactionIdentifier)
-        {
-            return this.txIdToFileIdIndex.ContainsKey(transactionIdentifier);
-        }
-
-        protected override void DisposeManagedResources()
-        {
-            this.blockDb.Dispose();
-            this.txDb.Dispose();
-            this.blockWaiter.Dispose();
-            this.txWaiter.Dispose();
-            base.DisposeManagedResources();
         }
     }
 }

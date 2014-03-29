@@ -71,7 +71,7 @@ namespace Evercoin.ProtocolObjects
             }
         }
 
-        public ITransaction ToTransaction(IDictionary<BigInteger, ITransaction> prevTransactions)
+        public ITransaction ToTransaction()
         {
             return new TypedTransaction
             {
@@ -83,15 +83,8 @@ namespace Evercoin.ProtocolObjects
                                                           SequenceNumber = x.Sequence,
                                                           SpendingTransactionIdentifier = this.TxId,
                                                           SpendingTransactionInputIndex = (uint)n,
-                                                          SpendingValueSource = x.PrevOutTxId.IsZero ?
-                                                                                new TypedValueSource
-                                                                                {
-                                                                                    AvailableValue = this.Outputs.Sum(o => o.ValueInSatoshis),
-                                                                                    OriginatingTransactionIdentifier = BigInteger.Zero,
-                                                                                    OriginatingTransactionOutputIndex = 0,
-                                                                                    ScriptPublicKey = new byte[0]
-                                                                                } :
-                                                                                prevTransactions[x.PrevOutTxId].Outputs[(int)x.PrevOutN]
+                                                          SpentTransactionOutputIndex = x.PrevOutN,
+                                                          SpentTransactionIdentifier = x.PrevOutTxId
                                                       }).GetArray<IValueSpender>(),
                 Outputs = this.Outputs.Select((x, n) => new TypedValueSource
                                                         {

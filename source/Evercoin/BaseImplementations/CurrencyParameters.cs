@@ -14,6 +14,8 @@ namespace Evercoin.BaseImplementations
 
         private readonly IChainParameters chainParameters;
 
+        private readonly IChainSerializer chainSerializer;
+
         /// <summary>
         /// Initializes a new instance of the <see cref="CurrencyParameters"/> class.
         /// </summary>
@@ -32,17 +34,22 @@ namespace Evercoin.BaseImplementations
         /// <param name="chainParameters">
         /// The value for <see cref="ChainParameters"/>.
         /// </param>
+        /// <param name="chainSerializer">
+        /// The value for <see cref="ChainSerializer"/>.
+        /// </param>
         public CurrencyParameters(Guid identifier,
                                   string friendlyName,
                                   INetworkParameters networkParameters,
                                   IHashAlgorithmStore hashAlgorithmStore,
-                                  IChainParameters chainParameters)
+                                  IChainParameters chainParameters,
+                                  IChainSerializer chainSerializer)
         {
             this.identifier = identifier;
             this.friendlyName = friendlyName;
             this.networkParameters = networkParameters;
             this.hashAlgorithmStore = hashAlgorithmStore;
             this.chainParameters = chainParameters;
+            this.chainSerializer = chainSerializer;
         }
 
         /// <summary>
@@ -75,5 +82,7 @@ namespace Evercoin.BaseImplementations
         /// algorithms to use for this currency.
         /// </summary>
         public IHashAlgorithmStore HashAlgorithmStore { get { return this.hashAlgorithmStore; } }
+
+        public IChainSerializer ChainSerializer { get { return this.chainSerializer; } }
     }
 }

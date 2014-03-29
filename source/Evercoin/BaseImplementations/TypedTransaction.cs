@@ -4,7 +4,7 @@ using Evercoin.Util;
 
 namespace Evercoin.BaseImplementations
 {
-    internal sealed class TypedTransaction : ITransaction
+    public sealed class TypedTransaction : ITransaction
     {
         /// <summary>
         /// Gets the version of this transaction.

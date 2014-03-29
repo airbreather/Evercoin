@@ -35,7 +35,7 @@ namespace Evercoin.App
         /// </summary>
         public override void Load()
         {
-            BigInteger maximumTarget = BigInteger.Parse("00000000FFFF0000000000000000000000000000000000000000000000000000", NumberStyles.HexNumber);
+            BigInteger maximumTarget = TargetFromBits(486604799);
             const decimal InitialBlockSubsidyInSatoshis = 5000000000;
 
             Mock<IValueSource> coinbase = new Mock<IValueSource>();
@@ -60,8 +60,41 @@ namespace Evercoin.App
             this.Bind<ITransactionScriptRunner>().To<TransactionScriptRunner>();
             this.Bind<ISignatureCheckerFactory>().To<ECDSASignatureCheckerFactory>();
             this.Bind<INetworkParameters>().To<SomeNetworkParams>();
+            this.Bind<IChainSerializer>().To<BitcoinChainSerializer>();
             this.Bind<IChainParameters>().ToMethod(ctx => new ChainParameters(genesisBlock.Object, HashAlgorithmIdentifiers.DoubleSHA256, HashAlgorithmIdentifiers.DoubleSHA256, HashAlgorithmIdentifiers.RipeMd160, HashAlgorithmIdentifiers.SHA1, HashAlgorithmIdentifiers.SHA256, HashAlgorithmIdentifiers.SHA256ThenRipeMd160, HashAlgorithmIdentifiers.DoubleSHA256, new[] { SecurityMechanism.ProofOfWork }, Duration.FromMinutes(10), 2016, InitialBlockSubsidyInSatoshis, 0.5m, 210000, maximumTarget));
-            this.Bind<ICurrencyParameters>().ToMethod(ctx => new CurrencyParameters(Guid.NewGuid(), "Bitcoin", ctx.Kernel.Get<INetworkParameters>(), this.hashAlgorithmStore, ctx.Kernel.Get<IChainParameters>()));
+            this.Bind<ICurrencyParameters>().ToMethod(ctx => new CurrencyParameters(Guid.NewGuid(), "Bitcoin", ctx.Kernel.Get<INetworkParameters>(), this.hashAlgorithmStore, ctx.Kernel.Get<IChainParameters>(), ctx.Kernel.Get<IChainSerializer>()));
+
+
+            BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").Reverse().GetArray());
+            this.underlyingChainStorage.PutBlock(genesisBlockIdentifier, genesisBlock.Object);
+            Cheating.AddBlock(0, genesisBlockIdentifier);
         }
+
+        private static BigInteger TargetFromBits(uint bits)
+        {
+            uint mantissa = bits & 0x007fffff;
+            bool negative = (bits & 0x00800000) != 0;
+            byte exponent = (byte)(bits >> 24);
+            BigInteger result;
+
+            if (exponent <= 3)
+            {
+                mantissa >>= 8 * (3 - exponent);
+                result = mantissa;
+            }
+            else
+            {
+                result = mantissa;
+                result <<= 8 * (exponent - 3);
+            }
+
+            if ((result.Sign < 0) != negative)
+            {
+                result = -result;
+            }
+
+            return result;
+        }
+
     }
 }

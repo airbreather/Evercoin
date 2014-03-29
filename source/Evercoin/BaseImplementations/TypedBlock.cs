@@ -7,7 +7,7 @@ using NodaTime;
 
 namespace Evercoin.BaseImplementations
 {
-    internal sealed class TypedBlock : IBlock
+    public sealed class TypedBlock : IBlock
     {
         /// <summary>
         /// Gets the ordered list of the identifiers of

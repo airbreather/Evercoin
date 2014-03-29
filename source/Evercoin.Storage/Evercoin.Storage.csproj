@@ -86,11 +86,6 @@
     <Compile Include="FileDBChainStore.cs" />
     <Compile Include="FileSystemChainStore.cs" />
     <Compile Include="MemoryChainStore.cs" />
-    <Compile Include="Model\Block.cs" />
-    <Compile Include="Model\MerkleTreeNode.cs" />
-    <Compile Include="Model\Transaction.cs" />
-    <Compile Include="Model\ValueSource.cs" />
-    <Compile Include="Model\ValueSpender.cs" />
     <Compile Include="DotNetZipFileChainStore.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

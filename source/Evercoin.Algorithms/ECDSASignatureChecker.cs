@@ -46,15 +46,14 @@ namespace Evercoin.Algorithms
             for (int i = 0; i < inputs.Length; i++)
             {
                 IValueSpender spender = this.transaction.Inputs[i];
-                IValueSource valueSource = spender.SpendingValueSource;
 
-                if (valueSource.IsCoinbase)
+                if (spender.SpentTransactionIdentifier.IsZero)
                 {
                     continue;
                 }
 
-                BigInteger originatingTransactionIdentifier = valueSource.OriginatingTransactionIdentifier;
-                uint originatingTransactionOutputIndex = valueSource.OriginatingTransactionOutputIndex;
+                BigInteger originatingTransactionIdentifier = spender.SpentTransactionIdentifier;
+                uint originatingTransactionOutputIndex = spender.SpentTransactionOutputIndex;
                 IEnumerable<byte> scriptSig = i == this.outputIndex ? scriptBytes : Enumerable.Empty<byte>();
                 uint seq = spender.SequenceNumber;
                 inputs[i] = new ProtocolTxIn(originatingTransactionIdentifier, originatingTransactionOutputIndex, scriptSig, seq);

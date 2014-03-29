@@ -1,16 +1,13 @@
-﻿using System;
-using System.Collections.Concurrent;
+﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Numerics;
-using System.Runtime.Serialization;
-using System.Threading;
-using System.Threading.Tasks;
+using System.Security.Cryptography;
 
 using Evercoin.BaseImplementations;
-using Evercoin.Storage.Model;
 using Evercoin.Util;
 
 namespace Evercoin.Storage
@@ -21,6 +18,11 @@ namespace Evercoin.Storage
     {
         private const string BlockDirName = @"C:\Freedom\blocks";
         private const string TxDirName = @"C:\Freedom\transactions";
+
+        private readonly Waiter<BigInteger> blockWaiter = new Waiter<BigInteger>();
+        private readonly Waiter<BigInteger> txWaiter = new Waiter<BigInteger>();
+
+        private IChainSerializer chainSerializer;
 
         public FileSystemChainStore()
         {
@@ -33,36 +35,94 @@ namespace Evercoin.Storage
             {
                 Directory.CreateDirectory(TxDirName);
             }
+        }
 
-            BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").AsEnumerable().Reverse().GetArray());
-            if (!this.ContainsBlock(genesisBlockIdentifier))
+        [Import]
+        public IChainSerializer ChainSerializer
+        {
+            get
             {
-                Block genesisBlock = new Block
-                                     {
-                                         Identifier = genesisBlockIdentifier,
-                                         TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").AsEnumerable().Reverse().GetArray() }
-                                     };
-                this.PutBlock(genesisBlockIdentifier, genesisBlock);
-                Cheating.AddBlock(0, genesisBlockIdentifier);
+                return this.chainSerializer;
             }
 
-            ParallelOptions options = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
-            ConcurrentDictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new ConcurrentDictionary<BigInteger, BigInteger>();
-            Parallel.ForEach(Directory.EnumerateFiles(BlockDirName), options, filePath =>
+            set
             {
-                string name = Path.GetFileName(filePath);
-                byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
-                Array.Reverse(hexBytes);
-                BigInteger blockId = new BigInteger(hexBytes);
-                try
-                {
-                    IBlock block = this.FindBlockCore(blockId);
-                    blockIdToNextBlockIdMapping[block.PreviousBlockIdentifier] = blockId;
-                }
-                catch
-                {
-                }
-            });
+                this.chainSerializer = value;
+                this.OnChainSerializerSet();
+            }
+        }
+
+        protected override IBlock FindBlockCore(BigInteger blockIdentifier)
+        {
+            this.blockWaiter.WaitFor(blockIdentifier);
+            string filePath = GetBlockFileName(blockIdentifier);
+            byte[] serializedBlock = File.ReadAllBytes(filePath);
+            return this.chainSerializer.GetBlockForBytes(serializedBlock);
+        }
+
+        protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
+        {
+            this.txWaiter.WaitFor(transactionIdentifier);
+            string filePath = GetTransactionFileName(transactionIdentifier);
+            byte[] serializedTransaction = File.ReadAllBytes(filePath);
+            return this.chainSerializer.GetTransactionForBytes(serializedTransaction);
+        }
+
+        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
+        {
+            string filePath = GetBlockFileName(blockIdentifier);
+            byte[] serializedBlock = this.chainSerializer.GetBytesForBlock(block);
+            File.WriteAllBytes(filePath, serializedBlock);
+            this.blockWaiter.SetEventFor(blockIdentifier);
+        }
+
+        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
+        {
+            string filePath = GetTransactionFileName(transactionIdentifier);
+            byte[] serializedTransaction = this.chainSerializer.GetBytesForTransaction(transaction);
+            File.WriteAllBytes(filePath, serializedTransaction);
+            this.txWaiter.SetEventFor(transactionIdentifier);
+        }
+
+        protected override bool ContainsBlockCore(BigInteger blockIdentifier)
+        {
+            return File.Exists(GetBlockFileName(blockIdentifier));
+        }
+
+        protected override bool ContainsTransactionCore(BigInteger transactionIdentifier)
+        {
+            return File.Exists(GetTransactionFileName(transactionIdentifier));
+        }
+
+        private static string GetBlockFileName(BigInteger blockIdentifier)
+        {
+            FancyByteArray bytes = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(blockIdentifier, 32, Endianness.LittleEndian);
+            return Path.Combine(BlockDirName, bytes.ToString());
+        }
+
+        private static string GetTransactionFileName(BigInteger transactionIdentifier)
+        {
+            FancyByteArray bytes = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(transactionIdentifier, 32, Endianness.LittleEndian);
+            return Path.Combine(TxDirName, bytes.ToString());
+        }
+
+        private void OnChainSerializerSet()
+        {
+            ConcurrentDictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new ConcurrentDictionary<BigInteger, BigInteger>();
+
+            // OOH, CHEATING
+            SHA256 hasher = SHA256.Create();
+            foreach (string fileName in Directory.EnumerateFiles(BlockDirName))
+            {
+                byte[] serializedBlock = File.ReadAllBytes(fileName);
+
+                // OOH, CHEATING
+                FancyByteArray hash = hasher.ComputeHash(hasher.ComputeHash(serializedBlock));
+
+                this.blockWaiter.SetEventFor(hash);
+            }
+
+            BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").AsEnumerable().Reverse().GetArray());
 
             BigInteger prevBlockId = BigInteger.Zero;
             for (int i = 0; i < blockIdToNextBlockIdMapping.Count; i++)
@@ -78,156 +138,25 @@ namespace Evercoin.Storage
             }
 
             HashSet<BigInteger> goodBlockIds = new HashSet<BigInteger>(blockIdToNextBlockIdMapping.Values);
-            Parallel.ForEach(Directory.EnumerateFiles(BlockDirName), options, filePath =>
+            foreach (string fileName in Directory.EnumerateFiles(BlockDirName))
             {
-                string name = Path.GetFileName(filePath);
-                byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
-                Array.Reverse(hexBytes);
-                BigInteger blockId = new BigInteger(hexBytes);
+                BigInteger blockId = BigInteger.Parse(Path.GetFileName(fileName), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
                 if (!goodBlockIds.Contains(blockId) &&
                     blockId != genesisBlockIdentifier)
                 {
-                    File.Delete(filePath);
-                }
-            });
-
-            Parallel.ForEach(Directory.EnumerateFiles(TxDirName), options, filePath =>
-            {
-                string name = Path.GetFileName(filePath);
-                byte[] hexBytes = ByteTwiddling.HexStringToByteArray(name);
-                Array.Reverse(hexBytes);
-                BigInteger transactionIdentifier = new BigInteger(hexBytes);
-                try
-                {
-                    ITransaction tx = this.FindTransactionCore(transactionIdentifier);
-                }
-                catch
-                {
-                    File.Delete(filePath);
-                }
-            });
-        }
-
-        protected override IBlock FindBlockCore(BigInteger blockIdentifier)
-        {
-            SpinWait spinner = new SpinWait();
-            string filePath = GetBlockFileName(blockIdentifier);
-            FileStream stream;
-            do
-            {
-                if (!File.Exists(filePath))
-                {
-                    spinner.SpinOnce();
-                    continue;
-                }
-
-                try
-                {
-                    stream = File.OpenRead(filePath);
-                    break;
-                }
-                catch
-                {
-                    spinner.SpinOnce();
+                    File.Delete(fileName);
                 }
             }
-            while (true);
 
-            using (stream)
+            foreach (string fileName in Directory.EnumerateFiles(TxDirName))
             {
-                var serializer = new DataContractSerializer(typeof(Block));
-                return (Block)serializer.ReadObject(stream);
+                // TODO: Cheating.AddBlock on the containing block once we've found all its transactions.
+                byte[] serializedTransaction = File.ReadAllBytes(fileName);
+
+                FancyByteArray hash = hasher.ComputeHash(hasher.ComputeHash(serializedTransaction));
+
+                this.txWaiter.SetEventFor(hash);
             }
-        }
-
-        protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
-        {
-            SpinWait spinner = new SpinWait();
-            string filePath = GetTransactionFileName(transactionIdentifier);
-            FileStream stream;
-            do
-            {
-                if (!File.Exists(filePath))
-                {
-                    spinner.SpinOnce();
-                    continue;
-                }
-
-                try
-                {
-                    stream = File.OpenRead(filePath);
-                    break;
-                }
-                catch
-                {
-                    spinner.SpinOnce();
-                }
-            }
-            while (true);
-
-            using (stream)
-            {
-                var serializer = new DataContractSerializer(typeof(Transaction));
-                return (Transaction)serializer.ReadObject(stream);
-            }
-        }
-
-        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
-        {
-            string filePath = GetBlockFileName(blockIdentifier);
-            Block typedBlock = new Block(blockIdentifier, block);
-
-            using (FileStream stream = File.OpenWrite(filePath))
-            {
-                var serializer = new DataContractSerializer(typeof(Block));
-                serializer.WriteObject(stream, typedBlock);
-            }
-        }
-
-        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
-        {
-            string filePath = GetTransactionFileName(transactionIdentifier);
-            Transaction typedTransaction = new Transaction(transactionIdentifier, transaction);
-
-            using (FileStream stream = File.OpenWrite(filePath))
-            {
-                var serializer = new DataContractSerializer(typeof(Transaction));
-                serializer.WriteObject(stream, typedTransaction);
-            }
-        }
-
-        protected override bool ContainsBlockCore(BigInteger blockIdentifier)
-        {
-            return File.Exists(GetBlockFileName(blockIdentifier));
-        }
-
-        protected override bool ContainsTransactionCore(BigInteger transactionIdentifier)
-        {
-            return File.Exists(GetTransactionFileName(transactionIdentifier));
-        }
-
-        protected override async Task<bool> ContainsBlockAsyncCore(BigInteger blockIdentifier, CancellationToken token)
-        {
-            return await Task.Run(() => File.Exists(GetBlockFileName(blockIdentifier)), token);
-        }
-
-        protected override async Task<bool> ContainsTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
-        {
-            return await Task.Run(() => File.Exists(GetTransactionFileName(transactionIdentifier)), token);
-        }
-
-        private static string GetBlockFileName(BigInteger blockIdentifier)
-        {
-            byte[] idBytes = blockIdentifier.ToLittleEndianUInt256Array();
-            Array.Reverse(idBytes);
-            return Path.Combine(BlockDirName, ByteTwiddling.ByteArrayToHexString(idBytes));
-        }
-
-        private static string GetTransactionFileName(BigInteger transactionIdentifier)
-        {
-            byte[] idBytes = transactionIdentifier.ToLittleEndianUInt256Array();
-            Array.Reverse(idBytes);
-            return Path.Combine(TxDirName, ByteTwiddling.ByteArrayToHexString(idBytes));
         }
     }
 }

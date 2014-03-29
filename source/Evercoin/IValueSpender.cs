@@ -8,10 +8,9 @@ namespace Evercoin
     /// </summary>
     public interface IValueSpender : IEquatable<IValueSpender>
     {
-        /// <summary>
-        /// Gets the <see cref="IValueSource"/> being spent by this spender.
-        /// </summary>
-        IValueSource SpendingValueSource { get; }
+        BigInteger SpentTransactionIdentifier { get; }
+
+        uint SpentTransactionOutputIndex { get; }
 
         /// <summary>
         /// Gets the identifier of the <see cref="ITransaction"/> that

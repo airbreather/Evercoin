@@ -5,7 +5,7 @@ using Evercoin.Util;
 
 namespace Evercoin.BaseImplementations
 {
-    internal sealed class TypedValueSource : IValueSource
+    public sealed class TypedValueSource : IValueSource
     {
         /// <summary>
         /// Gets a value indicating whether this is the coinbase value source

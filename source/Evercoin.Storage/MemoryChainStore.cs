@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.ComponentModel.Composition;
-using System.Linq;
 using System.Numerics;
 
 using Evercoin.BaseImplementations;
-using Evercoin.Storage.Model;
 using Evercoin.Util;
 
 namespace Evercoin.Storage
@@ -14,33 +12,26 @@ namespace Evercoin.Storage
     [Export(typeof(IReadableChainStore))]
     public sealed class MemoryChainStore : ReadWriteChainStoreBase
     {
-        private readonly ConcurrentDictionary<BigInteger, IBlock> blocks = new ConcurrentDictionary<BigInteger, IBlock>();
-        private readonly ConcurrentDictionary<BigInteger, ITransaction> transactions = new ConcurrentDictionary<BigInteger, ITransaction>();
+        private readonly ConcurrentDictionary<BigInteger, byte[]> blocks = new ConcurrentDictionary<BigInteger, byte[]>();
+        private readonly ConcurrentDictionary<BigInteger, byte[]> transactions = new ConcurrentDictionary<BigInteger, byte[]>();
         private readonly Waiter<BigInteger> blockWaiter = new Waiter<BigInteger>();
         private readonly Waiter<BigInteger> txWaiter = new Waiter<BigInteger>();
-
-        public MemoryChainStore()
-        {
-            BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").Reverse().GetArray());
-            Block genesisBlock = new Block
-            {
-                Identifier = genesisBlockIdentifier,
-                TransactionIdentifiers = new MerkleTreeNode { Data = ByteTwiddling.HexStringToByteArray("4A5E1E4BAAB89F3A32518A88C31BC87F618F76673E2CC77AB2127B7AFDEDA33B").Reverse().GetArray() }
-            };
-            this.PutBlock(genesisBlockIdentifier, genesisBlock);
-            Cheating.AddBlock(0, genesisBlockIdentifier);
-        }
+        
+        [Import]
+        public IChainSerializer ChainSerializer { get; set; }
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
         {
             this.blockWaiter.WaitFor(blockIdentifier);
-            return this.blocks[blockIdentifier];
+            byte[] serializedBlock = this.blocks[blockIdentifier];
+            return this.ChainSerializer.GetBlockForBytes(serializedBlock);
         }
 
         protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
         {
             this.txWaiter.WaitFor(transactionIdentifier);
-            return this.transactions[transactionIdentifier];
+            byte[] serializedTransaction = this.transactions[transactionIdentifier];
+            return this.ChainSerializer.GetTransactionForBytes(serializedTransaction);
         }
 
         protected override bool ContainsBlockCore(BigInteger blockIdentifier)
@@ -55,15 +46,18 @@ namespace Evercoin.Storage
 
         protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
         {
-            this.blocks[blockIdentifier] = block;
+            byte[] serializedBlock = this.ChainSerializer.GetBytesForBlock(block);
+            this.blocks[blockIdentifier] = serializedBlock;
             this.blockWaiter.SetEventFor(blockIdentifier);
         }
 
         protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
         {
+            byte[] serializedTransaction = this.ChainSerializer.GetBytesForTransaction(transaction);
+
             // TODO: coinbases can have duplicate transaction IDs before version 2.
             // TODO: Figure that shiz out!
-            this.transactions[transactionIdentifier] = transaction;
+            this.transactions[transactionIdentifier] = serializedTransaction;
             this.txWaiter.SetEventFor(transactionIdentifier);
         }
 

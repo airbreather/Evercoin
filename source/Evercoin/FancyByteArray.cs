@@ -52,7 +52,7 @@ namespace Evercoin
 
         public static FancyByteArray CreateFromBigIntegerWithDesiredLengthAndEndianness(BigInteger bigInteger, int desiredLengthInBytes, Endianness desiredEndianness)
         {
-            return CreateFromBigIntegerWithDesiredLengthAndEndianness(bigInteger, desiredLengthInBytes, desiredEndianness);
+            return CreateFromBigIntegerWithDesiredLengthAndEndianness(bigInteger, (int?)desiredLengthInBytes, desiredEndianness);
         }
 
         private static FancyByteArray CreateFromBigIntegerWithDesiredLengthAndEndianness(BigInteger bigInteger, int? desiredLengthInBytes, Endianness desiredEndianness)
@@ -81,7 +81,7 @@ namespace Evercoin
             else
             {
                 littleEndianResultWithDesiredLength = new byte[desiredLengthInBytes.Value];
-                Buffer.BlockCopy(unpaddedLittleEndianResult, 0, littleEndianResultWithDesiredLength, 0, desiredLengthInBytes.Value);
+                Buffer.BlockCopy(unpaddedLittleEndianResult, 0, littleEndianResultWithDesiredLength, 0, unpaddedLittleEndianResult.Length);
 
                 if (bigInteger.Sign < 0)
                 {
@@ -149,7 +149,7 @@ namespace Evercoin
 
         public override string ToString()
         {
-            return ByteTwiddling.ByteArrayToHexString(this.Value);
+            return ByteTwiddling.ByteArrayToHexString(this.Value.Reverse().ToArray());
         }
 
         public override bool Equals(object obj)

@@ -88,6 +88,7 @@
     <Compile Include="Endianness.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="FancyByteArray.cs" />
+    <Compile Include="IChainSerializer.cs" />
     <Compile Include="ICurrencyParameters.cs" />
     <Compile Include="ICurrencyNetwork.cs" />
     <Compile Include="IMerkleTreeNode.cs" />

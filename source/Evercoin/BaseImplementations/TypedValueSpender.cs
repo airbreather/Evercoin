@@ -5,12 +5,11 @@ using Evercoin.Util;
 
 namespace Evercoin.BaseImplementations
 {
-    internal sealed class TypedValueSpender : IValueSpender
+    public sealed class TypedValueSpender : IValueSpender
     {
-        /// <summary>
-        /// The <see cref="IValueSource"/> being spent by this spender.
-        /// </summary>
-        public IValueSource SpendingValueSource { get; set; }
+        public BigInteger SpentTransactionIdentifier { get; set; }
+
+        public uint SpentTransactionOutputIndex { get; set; }
 
         /// <summary>
         /// The identifier of the <see cref="ITransaction"/> that
@@ -65,7 +64,8 @@ namespace Evercoin.BaseImplementations
             return other != null &&
                    this.SpendingTransactionIdentifier == other.SpendingTransactionIdentifier &&
                    this.SpendingTransactionInputIndex == other.SpendingTransactionInputIndex &&
-                   Equals(this.SpendingValueSource, other.SpendingValueSource) &&
+                   this.SpentTransactionIdentifier == other.SpentTransactionIdentifier &&
+                   this.SpentTransactionOutputIndex == other.SpentTransactionOutputIndex &&
                    this.ScriptSignature.SequenceEqual(other.ScriptSignature) &&
                    this.SequenceNumber == other.SequenceNumber;
         }
@@ -79,7 +79,8 @@ namespace Evercoin.BaseImplementations
         public override int GetHashCode()
         {
             HashCodeBuilder builder = new HashCodeBuilder()
-                .HashWith(this.SpendingValueSource)
+                .HashWith(this.SpentTransactionIdentifier)
+                .HashWith(this.SpentTransactionOutputIndex)
                 .HashWith(this.SpendingTransactionIdentifier)
                 .HashWith(this.SpendingTransactionInputIndex)
                 .HashWith(this.SequenceNumber)
