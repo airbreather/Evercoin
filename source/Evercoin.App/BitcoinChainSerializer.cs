@@ -20,7 +20,7 @@ namespace Evercoin.App
             byte[] versionBytes = BitConverter.GetBytes(block.Version).LittleEndianToOrFromBitConverterEndianness();
             byte[] prevBlockIdBytes = block.PreviousBlockIdentifier.ToLittleEndianUInt256Array();
             byte[] merkleRootBytes = block.TransactionIdentifiers.Data;
-            byte[] timestampBytes = BitConverter.GetBytes((uint)block.Timestamp.Ticks).LittleEndianToOrFromBitConverterEndianness();
+            byte[] timestampBytes = BitConverter.GetBytes((uint)((block.Timestamp - NodaConstants.UnixEpoch).Ticks / NodaConstants.TicksPerSecond)).LittleEndianToOrFromBitConverterEndianness();
             byte[] packedTargetBytes = BitConverter.GetBytes(TargetToBits(block.DifficultyTarget)).LittleEndianToOrFromBitConverterEndianness();
             byte[] nonceBytes = BitConverter.GetBytes(block.Nonce).LittleEndianToOrFromBitConverterEndianness();
 

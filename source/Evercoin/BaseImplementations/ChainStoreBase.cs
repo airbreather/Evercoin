@@ -69,70 +69,70 @@ namespace Evercoin.BaseImplementations
             return this.ContainsTransactionCore(transactionIdentifier);
         }
 
-        public async Task<bool> ContainsBlockAsync(BigInteger blockIdentifier)
+        public Task<bool> ContainsBlockAsync(BigInteger blockIdentifier)
         {
-            return await this.ContainsBlockAsync(blockIdentifier, CancellationToken.None);
+            return this.ContainsBlockAsync(blockIdentifier, CancellationToken.None);
         }
 
-        public async Task<IBlock> GetBlockAsync(BigInteger blockIdentifier)
+        public Task<IBlock> GetBlockAsync(BigInteger blockIdentifier)
         {
-            return await this.GetBlockAsync(blockIdentifier, CancellationToken.None);
+            return this.GetBlockAsync(blockIdentifier, CancellationToken.None);
         }
 
-        public async Task PutBlockAsync(BigInteger blockIdentifier, IBlock block)
+        public Task PutBlockAsync(BigInteger blockIdentifier, IBlock block)
         {
-            await this.PutBlockAsync(blockIdentifier, block, CancellationToken.None);
+            return this.PutBlockAsync(blockIdentifier, block, CancellationToken.None);
         }
 
-        public async Task<bool> ContainsTransactionAsync(BigInteger transactionIdentifier)
+        public Task<bool> ContainsTransactionAsync(BigInteger transactionIdentifier)
         {
-            return await this.ContainsTransactionAsync(transactionIdentifier, CancellationToken.None);
+            return this.ContainsTransactionAsync(transactionIdentifier, CancellationToken.None);
         }
 
-        public async Task<ITransaction> GetTransactionAsync(BigInteger transactionIdentifier)
+        public Task<ITransaction> GetTransactionAsync(BigInteger transactionIdentifier)
         {
-            return await this.GetTransactionAsync(transactionIdentifier, CancellationToken.None);
+            return this.GetTransactionAsync(transactionIdentifier, CancellationToken.None);
         }
 
-        public async Task PutTransactionAsync(BigInteger transactionIdentifier, ITransaction transaction)
+        public Task PutTransactionAsync(BigInteger transactionIdentifier, ITransaction transaction)
         {
-            await this.PutTransactionAsync(transactionIdentifier, transaction, CancellationToken.None);
+            return this.PutTransactionAsync(transactionIdentifier, transaction, CancellationToken.None);
         }
 
-        public async Task<bool> ContainsBlockAsync(BigInteger blockIdentifier, CancellationToken token)
+        public Task<bool> ContainsBlockAsync(BigInteger blockIdentifier, CancellationToken token)
         {
             this.ThrowIfDisposed();
-            return await this.ContainsBlockAsyncCore(blockIdentifier, token);
+            return this.ContainsBlockAsyncCore(blockIdentifier, token);
         }
 
-        public async Task<IBlock> GetBlockAsync(BigInteger blockIdentifier, CancellationToken token)
+        public Task<IBlock> GetBlockAsync(BigInteger blockIdentifier, CancellationToken token)
         {
             this.ThrowIfDisposed();
-            return await this.FindBlockAsyncCore(blockIdentifier, token);
+            return this.FindBlockAsyncCore(blockIdentifier, token);
         }
 
-        public async Task PutBlockAsync(BigInteger blockIdentifier, IBlock block, CancellationToken token)
+        public Task PutBlockAsync(BigInteger blockIdentifier, IBlock block, CancellationToken token)
         {
             this.ThrowIfDisposed();
-            await this.PutBlockAsyncCore(blockIdentifier, block, token);
+            return this.PutBlockAsyncCore(blockIdentifier, block, token);
         }
 
-        public async Task<bool> ContainsTransactionAsync(BigInteger transactionIdentifier, CancellationToken token)
+        public Task<bool> ContainsTransactionAsync(BigInteger transactionIdentifier, CancellationToken token)
         {
             this.ThrowIfDisposed();
-            return await this.ContainsTransactionAsyncCore(transactionIdentifier, token);
+            return this.ContainsTransactionAsyncCore(transactionIdentifier, token);
         }
 
-        public async Task<ITransaction> GetTransactionAsync(BigInteger transactionIdentifier, CancellationToken token)
+        public Task<ITransaction> GetTransactionAsync(BigInteger transactionIdentifier, CancellationToken token)
         {
             this.ThrowIfDisposed();
-            return await this.FindTransactionAsyncCore(transactionIdentifier, token);
+            return this.FindTransactionAsyncCore(transactionIdentifier, token);
         }
 
-        public async Task PutTransactionAsync(BigInteger transactionIdentifier, ITransaction transaction, CancellationToken token)
+        public Task PutTransactionAsync(BigInteger transactionIdentifier, ITransaction transaction, CancellationToken token)
         {
             this.ThrowIfDisposed();
-            await this.PutTransactionAsyncCore(transactionIdentifier, transaction, token);
+            return this.PutTransactionAsyncCore(transactionIdentifier, transaction, token);
         }
 
         protected abstract IBlock FindBlockCore(BigInteger blockIdentifier);
@@ -153,34 +153,34 @@ namespace Evercoin.BaseImplementations
             return this.FindTransactionCore(transactionIdentifier) != null;
         }
 
-        protected virtual async Task<bool> ContainsBlockAsyncCore(BigInteger blockIdentifier, CancellationToken token)
+        protected virtual Task<bool> ContainsBlockAsyncCore(BigInteger blockIdentifier, CancellationToken token)
         {
-            return await Task.Run(() => this.ContainsBlockCore(blockIdentifier), token);
+            return Task.Run(() => this.ContainsBlockCore(blockIdentifier), token);
         }
 
-        protected virtual async Task<bool> ContainsTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
+        protected virtual Task<bool> ContainsTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
         {
-            return await Task.Run(() => this.ContainsTransactionCore(transactionIdentifier), token);
+            return Task.Run(() => this.ContainsTransactionCore(transactionIdentifier), token);
         }
 
-        protected virtual async Task<IBlock> FindBlockAsyncCore(BigInteger blockIdentifier, CancellationToken token)
+        protected virtual Task<IBlock> FindBlockAsyncCore(BigInteger blockIdentifier, CancellationToken token)
         {
-            return await Task.Run(() => this.FindBlockCore(blockIdentifier), token);
+            return Task.Run(() => this.FindBlockCore(blockIdentifier), token);
         }
 
-        protected virtual async Task<ITransaction> FindTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
+        protected virtual Task<ITransaction> FindTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
         {
-            return await Task.Run(() => this.FindTransactionCore(transactionIdentifier), token);
+            return Task.Run(() => this.FindTransactionCore(transactionIdentifier), token);
         }
 
-        protected virtual async Task PutBlockAsyncCore(BigInteger blockIdentifier, IBlock block, CancellationToken token)
+        protected virtual Task PutBlockAsyncCore(BigInteger blockIdentifier, IBlock block, CancellationToken token)
         {
-            await Task.Run(() => this.PutBlockCore(blockIdentifier, block), token);
+            return Task.Run(() => this.PutBlockCore(blockIdentifier, block), token);
         }
 
-        protected virtual async Task PutTransactionAsyncCore(BigInteger transactionIdentifier, ITransaction transaction, CancellationToken token)
+        protected virtual Task PutTransactionAsyncCore(BigInteger transactionIdentifier, ITransaction transaction, CancellationToken token)
         {
-            await Task.Run(() => this.PutTransactionCore(transactionIdentifier, transaction), token);
+            return Task.Run(() => this.PutTransactionCore(transactionIdentifier, transaction), token);
         }
     }
 }

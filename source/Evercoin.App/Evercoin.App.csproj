@@ -80,6 +80,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="BitcoinChainSerializer.cs" />
+    <Compile Include="BitcoinChainValidator.cs" />
     <Compile Include="CompositeChainStore.cs" />
     <Compile Include="CompositeHashAlgorithmStore.cs" />
     <Compile Include="BlockCache.cs" />

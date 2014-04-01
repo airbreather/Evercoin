@@ -49,7 +49,8 @@ namespace Evercoin.App
             genesisBlock.Setup(x => x.TransactionIdentifiers).Returns(transactionIdentifiers.Object);
 
             this.underlyingChainStorage.PutBlock(genesisBlockIdentifier, genesisBlock.Object);
-            Cheating.AddBlock(0, genesisBlockIdentifier);
+            IBlockChain blockChain = new BlockChain();
+            blockChain.AddBlockAtHeight(genesisBlockIdentifier, 0);
 
             this.Bind<IReadableChainStore>().ToConstant(this.underlyingChainStorage);
             this.Bind<IChainStore>().ToConstant(this.underlyingChainStorage);
@@ -60,9 +61,11 @@ namespace Evercoin.App
             this.Bind<ITransactionScriptRunner>().To<TransactionScriptRunner>();
             this.Bind<ISignatureCheckerFactory>().To<ECDSASignatureCheckerFactory>();
             this.Bind<INetworkParameters>().To<SomeNetworkParams>();
+            this.Bind<IChainValidator>().To<BitcoinChainValidator>();
+            this.Bind<IBlockChain>().ToConstant(blockChain);
             this.Bind<IChainSerializer>().To<BitcoinChainSerializer>();
             this.Bind<IChainParameters>().ToMethod(ctx => new ChainParameters(genesisBlock.Object, HashAlgorithmIdentifiers.DoubleSHA256, HashAlgorithmIdentifiers.DoubleSHA256, HashAlgorithmIdentifiers.RipeMd160, HashAlgorithmIdentifiers.SHA1, HashAlgorithmIdentifiers.SHA256, HashAlgorithmIdentifiers.SHA256ThenRipeMd160, HashAlgorithmIdentifiers.DoubleSHA256, new[] { SecurityMechanism.ProofOfWork }, Duration.FromMinutes(10), 2016, InitialBlockSubsidyInSatoshis, 0.5m, 210000, maximumTarget));
-            this.Bind<ICurrencyParameters>().ToMethod(ctx => new CurrencyParameters(Guid.NewGuid(), "Bitcoin", ctx.Kernel.Get<INetworkParameters>(), this.hashAlgorithmStore, ctx.Kernel.Get<IChainParameters>(), ctx.Kernel.Get<IChainSerializer>()));
+            this.Bind<ICurrencyParameters>().ToMethod(ctx => new CurrencyParameters(Guid.NewGuid(), "Bitcoin", ctx.Kernel.Get<INetworkParameters>(), this.hashAlgorithmStore, ctx.Kernel.Get<IChainParameters>(), ctx.Kernel.Get<IChainSerializer>(), ctx.Kernel.Get<IChainValidator>()));
         }
     }
 }

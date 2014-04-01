@@ -35,9 +35,9 @@ namespace Evercoin.Network
 
         private readonly Subject<Tuple<INetworkPeer, ProtocolInventoryVector[]>> inventoryRequests = new Subject<Tuple<INetworkPeer, ProtocolInventoryVector[]>>();
 
-        private readonly Subject<Tuple<INetworkPeer, ProtocolBlock>> blocksReceived = new Subject<Tuple<INetworkPeer, ProtocolBlock>>();
+        private readonly Subject<Tuple<INetworkPeer, IBlock>> blocksReceived = new Subject<Tuple<INetworkPeer, IBlock>>();
 
-        private readonly Subject<Tuple<INetworkPeer, ProtocolTransaction>> transactionsReceived = new Subject<Tuple<INetworkPeer, ProtocolTransaction>>();
+        private readonly Subject<Tuple<INetworkPeer, ITransaction, BigInteger, ulong>> transactionsReceived = new Subject<Tuple<INetworkPeer, ITransaction, BigInteger, ulong>>();
 
         private readonly Subject<Tuple<INetworkPeer, ProtocolVersionPacket>> versionOffersReceived = new Subject<Tuple<INetworkPeer, ProtocolVersionPacket>>();
 
@@ -89,7 +89,7 @@ namespace Evercoin.Network
         /// <remarks>
         /// Ordering, validity, etc. not guaranteed.
         /// </remarks>
-        public override IObservable<Tuple<INetworkPeer, ProtocolBlock>> ReceivedBlocks { get { return this.blocksReceived; } }
+        public override IObservable<Tuple<INetworkPeer, IBlock>> ReceivedBlocks { get { return this.blocksReceived; } }
 
         /// <summary>
         /// Gets the transaction messages we've received.
@@ -97,7 +97,7 @@ namespace Evercoin.Network
         /// <remarks>
         /// Ordering, validity, etc. not guaranteed.
         /// </remarks>
-        public override IObservable<Tuple<INetworkPeer, ProtocolTransaction>> ReceivedTransactions { get { return this.transactionsReceived; } }
+        public override IObservable<Tuple<INetworkPeer, ITransaction, BigInteger, ulong>> ReceivedTransactions { get { return this.transactionsReceived; } }
 
         /// <summary>
         /// Gets the ping responses we've received.
@@ -168,7 +168,7 @@ namespace Evercoin.Network
 
             GetBlocksMessageBuilder b = new GetBlocksMessageBuilder(this.rawNetwork, this.hashAlgorithmStore);
             var message = b.BuildGetBlocksMessage(peer, listToRequest, BigInteger.Zero, requestType);
-            await this.rawNetwork.SendMessageToClientAsync(peer, message, token);
+            await this.rawNetwork.SendMessageToClientAsync(peer, message, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -213,7 +213,7 @@ namespace Evercoin.Network
             INetworkPeer peer = this.ConnectedPeers.First().Value;
 
             INetworkMessage response = new GetDataMessageBuilder(this.rawNetwork, this.hashAlgorithmStore).BuildGetDataMessage(peer, inventoryVectors);
-            await this.rawNetwork.SendMessageToClientAsync(peer, response, token);
+            await this.rawNetwork.SendMessageToClientAsync(peer, response, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -252,7 +252,7 @@ namespace Evercoin.Network
         {
             PingMessageBuilder messageBuilder = new PingMessageBuilder(this.rawNetwork, this.hashAlgorithmStore);
             INetworkMessage message = messageBuilder.BuildPingMessage(peer, nonce);
-            await this.rawNetwork.SendMessageToClientAsync(peer, message, token);
+            await this.rawNetwork.SendMessageToClientAsync(peer, message, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -271,7 +271,7 @@ namespace Evercoin.Network
         {
             VerAckMessageBuilder builder = new VerAckMessageBuilder(this.rawNetwork, this.hashAlgorithmStore);
             INetworkMessage response = builder.BuildVerAckMessage(peer);
-            await this.rawNetwork.SendMessageToClientAsync(peer, response, token);
+            await this.rawNetwork.SendMessageToClientAsync(peer, response, token).ConfigureAwait(false);
         }
 
         /// <summary>
@@ -315,7 +315,7 @@ namespace Evercoin.Network
 
             VersionMessageBuilder messageBuilder = new VersionMessageBuilder(this.rawNetwork, this.hashAlgorithmStore);
             INetworkMessage message = messageBuilder.BuildVersionMessage(peer, packet);
-            await this.rawNetwork.SendMessageToClientAsync(peer, message, token);
+            await this.rawNetwork.SendMessageToClientAsync(peer, message, token).ConfigureAwait(false);
         }
 
         public override void Start(CancellationToken token)
@@ -364,11 +364,11 @@ namespace Evercoin.Network
                         using (MemoryStream stream = new MemoryStream(x.Payload))
                         using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
                         {
-                            ulong neededItemCount = await reader.ReadCompactSizeAsync(token);
+                            ulong neededItemCount = await reader.ReadCompactSizeAsync(token).ConfigureAwait(false);
 
                             while (neededItemCount-- > 0)
                             {
-                                ProtocolInventoryVector vector = await reader.ReadInventoryVectorAsync(token);
+                                ProtocolInventoryVector vector = await reader.ReadInventoryVectorAsync(token).ConfigureAwait(false);
                                 inventoryVectors.Add(vector);
                             }
                         }
@@ -383,20 +383,25 @@ namespace Evercoin.Network
                         using (MemoryStream stream = new MemoryStream(x.Payload))
                         using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
                         {
-                            Tuple<ProtocolBlock, IEnumerable<ProtocolTransaction>> result = await reader.ReadBlockAsync(token);
+                            Tuple<ProtocolBlock, IEnumerable<ProtocolTransaction>> result = await reader.ReadBlockAsync(token).ConfigureAwait(false);
                             ProtocolBlock protoBlock = result.Item1;
                             IEnumerable<ProtocolTransaction> transactions = result.Item2;
 
-                            this.blocksReceived.OnNext(Tuple.Create(x.RemotePeer, protoBlock));
+                            IChainSerializer chainSerializer = this.currencyParameters.ChainSerializer;
+                            IBlock block = chainSerializer.GetBlockForBytes(protoBlock.HeaderData);
+
+                            this.blocksReceived.OnNext(Tuple.Create(x.RemotePeer, block));
 
                             IHashAlgorithm blockHashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(this.currencyParameters.ChainParameters.BlockHashAlgorithmIdentifier);
                             byte[] blockHash = blockHashAlgorithm.CalculateHash(protoBlock.HeaderData);
                             BigInteger blockIdentifier = new BigInteger(blockHash);
 
-                            foreach (ProtocolTransaction obliviousProtoTransaction in transactions)
+                            ulong i = 0;
+                            foreach (ProtocolTransaction protoTransaction in transactions)
                             {
-                                ProtocolTransaction containedProtoTransaction = new ProtocolTransaction(obliviousProtoTransaction, blockIdentifier);
-                                this.transactionsReceived.OnNext(Tuple.Create(x.RemotePeer, containedProtoTransaction));
+                                ITransaction transaction = chainSerializer.GetTransactionForBytes(protoTransaction.Data);
+
+                                this.transactionsReceived.OnNext(Tuple.Create(x.RemotePeer, transaction, blockIdentifier, i++));
                             }
                         }
                     }
@@ -408,8 +413,11 @@ namespace Evercoin.Network
                         using (MemoryStream stream = new MemoryStream(x.Payload))
                         using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
                         {
-                            ProtocolTransaction protoTransaction = await reader.ReadTransactionAsync(token);
-                            this.transactionsReceived.OnNext(Tuple.Create(x.RemotePeer, protoTransaction));
+                            IChainSerializer chainSerializer = this.currencyParameters.ChainSerializer;
+
+                            ProtocolTransaction protoTransaction = await reader.ReadTransactionAsync(token).ConfigureAwait(false);
+                            ITransaction transaction = chainSerializer.GetTransactionForBytes(protoTransaction.Data);
+                            this.transactionsReceived.OnNext(Tuple.Create(x.RemotePeer, transaction, BigInteger.Zero, (ulong)0));
                         }
                     }
                 },
@@ -420,7 +428,7 @@ namespace Evercoin.Network
                         using (MemoryStream stream = new MemoryStream(x.Payload))
                         using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
                         {
-                            ProtocolVersionPacket versionPacket = await reader.ReadVersionPacketAsync(token);
+                            ProtocolVersionPacket versionPacket = await reader.ReadVersionPacketAsync(token).ConfigureAwait(false);
                             this.versionOffersReceived.OnNext(Tuple.Create(x.RemotePeer, versionPacket));
                         }
                     }
@@ -439,13 +447,16 @@ namespace Evercoin.Network
                         using (MemoryStream stream = new MemoryStream(x.Payload))
                         using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
                         {
-                            ulong blockHeadersToRead = await reader.ReadCompactSizeAsync(token);
+                            IChainSerializer chainSerializer = this.currencyParameters.ChainSerializer;
+                            ulong blockHeadersToRead = await reader.ReadCompactSizeAsync(token).ConfigureAwait(false);
                             while (blockHeadersToRead-- > 0)
                             {
-                                Tuple<ProtocolBlock, IEnumerable<ProtocolTransaction>> result = await reader.ReadBlockAsync(token);
+                                Tuple<ProtocolBlock, IEnumerable<ProtocolTransaction>> result = await reader.ReadBlockAsync(token).ConfigureAwait(false);
 
                                 ProtocolBlock protoBlock = result.Item1;
-                                this.blocksReceived.OnNext(Tuple.Create(x.RemotePeer, protoBlock));
+                                IBlock block = chainSerializer.GetBlockForBytes(protoBlock.HeaderData);
+
+                                this.blocksReceived.OnNext(Tuple.Create(x.RemotePeer, block));
                             }
                         }
                     }

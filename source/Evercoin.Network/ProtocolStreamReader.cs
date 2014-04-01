@@ -89,26 +89,26 @@ namespace Evercoin.Network
 
         private async Task<byte> ReadByteAsync(CancellationToken token)
         {
-            byte[] bytes = await this.ReadBytesAsyncWithIntParam(1, token);
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(1, token).ConfigureAwait(false);
             return bytes[0];
         }
 
         private async Task<ProtocolCompactSize> ReadCompactSizeAsyncCore(CancellationToken token)
         {
             ulong value;
-            byte firstByte = await this.ReadByteAsync(token);
+            byte firstByte = await this.ReadByteAsync(token).ConfigureAwait(false);
             switch (firstByte)
             {
                 case 0xfd:
-                    value = await this.ReadUInt16Async(token);
+                    value = await this.ReadUInt16Async(token).ConfigureAwait(false);
                     break;
 
                 case 0xfe:
-                    value = await this.ReadUInt32AsyncCore(token);
+                    value = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
                     break;
 
                 case 0xff:
-                    value = await this.ReadUInt64Async(token);
+                    value = await this.ReadUInt64Async(token).ConfigureAwait(false);
                     break;
 
                 default:
@@ -121,8 +121,8 @@ namespace Evercoin.Network
 
         private async Task<ProtocolInventoryVector> ReadInventoryVectorAsyncCore(CancellationToken token)
         {
-            ProtocolInventoryVector.InventoryType inventoryType = (ProtocolInventoryVector.InventoryType)await this.ReadUInt32AsyncCore(token);
-            BigInteger hash = await this.ReadUInt256AsyncCore(token);
+            ProtocolInventoryVector.InventoryType inventoryType = (ProtocolInventoryVector.InventoryType)await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
+            BigInteger hash = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
             return new ProtocolInventoryVector(inventoryType, hash);
         }
 
@@ -131,22 +131,22 @@ namespace Evercoin.Network
             uint? time = null;
             if (this.ProtocolVersion >= 31402)
             {
-                time = await this.ReadUInt32AsyncCore(token);
+                time = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
             }
 
-            ulong services = await this.ReadUInt64Async(token);
+            ulong services = await this.ReadUInt64Async(token).ConfigureAwait(false);
 
-            byte[] addressBytes = await this.ReadBytesAsyncWithIntParam(16, token);
+            byte[] addressBytes = await this.ReadBytesAsyncWithIntParam(16, token).ConfigureAwait(false);
             var v6Address = new IPAddress(addressBytes);
             var v4Address = new IPAddress(addressBytes.GetRange(12, 4).GetArray());
 
-            ushort port = await this.ReadUInt16Async(token, littleEndian: false);
+            ushort port = await this.ReadUInt16Async(token, littleEndian: false).ConfigureAwait(false);
             return new ProtocolNetworkAddress(time, services, v4Address, port);
         }
 
         private async Task<INetworkMessage> ReadNetworkMessageAsyncCore(INetworkParameters networkParameters, INetworkPeer peer, CancellationToken token)
         {
-            byte[] data = await this.ReadBytesAsyncWithIntParam(networkParameters.MessagePrefixLengthInBytes, token);
+            byte[] data = await this.ReadBytesAsyncWithIntParam(networkParameters.MessagePrefixLengthInBytes, token).ConfigureAwait(false);
             byte[] expectedStaticPrefix = networkParameters.StaticMessagePrefixData;
             IReadOnlyList<byte> actualStaticPrefix = data.GetRange(0, expectedStaticPrefix.Length);
             if (!expectedStaticPrefix.SequenceEqual(actualStaticPrefix))
@@ -162,13 +162,13 @@ namespace Evercoin.Network
             IReadOnlyList<byte> commandBytes = data.GetRange(expectedStaticPrefix.Length, data.Length - expectedStaticPrefix.Length);
 
             int payloadChecksumLengthInBytes = networkParameters.PayloadChecksumLengthInBytes;
-            data = await this.ReadBytesAsyncWithIntParam(payloadChecksumLengthInBytes + 4, token);
+            data = await this.ReadBytesAsyncWithIntParam(payloadChecksumLengthInBytes + 4, token).ConfigureAwait(false);
 
             IReadOnlyList<byte> payloadSize = data.GetRange(0, 4);
             IReadOnlyList<byte> payloadChecksum = data.GetRange(4, payloadChecksumLengthInBytes);
 
             uint payloadLengthInBytes = BitConverter.ToUInt32(payloadSize.GetArray().LittleEndianToOrFromBitConverterEndianness(), 0);
-            byte[] payload = await this.ReadBytesAsync(payloadLengthInBytes, token);
+            byte[] payload = await this.ReadBytesAsync(payloadLengthInBytes, token).ConfigureAwait(false);
 
             IHashAlgorithm checksumAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(networkParameters.PayloadChecksumAlgorithmIdentifier);
             byte[] actualChecksum = checksumAlgorithm.CalculateHash(payload);
@@ -189,7 +189,7 @@ namespace Evercoin.Network
 
         private async Task<ushort> ReadUInt16Async(CancellationToken token, bool littleEndian = true)
         {
-            byte[] bytes = (await this.ReadBytesAsyncWithIntParam(2, token)).LittleEndianToOrFromBitConverterEndianness();
+            byte[] bytes = (await this.ReadBytesAsyncWithIntParam(2, token).ConfigureAwait(false)).LittleEndianToOrFromBitConverterEndianness();
             if (!littleEndian)
             {
                 Array.Reverse(bytes);
@@ -200,31 +200,31 @@ namespace Evercoin.Network
 
         private async Task<uint> ReadUInt32AsyncCore(CancellationToken token)
         {
-            byte[] bytes = await this.ReadBytesAsyncWithIntParam(4, token);
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(4, token).ConfigureAwait(false);
             return BitConverter.ToUInt32(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
         }
 
         private async Task<int> ReadInt32AsyncCore(CancellationToken token)
         {
-            byte[] bytes = await this.ReadBytesAsyncWithIntParam(4, token);
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(4, token).ConfigureAwait(false);
             return BitConverter.ToInt32(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
         }
 
         private async Task<ulong> ReadUInt64Async(CancellationToken token)
         {
-            byte[] bytes = await this.ReadBytesAsyncWithIntParam(8, token);
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(8, token).ConfigureAwait(false);
             return BitConverter.ToUInt64(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
         }
 
         private async Task<long> ReadInt64Async(CancellationToken token)
         {
-            byte[] bytes = await this.ReadBytesAsyncWithIntParam(8, token);
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(8, token).ConfigureAwait(false);
             return BitConverter.ToInt64(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
         }
 
         private async Task<BigInteger> ReadUInt256AsyncCore(CancellationToken token)
         {
-            byte[] bytes = await this.ReadBytesAsyncWithIntParam(32, token);
+            byte[] bytes = await this.ReadBytesAsyncWithIntParam(32, token).ConfigureAwait(false);
             return new BigInteger(bytes.LittleEndianToOrFromBitConverterEndianness());
         }
 
@@ -236,7 +236,7 @@ namespace Evercoin.Network
             while (bytesRead < numberOfBytesToRead)
             {
                 int numberOfBytesToReadThisOuterLoop = (int)Math.Min(Int32.MaxValue, numberOfBytesToRead - bytesRead);
-                byte[] bytesReadThisOuterLoop = await this.ReadBytesAsyncWithIntParam(numberOfBytesToReadThisOuterLoop, token);
+                byte[] bytesReadThisOuterLoop = await this.ReadBytesAsyncWithIntParam(numberOfBytesToReadThisOuterLoop, token).ConfigureAwait(false);
                 sequencesRead.Add(bytesReadThisOuterLoop);
                 bytesRead += (ulong)bytesReadThisOuterLoop.Length;
             }
@@ -250,7 +250,7 @@ namespace Evercoin.Network
             byte[] data = new byte[numberOfBytesToRead];
             while (numberOfBytesRead < numberOfBytesToRead)
             {
-                int bytesReadThisLoop = await this.BaseStream.ReadAsync(data, numberOfBytesRead, numberOfBytesToRead - numberOfBytesRead, token);
+                int bytesReadThisLoop = await this.BaseStream.ReadAsync(data, numberOfBytesRead, numberOfBytesToRead - numberOfBytesRead, token).ConfigureAwait(false);
                 if (bytesReadThisLoop == 0)
                 {
                     throw new EndOfStreamException("Reached the end of the stream before all requested data was read.");
@@ -264,44 +264,44 @@ namespace Evercoin.Network
 
         private async Task<ProtocolTxIn> ReadTxInAsyncCore(CancellationToken token)
         {
-            BigInteger prevOutTxId = await this.ReadUInt256AsyncCore(token);
+            BigInteger prevOutTxId = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
 
-            uint prevOutIndex = await this.ReadUInt32AsyncCore(token);
+            uint prevOutIndex = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
 
-            ulong scriptSigLength = await this.ReadCompactSizeAsyncCore(token);
-            byte[] scriptSig = await this.ReadBytesAsync(scriptSigLength, token);
+            ulong scriptSigLength = await this.ReadCompactSizeAsyncCore(token).ConfigureAwait(false);
+            byte[] scriptSig = await this.ReadBytesAsync(scriptSigLength, token).ConfigureAwait(false);
 
-            uint seq = await this.ReadUInt32AsyncCore(token);
+            uint seq = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
 
             return new ProtocolTxIn(prevOutTxId, prevOutIndex, scriptSig, seq);
         }
 
         private async Task<ProtocolTxOut> ReadTxOutAsyncCore(CancellationToken token)
         {
-            long valueInSatoshis = await this.ReadInt64Async(token);
+            long valueInSatoshis = await this.ReadInt64Async(token).ConfigureAwait(false);
 
-            ulong scriptPubKeyLength = await this.ReadCompactSizeAsyncCore(token);
-            byte[] scriptPubKey = await this.ReadBytesAsync(scriptPubKeyLength, token);
+            ulong scriptPubKeyLength = await this.ReadCompactSizeAsyncCore(token).ConfigureAwait(false);
+            byte[] scriptPubKey = await this.ReadBytesAsync(scriptPubKeyLength, token).ConfigureAwait(false);
 
             return new ProtocolTxOut(valueInSatoshis, scriptPubKey);
         }
 
         private async Task<Tuple<ProtocolBlock, IEnumerable<ProtocolTransaction>>> ReadBlockAsyncCore(CancellationToken token)
         {
-            uint version = await this.ReadUInt32AsyncCore(token);
-            BigInteger prevBlockId = await this.ReadUInt256AsyncCore(token);
-            BigInteger merkleRoot = await this.ReadUInt256AsyncCore(token);
-            uint timestamp = await this.ReadUInt32AsyncCore(token);
-            uint bits = await this.ReadUInt32AsyncCore(token);
-            uint nonce = await this.ReadUInt32AsyncCore(token);
+            uint version = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
+            BigInteger prevBlockId = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
+            BigInteger merkleRoot = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
+            uint timestamp = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
+            uint bits = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
+            uint nonce = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
 
-            ulong transactionCount = await this.ReadCompactSizeAsyncCore(token);
+            ulong transactionCount = await this.ReadCompactSizeAsyncCore(token).ConfigureAwait(false);
             ProtocolTransaction[] includedTransactions = new ProtocolTransaction[transactionCount];
 
             int transactionIndex = 0;
             while (transactionCount-- > 0)
             {
-                ProtocolTransaction nextTransaction = await this.ReadTransactionAsyncCore(token);
+                ProtocolTransaction nextTransaction = await this.ReadTransactionAsyncCore(token).ConfigureAwait(false);
                 includedTransactions[transactionIndex++] = nextTransaction;
             }
 
@@ -310,54 +310,54 @@ namespace Evercoin.Network
 
         private async Task<ProtocolTransaction> ReadTransactionAsyncCore(CancellationToken token)
         {
-            uint version = await this.ReadUInt32AsyncCore(token);
+            uint version = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
 
-            ulong inputCount = await this.ReadCompactSizeAsyncCore(token);
+            ulong inputCount = await this.ReadCompactSizeAsyncCore(token).ConfigureAwait(false);
             List<ProtocolTxIn> inputs = new List<ProtocolTxIn>();
 
             while (inputCount-- > 0)
             {
-                ProtocolTxIn nextInput = await this.ReadTxInAsyncCore(token);
+                ProtocolTxIn nextInput = await this.ReadTxInAsyncCore(token).ConfigureAwait(false);
                 inputs.Add(nextInput);
             }
 
-            ulong outputCount = await this.ReadCompactSizeAsyncCore(token);
+            ulong outputCount = await this.ReadCompactSizeAsyncCore(token).ConfigureAwait(false);
             List<ProtocolTxOut> outputs = new List<ProtocolTxOut>();
 
             while (outputCount-- > 0)
             {
-                ProtocolTxOut nextOutput = await this.ReadTxOutAsyncCore(token);
+                ProtocolTxOut nextOutput = await this.ReadTxOutAsyncCore(token).ConfigureAwait(false);
                 outputs.Add(nextOutput);
             }
 
-            uint lockTime = await this.ReadUInt32AsyncCore(token);
+            uint lockTime = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
 
             return new ProtocolTransaction(version, inputs, outputs, lockTime);
         }
 
         private async Task<string> ReadProtocolStringAsyncCore(Encoding encoding, CancellationToken token)
         {
-            ulong length = await this.ReadCompactSizeAsyncCore(token);
-            byte[] data = await this.ReadBytesAsync(length, token);
+            ulong length = await this.ReadCompactSizeAsyncCore(token).ConfigureAwait(false);
+            byte[] data = await this.ReadBytesAsync(length, token).ConfigureAwait(false);
             return encoding.GetString(data);
         }
 
         private async Task<bool> ReadBooleanAsyncCore(CancellationToken token)
         {
-            byte[] singleByte = await this.ReadBytesAsyncWithIntParam(1, token);
+            byte[] singleByte = await this.ReadBytesAsyncWithIntParam(1, token).ConfigureAwait(false);
             return singleByte[0] != 0;
         }
 
         private async Task<ProtocolVersionPacket> ReadVersionPacketAsyncCore(CancellationToken token)
         {
-            int version = await this.ReadInt32AsyncCore(token);
-            ulong services = await this.ReadUInt64Async(token);
-            long timestampInSecondsSinceUnixEpoch = await this.ReadInt64Async(token);
-            ProtocolNetworkAddress receivingAddress = await this.ReadNetworkAddressAsyncCore(token);
-            ProtocolNetworkAddress sendingAddress = await this.ReadNetworkAddressAsyncCore(token);
-            ulong nonce = await this.ReadUInt64Async(token);
-            string userAgent = await this.ReadProtocolStringAsyncCore(Encoding.UTF8, token);
-            int startHeight = await this.ReadInt32AsyncCore(token);
+            int version = await this.ReadInt32AsyncCore(token).ConfigureAwait(false);
+            ulong services = await this.ReadUInt64Async(token).ConfigureAwait(false);
+            long timestampInSecondsSinceUnixEpoch = await this.ReadInt64Async(token).ConfigureAwait(false);
+            ProtocolNetworkAddress receivingAddress = await this.ReadNetworkAddressAsyncCore(token).ConfigureAwait(false);
+            ProtocolNetworkAddress sendingAddress = await this.ReadNetworkAddressAsyncCore(token).ConfigureAwait(false);
+            ulong nonce = await this.ReadUInt64Async(token).ConfigureAwait(false);
+            string userAgent = await this.ReadProtocolStringAsyncCore(Encoding.UTF8, token).ConfigureAwait(false);
+            int startHeight = await this.ReadInt32AsyncCore(token).ConfigureAwait(false);
 
             Instant timestamp = Instant.FromSecondsSinceUnixEpoch(timestampInSecondsSinceUnixEpoch);
             return new ProtocolVersionPacket(version, services, timestamp, receivingAddress, sendingAddress, nonce, userAgent, startHeight, false);

@@ -81,9 +81,9 @@ namespace Evercoin.Network
         /// </summary>
         public INetworkParameters Parameters { get { return this.networkParameters; } }
 
-        public async Task BroadcastMessageAsync(INetworkMessage message)
+        public Task BroadcastMessageAsync(INetworkMessage message)
         {
-            await this.BroadcastMessageAsync(message, CancellationToken.None);
+            return this.BroadcastMessageAsync(message, CancellationToken.None);
         }
 
         public Task SendMessageToClientAsync(INetworkPeer peer, INetworkMessage message)
@@ -149,10 +149,10 @@ namespace Evercoin.Network
         /// <remarks>
         /// <see cref="INetworkMessage.RemoteClient"/> is ignored.
         /// </remarks>
-        public async Task BroadcastMessageAsync(INetworkMessage message, CancellationToken token)
+        public Task BroadcastMessageAsync(INetworkMessage message, CancellationToken token)
         {
             IEnumerable<Task> broadcastTasks = this.clientLookup.Values.Select(tcpClient => this.SendMessageCoreAsync(tcpClient, message, token));
-            await Task.WhenAll(broadcastTasks);
+            return Task.WhenAll(broadcastTasks);
         }
 
         /// <summary>
@@ -186,7 +186,7 @@ namespace Evercoin.Network
             Guid clientId = Guid.NewGuid();
             TcpClient client = new TcpClient(AddressFamily.InterNetwork);
             this.clientLookup.TryAdd(clientId, client);
-            await connectionCallback(client);
+            await connectionCallback(client).ConfigureAwait(false);
             INetworkPeer peer = new NetworkPeer(clientId, ConnectionDirection.Outgoing, (IPEndPoint)client.Client.LocalEndPoint, (IPEndPoint)client.Client.RemoteEndPoint);
             this.peerLookup.TryAdd(clientId, peer);
 
@@ -216,7 +216,7 @@ namespace Evercoin.Network
             ////Console.WriteLine("Send: {0} . {1}", Encoding.ASCII.GetString(messageToSend.CommandBytes), ByteTwiddling.ByteArrayToHexString(messageToSend.Payload));
 
             byte[] messageBytes = messageToSend.FullData;
-            await client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length, token);
+            await client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length, token).ConfigureAwait(false);
         }
     }
 }

@@ -88,6 +88,7 @@
     <Compile Include="Endianness.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="FancyByteArray.cs" />
+    <Compile Include="IBlockChain.cs" />
     <Compile Include="IChainSerializer.cs" />
     <Compile Include="ICurrencyParameters.cs" />
     <Compile Include="ICurrencyNetwork.cs" />
@@ -96,6 +97,7 @@
     <Compile Include="INetworkPeer.cs" />
     <Compile Include="ISignatureCheckerFactory.cs" />
     <Compile Include="ITransactionScriptParser.cs" />
+    <Compile Include="IChainValidator.cs" />
     <Compile Include="IValueSpender.cs" />
     <Compile Include="HashAlgorithmIdentifiers.cs" />
     <Compile Include="IBlock.cs" />
@@ -130,6 +132,7 @@
     <Compile Include="Util\HashCodeBuilder.cs" />
     <Compile Include="Util\ReadOnlySubList.cs" />
     <Compile Include="Util\Waiter.cs" />
+    <Compile Include="ValidationResult.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

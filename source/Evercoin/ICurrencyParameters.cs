@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Evercoin
 {
@@ -45,5 +46,7 @@ namespace Evercoin
         IHashAlgorithmStore HashAlgorithmStore { get; }
 
         IChainSerializer ChainSerializer { get; }
+
+        IChainValidator ChainValidator { get; }
     }
 }

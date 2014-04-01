@@ -133,7 +133,6 @@ namespace Evercoin.Storage
                     break;
                 }
 
-                Cheating.AddBlock(i, blockId);
                 prevBlockId = blockId;
             }
 

@@ -2,43 +2,16 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
-using System.Threading;
-using System.Threading.Tasks;
 
 namespace Evercoin.Util
 {
     public static class Cheating
     {
-        private static int blockCount = 0;
         private static int txCount = 0;
-        private static int highestBlock = 0;
 
         private static readonly object syncLock = new object();
-        private static readonly Dictionary<BigInteger, int> IdToHeight = new Dictionary<BigInteger, int>();
-        private static readonly Waiter<BigInteger> BlockWaiter = new Waiter<BigInteger>();
 
-        private static BigInteger[] BlockIdentifiers = new BigInteger[0];
         private static BigInteger[] TransactionIdentifiers = new BigInteger[0];
-
-        public static void AddBlock(int height, BigInteger blockIdentifier)
-        {
-            lock (syncLock)
-            {
-                if (BlockIdentifiers.Length < height + 1)
-                {
-                    Array.Resize(ref BlockIdentifiers, height + 600000);
-                }
-
-                highestBlock = Math.Max(highestBlock, height);
-
-                BlockIdentifiers[height] = blockIdentifier;
-                IdToHeight[blockIdentifier] = height;
-
-                BlockWaiter.SetEventFor(blockIdentifier);
-
-                blockCount++;
-            }
-        }
 
         public static void AddTransaction(BigInteger transactionIdentifier)
         {
@@ -55,42 +28,9 @@ namespace Evercoin.Util
             }
         }
 
-        public static IReadOnlyList<BigInteger> GetBlockIdentifiers()
-        {
-            lock (syncLock)
-            {
-                return BlockIdentifiers.GetRange(0, blockCount);
-            }
-        }
-
-        public static int GetBlockIdentifierCount()
-        {
-            return blockCount;
-        }
-
-        public static int GetHighestBlock()
-        {
-            return highestBlock;
-        }
-
         public static int GetTransactionIdentifierCount()
         {
             return txCount;
-        }
-
-        public static async Task<int> GetBlockHeightAsync(BigInteger blockIdentifier, CancellationToken token)
-        {
-            await Task.Run(() => BlockWaiter.WaitFor(blockIdentifier, token), token);
-
-            lock (syncLock)
-            {
-                return IdToHeight[blockIdentifier];
-            }
-        }
-
-        public static void DisposeThings()
-        {
-            BlockWaiter.Dispose();
         }
 
         public static IMerkleTreeNode ToMerkleTree(this IEnumerable<IEnumerable<byte>> inputs, IHashAlgorithm hashAlgorithm)

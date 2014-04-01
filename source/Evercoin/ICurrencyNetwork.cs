@@ -59,7 +59,7 @@ namespace Evercoin
         /// <remarks>
         /// Ordering, validity, etc. not guaranteed.
         /// </remarks>
-        IObservable<Tuple<INetworkPeer, ProtocolBlock>> ReceivedBlocks { get; }
+        IObservable<Tuple<INetworkPeer, IBlock>> ReceivedBlocks { get; }
 
         /// <summary>
         /// Gets the transaction messages we've received.
@@ -67,7 +67,7 @@ namespace Evercoin
         /// <remarks>
         /// Ordering, validity, etc. not guaranteed.
         /// </remarks>
-        IObservable<Tuple<INetworkPeer, ProtocolTransaction>> ReceivedTransactions { get; }
+        IObservable<Tuple<INetworkPeer, ITransaction, BigInteger, ulong>> ReceivedTransactions { get; }
 
         /// <summary>
         /// Gets the ping responses we've received.
