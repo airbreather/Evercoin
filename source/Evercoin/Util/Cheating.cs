@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Numerics;
+using System.Threading;
 
 namespace Evercoin.Util
 {
@@ -9,23 +10,9 @@ namespace Evercoin.Util
     {
         private static int txCount = 0;
 
-        private static readonly object syncLock = new object();
-
-        private static BigInteger[] TransactionIdentifiers = new BigInteger[0];
-
         public static void AddTransaction(BigInteger transactionIdentifier)
         {
-            lock (syncLock)
-            {
-                txCount++;
-
-                if (TransactionIdentifiers.Length < txCount + 1)
-                {
-                    Array.Resize(ref TransactionIdentifiers, txCount + 600000);
-                }
-
-                TransactionIdentifiers[txCount] = transactionIdentifier;
-            }
+            Interlocked.Increment(ref txCount);
         }
 
         public static int GetTransactionIdentifierCount()
@@ -115,7 +102,7 @@ namespace Evercoin.Util
                     return;
                 }
 
-                IEnumerable<byte> dataToHash = firstNode.Data.Concat(secondNode.Data);
+                byte[] dataToHash = ByteTwiddling.ConcatenateData(firstNode.Data, secondNode.Data);
                 this.Data = hashAlgorithm.CalculateHash(dataToHash);
             }
         }

@@ -111,7 +111,6 @@ namespace Evercoin.App
                 return ValidationResult.FailWithReason("Invalid script!");
             }
 
-
             return ValidationResult.PassingResult;
         }
     }

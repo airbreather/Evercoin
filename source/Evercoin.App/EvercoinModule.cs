@@ -4,7 +4,6 @@ using Evercoin.Algorithms;
 using Evercoin.BaseImplementations;
 using Evercoin.Network;
 using Evercoin.TransactionScript;
-using Evercoin.Util;
 
 using Moq;
 

@@ -26,7 +26,8 @@ namespace Evercoin.Storage
         private readonly Waiter<BigInteger> blockWaiter = new Waiter<BigInteger>();
         private readonly Waiter<BigInteger> txWaiter = new Waiter<BigInteger>();
 
-        private IChainSerializer chainSerializer;
+        private readonly object blockLock = new object();
+        private readonly object txLock = new object();
 
         public LevelDBChainStore()
         {
@@ -40,49 +41,47 @@ namespace Evercoin.Storage
             txOptions.Compression = CompressionType.SnappyCompression;
             txOptions.CreateIfMissing = true;
 
+            if (Directory.Exists(BlockFileName))
+            Directory.Delete(BlockFileName, true);
+            if (Directory.Exists(TxFileName))
+            Directory.Delete(TxFileName, true);
+
             this.blockDB = new DB(blockOptions, BlockFileName);
             this.txDB = new DB(txOptions, TxFileName);
         }
 
         [Import]
-        public IChainSerializer ChainSerializer
-        {
-            get
-            {
-                return this.chainSerializer;
-            }
-
-            set
-            {
-                this.chainSerializer = value;
-                this.OnChainSerializerSet();
-            }
-        }
+        public IChainSerializer ChainSerializer { get; set; }
 
         protected override IBlock FindBlockCore(BigInteger blockIdentifier)
         {
             this.blockWaiter.WaitFor(blockIdentifier);
 
-            string serializedBlockString = this.blockDB.Get(GetBlockKey(blockIdentifier));
+            string serializedBlockString;
+            lock (this.blockLock)
+            serializedBlockString = this.blockDB.Get(GetBlockKey(blockIdentifier));
             byte[] serializedBlock = ByteTwiddling.HexStringToByteArray(serializedBlockString);
 
-            return this.chainSerializer.GetBlockForBytes(serializedBlock);
+            return this.ChainSerializer.GetBlockForBytes(serializedBlock);
         }
 
         protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
         {
             this.txWaiter.WaitFor(transactionIdentifier);
 
-            string serializedTransactionString = this.txDB.Get(GetTxKey(transactionIdentifier));
+            string serializedTransactionString;
+            lock (this.txLock)
+            serializedTransactionString = this.txDB.Get(GetTxKey(transactionIdentifier));
             byte[] serializedTransaction = ByteTwiddling.HexStringToByteArray(serializedTransactionString);
 
-            return this.chainSerializer.GetTransactionForBytes(serializedTransaction);
+            return this.ChainSerializer.GetTransactionForBytes(serializedTransaction);
         }
 
         protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
         {
             byte[] serializedBlock = this.ChainSerializer.GetBytesForBlock(block);
             string serializedBlockString = ByteTwiddling.ByteArrayToHexString(serializedBlock);
+            lock (this.blockLock)
             this.blockDB.Put(GetBlockKey(blockIdentifier), serializedBlockString);
 
             this.blockWaiter.SetEventFor(blockIdentifier);
@@ -92,6 +91,7 @@ namespace Evercoin.Storage
         {
             byte[] serializedTransaction = this.ChainSerializer.GetBytesForTransaction(transaction);
             string serializedTransactionString = ByteTwiddling.ByteArrayToHexString(serializedTransaction);
+            lock (this.txLock)
             this.txDB.Put(GetTxKey(transactionIdentifier), serializedTransactionString);
 
             this.txWaiter.SetEventFor(transactionIdentifier);
@@ -99,11 +99,13 @@ namespace Evercoin.Storage
 
         protected override bool ContainsBlockCore(BigInteger blockIdentifier)
         {
+            lock (this.blockLock)
             return this.blockDB.Get(GetBlockKey(blockIdentifier)) != null;
         }
 
         protected override bool ContainsTransactionCore(BigInteger transactionIdentifier)
         {
+            lock (this.txLock)
             return this.txDB.Get(GetTxKey(transactionIdentifier)) != null;
         }
 
@@ -151,10 +153,6 @@ namespace Evercoin.Storage
             {
                 File.WriteAllBytes(targetFilePath, resourceData);
             }
-        }
-
-        private void OnChainSerializerSet()
-        {
         }
     }
 }

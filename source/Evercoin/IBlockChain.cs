@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Numerics;
 using System.Threading;
 
@@ -19,11 +20,13 @@ namespace Evercoin
         void AddBlockAtHeight(BigInteger block, ulong height);
 
         void AddTransactionToBlock(BigInteger transactionIdentifier, BigInteger blockIdentifier, ulong index);
+
+        IEnumerable<BigInteger> GetTransactionsForBlock(BigInteger blockIdentifier);
     }
 
     public sealed class BlockChain : IBlockChain
     {
-        private readonly ConcurrentDictionary<BigInteger, List<BigInteger>> blockToTransactionMapping = new ConcurrentDictionary<BigInteger, List<BigInteger>>();
+        private readonly ConcurrentDictionary<FancyByteArray, List<BigInteger>> blockToTransactionMapping = new ConcurrentDictionary<FancyByteArray, List<BigInteger>>();
 
         private readonly ConcurrentDictionary<BigInteger, BigInteger> transactionToBlockMapping = new ConcurrentDictionary<BigInteger, BigInteger>();
 
@@ -63,24 +66,20 @@ namespace Evercoin
         {
             this.blockToHeightMapping[blockIdentifier] = height;
             this.heightToBlockMapping[height] = blockIdentifier;
-            ////this.blockToTransactionMapping[blockIdentifier] = new List<BigInteger>();
+            this.blockToTransactionMapping[FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(blockIdentifier, 32, Endianness.LittleEndian)] = new List<BigInteger>();
             Interlocked.Increment(ref length);
         }
 
         public void AddTransactionToBlock(BigInteger transactionIdentifier, BigInteger blockIdentifier, ulong index)
         {
-            /*
-            List<BigInteger> blockTransactions;
-            if (!this.blockToTransactionMapping.TryGetValue(blockIdentifier, out blockTransactions))
-            {
-                throw new NotSupportedException("ADD BLOCK FIRST BRO");
-            }
+            List<BigInteger> blockTransactions = this.blockToTransactionMapping.GetOrAdd(FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(blockIdentifier, 32, Endianness.LittleEndian), _ => new List<BigInteger>());
 
             if (index > Int32.MaxValue)
             {
                 throw new NotSupportedException("Seriously?");
             }
 
+            // TODO: BIP30
             this.transactionToBlockMapping[transactionIdentifier] = blockIdentifier;
 
             int intIndex = (int)index;
@@ -94,7 +93,20 @@ namespace Evercoin
 
                 blockTransactions[intIndex] = transactionIdentifier;
             }
-            */
+        }
+
+        public IEnumerable<BigInteger> GetTransactionsForBlock(BigInteger blockIdentifier)
+        {
+            List<BigInteger> blockTransactions;
+            if (!this.blockToTransactionMapping.TryGetValue(FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(blockIdentifier, 32, Endianness.LittleEndian), out blockTransactions))
+            {
+                return Enumerable.Empty<BigInteger>();
+            }
+
+            lock (blockTransactions)
+            {
+                return blockTransactions.ToList();
+            }
         }
     }
 }

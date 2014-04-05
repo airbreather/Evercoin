@@ -68,7 +68,7 @@ namespace Evercoin.ProtocolObjects
                 Nonce = this.Nonce,
                 PreviousBlockIdentifier = this.PrevBlockId,
                 Timestamp = Instant.FromSecondsSinceUnixEpoch(this.Timestamp),
-                TransactionIdentifiers = new[] { this.MerkleRoot.ToLittleEndianUInt256Array() }.ToMerkleTree(transactionHashAlgorithm),
+                TransactionIdentifiers = this.MerkleRoot.ToLittleEndianUInt256Array().AsSingleElementEnumerable().ToMerkleTree(transactionHashAlgorithm),
                 Version = this.Version
             };
         }

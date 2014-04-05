@@ -78,6 +78,21 @@ namespace Evercoin
         }
 
         /// <summary>
+        /// Gets a single-element enumerable that contains just a single value.
+        /// </summary>
+        /// <param name="value">
+        /// The value to stuff into a single-element enumerable.
+        /// </param>
+        /// <returns>
+        /// A single-element enumerable that contains just <paramref name="value"/>.
+        /// </returns>
+        public static IEnumerable<T> AsSingleElementEnumerable<T>(this T value)
+        {
+            T[] result = { value };
+            return result;
+        }
+
+        /// <summary>
         /// Determines whether this Merkle tree is valid, using a given
         /// <see cref="IHashAlgorithm"/> if needed to calculate child hashes.
         /// </summary>
