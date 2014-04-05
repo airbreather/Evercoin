@@ -30,7 +30,7 @@ namespace Evercoin.App
             {
                 CompositeHashAlgorithmStore hashAlgorithmStore = new CompositeHashAlgorithmStore();
                 container.ComposeParts(chainStorage, hashAlgorithmStore);
-                using (EvercoinModule module = new EvercoinModule(/*caching*/chainStorage, hashAlgorithmStore))
+                using (EvercoinModule module = new EvercoinModule(cachingChainStorage, hashAlgorithmStore))
                 using (StandardKernel kernel = new StandardKernel(module))
                 {
                     Console.WriteLine("=== Hash Algorithms ===");

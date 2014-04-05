@@ -6,7 +6,6 @@ using System.Net;
 using System.Numerics;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
-using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -120,61 +119,74 @@ namespace Evercoin.App
                     while (true)
                     {
                         Task t = this.network.RequestBlockOffersAsync(x, ((IReadOnlyList<BigInteger>)blockIdentifiers).GetRange(0, (int)i), BlockRequestType.IncludeTransactions, token);
-                        if (i >= currentBlockHeight - 1)
+                        if (i >= currentBlockHeight)
                         {
                             await t.ConfigureAwait(false);
                             break;
                         }
 
                         i += 500;
-                        i = Math.Min(i, currentBlockHeight - 1);
+                        i = Math.Min(i, currentBlockHeight);
                         await t.ConfigureAwait(false);
                     }
 
                     // Now, validate all the transactions and blocks.
-                    ulong validatedBlockHeight = 1;
+                    this.validationBlock = 1;
                     IHashAlgorithm txHashAlgorithm = this.currencyParameters.HashAlgorithmStore.GetHashAlgorithm(this.currencyParameters.ChainParameters.TransactionHashAlgorithmIdentifier);
-                    while (validatedBlockHeight < currentBlockHeight)
+                    while (this.validationBlock < currentBlockHeight)
                     {
-                        this.validationBlock = validatedBlockHeight;
-                        BigInteger blockIdentifier = this.blockChain.GetIdentifierOfBlockAtHeight(validatedBlockHeight).Value;
+                        BigInteger blockIdentifier = this.blockChain.GetIdentifierOfBlockAtHeight(this.validationBlock).Value;
                         IBlock block = await this.chainStore.GetBlockAsync(blockIdentifier, token).ConfigureAwait(false);
+
+                        ValidationResult blockValidationResult = this.currencyParameters.ChainValidator.ValidateBlock(block);
+                        if (!blockValidationResult)
+                        {
+                            string exceptionMessage = "Block " + this.validationBlock + " is invalid: " + blockValidationResult.Reason;
+                            Console.WriteLine();
+                            Console.WriteLine(exceptionMessage);
+                            throw new InvalidOperationException(exceptionMessage);
+                        }
+
                         FancyByteArray expectedMerkleRoot = block.TransactionIdentifiers.Data;
-                        await Task.Run(() => SpinWait.SpinUntil(() =>
+                        FancyByteArray actualMerkleRoot = new FancyByteArray();
+                        HashSet<BigInteger> foundTransactions = new HashSet<BigInteger>();
+                        SpinWait waiter = new SpinWait();
+                        while (true)
                         {
-                            List<FancyByteArray> transactionData = this.blockChain.GetTransactionsForBlock(blockIdentifier).Select(trid => FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(trid, 32, Endianness.LittleEndian)).ToList();
-                            if (transactionData.Count == 0)
+                            bool merkleRootUpdated = false;
+                            List<BigInteger> transactionsForBlock = this.blockChain.GetTransactionsForBlock(blockIdentifier).ToList();
+                            foreach (BigInteger transactionIdentifier in transactionsForBlock.Where(transactionIdentifier => foundTransactions.Add(transactionIdentifier) && !transactionIdentifier.IsZero))
                             {
-                                return false;
+                                ITransaction transaction = await this.chainStore.GetTransactionAsync(transactionIdentifier, token).ConfigureAwait(false);
+                                ValidationResult transactionValidationResult = this.currencyParameters.ChainValidator.ValidateTransaction(transaction);
+                                if (!transactionValidationResult)
+                                {
+                                    string exceptionMessage = "Transaction " + FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(transactionIdentifier, 32, Endianness.LittleEndian) + " in block " + this.validationBlock + " is invalid: " + transactionValidationResult.Reason;
+                                    Console.WriteLine();
+                                    Console.WriteLine(exceptionMessage);
+                                    throw new InvalidOperationException(exceptionMessage);
+                                }
+
+                                Interlocked.Increment(ref validTransactions);
+                                merkleRootUpdated = true;
                             }
 
-                            IMerkleTreeNode tree = transactionData.Select(tt => (byte[])tt).ToMerkleTree(txHashAlgorithm);
-                            FancyByteArray actualMerkleRoot = FancyByteArray.CreateFromBytes(tree.Data);
-                            return expectedMerkleRoot == actualMerkleRoot;
-                        }), token).ConfigureAwait(false);
-
-                        await Task.Run(() => Parallel.ForEach(this.blockChain.GetTransactionsForBlock(blockIdentifier), transasctionIdentifier =>
-                        {
-                            if (!this.chainStore.ContainsTransaction(transasctionIdentifier))
+                            if (merkleRootUpdated)
                             {
-                                Console.WriteLine();
-                                FancyByteArray trid = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(transasctionIdentifier, 32, Endianness.LittleEndian);
-                                Console.WriteLine("A MISSING TRANSACTION: {0}", trid);
-                                return;
+                                actualMerkleRoot = transactionsForBlock.Select(transactionIdentifier => FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(transactionIdentifier, 32, Endianness.LittleEndian).Value)
+                                                                       .ToMerkleTree(txHashAlgorithm)
+                                                                       .Data;
                             }
 
-                            ITransaction transaction = this.chainStore.GetTransaction(transasctionIdentifier);
-                            if (!this.currencyParameters.ChainValidator.ValidateTransaction(transaction))
+                            if (expectedMerkleRoot == actualMerkleRoot)
                             {
-                                FancyByteArray trid = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(transasctionIdentifier, 32, Endianness.LittleEndian);
-                                Console.WriteLine("A BAD TRANSACTION: {0}", trid);
-                                return;
+                                break;
                             }
 
-                            Interlocked.Increment(ref validTransactions);
-                        }), token).ConfigureAwait(false);
+                            waiter.SpinOnce();
+                        }
 
-                        validatedBlockHeight++;
+                        this.validationBlock++;
                     }
                 }
             );

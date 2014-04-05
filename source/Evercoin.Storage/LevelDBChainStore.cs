@@ -1,14 +1,14 @@
 ﻿#if X64
 using System;
+using System.Collections.Concurrent;
 using System.ComponentModel.Composition;
 using System.IO;
 using System.Linq;
 using System.Numerics;
 using System.Reflection;
-
+using System.Text;
 using Evercoin.BaseImplementations;
 using Evercoin.Util;
-
 using LevelDB;
 
 namespace Evercoin.Storage
@@ -28,6 +28,8 @@ namespace Evercoin.Storage
 
         private readonly object blockLock = new object();
         private readonly object txLock = new object();
+
+        private readonly ConcurrentDictionary<BigInteger, bool> transactions = new ConcurrentDictionary<BigInteger, bool>();
 
         public LevelDBChainStore()
         {
@@ -95,6 +97,7 @@ namespace Evercoin.Storage
             this.txDB.Put(GetTxKey(transactionIdentifier), serializedTransactionString);
 
             this.txWaiter.SetEventFor(transactionIdentifier);
+            this.transactions[transactionIdentifier] = true;
         }
 
         protected override bool ContainsBlockCore(BigInteger blockIdentifier)
@@ -105,8 +108,7 @@ namespace Evercoin.Storage
 
         protected override bool ContainsTransactionCore(BigInteger transactionIdentifier)
         {
-            lock (this.txLock)
-            return this.txDB.Get(GetTxKey(transactionIdentifier)) != null;
+            return this.transactions.ContainsKey(transactionIdentifier);
         }
 
         protected override void DisposeManagedResources()
@@ -120,12 +122,12 @@ namespace Evercoin.Storage
 
         private static string GetBlockKey(BigInteger blockIdentifier)
         {
-            return FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(blockIdentifier, 32, Endianness.LittleEndian).ToString();
+            return Encoding.ASCII.GetString(blockIdentifier.ToByteArray());
         }
 
         private static string GetTxKey(BigInteger transactionIdentifier)
         {
-            return FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(transactionIdentifier, 32, Endianness.LittleEndian).ToString();
+            return Encoding.ASCII.GetString(transactionIdentifier.ToByteArray());
         }
 
         private static void CopyToFile(string resourceTag)

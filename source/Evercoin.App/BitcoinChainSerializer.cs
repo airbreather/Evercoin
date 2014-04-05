@@ -21,7 +21,7 @@ namespace Evercoin.App
             byte[] prevBlockIdBytes = block.PreviousBlockIdentifier.ToLittleEndianUInt256Array();
             byte[] merkleRootBytes = block.TransactionIdentifiers.Data;
             byte[] timestampBytes = BitConverter.GetBytes((uint)((block.Timestamp - NodaConstants.UnixEpoch).Ticks / NodaConstants.TicksPerSecond)).LittleEndianToOrFromBitConverterEndianness();
-            byte[] packedTargetBytes = BitConverter.GetBytes(TargetToBits(block.DifficultyTarget)).LittleEndianToOrFromBitConverterEndianness();
+            byte[] packedTargetBytes = BitConverter.GetBytes(Extensions.TargetToBits(block.DifficultyTarget)).LittleEndianToOrFromBitConverterEndianness();
             byte[] nonceBytes = BitConverter.GetBytes(block.Nonce).LittleEndianToOrFromBitConverterEndianness();
 
             return ByteTwiddling.ConcatenateData(versionBytes, prevBlockIdBytes, merkleRootBytes, timestampBytes, packedTargetBytes, nonceBytes);
@@ -76,7 +76,7 @@ namespace Evercoin.App
                 PreviousBlockIdentifier = GetUInt256(serializedBlockArray, ref offset),
                 TransactionIdentifiers = GetUInt256(serializedBlockArray, ref offset).ToLittleEndianUInt256Array().AsSingleElementEnumerable().ToMerkleTree(null),
                 Timestamp = Instant.FromSecondsSinceUnixEpoch(GetUInt32(serializedBlockArray, ref offset)),
-                DifficultyTarget = TargetFromBits(GetUInt32(serializedBlockArray, ref offset)),
+                DifficultyTarget = Extensions.TargetFromBits(GetUInt32(serializedBlockArray, ref offset)),
                 Nonce = GetUInt32(serializedBlockArray, ref offset)
             };
         }
@@ -123,57 +123,6 @@ namespace Evercoin.App
             return protocolTransaction.ToTransaction();
         }
 
-        private static BigInteger TargetFromBits(uint bits)
-        {
-            uint mantissa = bits & 0x007fffff;
-            bool negative = (bits & 0x00800000) != 0;
-            byte exponent = (byte)(bits >> 24);
-            BigInteger result;
-
-            if (exponent <= 3)
-            {
-                mantissa >>= 8 * (3 - exponent);
-                result = mantissa;
-            }
-            else
-            {
-                result = mantissa;
-                result <<= 8 * (exponent - 3);
-            }
-
-            if ((result.Sign < 0) != negative)
-            {
-                result = -result;
-            }
-
-            return result;
-        }
-
-        private static uint TargetToBits(BigInteger target)
-        {
-            int size = target.ToByteArray().Length;
-
-            uint result;
-            if (size <= 3)
-            {
-                result = ((uint)target) << (8 * (3 - size));
-            }
-            else
-            {
-                result = (uint)(target >> (8 * (size - 3)));
-            }
-
-            if (0 != (result & 0x00800000))
-            {
-                result >>= 8;
-                size++;
-            }
-
-            result |= (uint)(size << 24);
-            result |= (uint)(target.Sign < 0 ? 0x00800000 : 0);
-            return result;
-        }
-
         private static ushort GetUInt16(IReadOnlyList<byte> bytes, ref int offset)
         {
             byte[] subArray = bytes.GetRange(offset, 2).ToArray().LittleEndianToOrFromBitConverterEndianness();
@@ -183,9 +132,10 @@ namespace Evercoin.App
 
         private static uint GetUInt32(IReadOnlyList<byte> bytes, ref int offset)
         {
-            byte[] subArray = bytes.GetRange(offset, 4).ToArray().LittleEndianToOrFromBitConverterEndianness();
-            offset += 4;
-            return BitConverter.ToUInt32(subArray, 0);
+            return (uint)bytes[offset++] << 00 |
+                   (uint)bytes[offset++] << 08 |
+                   (uint)bytes[offset++] << 16 |
+                   (uint)bytes[offset++] << 24;
         }
 
         private static ulong GetUInt64(IReadOnlyList<byte> bytes, ref int offset)

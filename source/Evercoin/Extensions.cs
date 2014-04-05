@@ -336,5 +336,56 @@ namespace Evercoin
                 collection.Add(value);
             }
         }
+
+        public static BigInteger TargetFromBits(uint bits)
+        {
+            uint mantissa = bits & 0x007fffff;
+            bool negative = (bits & 0x00800000) != 0;
+            byte exponent = (byte)(bits >> 24);
+            BigInteger result;
+
+            if (exponent <= 3)
+            {
+                mantissa >>= 8 * (3 - exponent);
+                result = mantissa;
+            }
+            else
+            {
+                result = mantissa;
+                result <<= 8 * (exponent - 3);
+            }
+
+            if ((result.Sign < 0) != negative)
+            {
+                result = -result;
+            }
+
+            return result;
+        }
+
+        public static uint TargetToBits(BigInteger target)
+        {
+            int size = target.ToByteArray().Length;
+
+            uint result;
+            if (size <= 3)
+            {
+                result = ((uint)target) << (8 * (3 - size));
+            }
+            else
+            {
+                result = (uint)(target >> (8 * (size - 3)));
+            }
+
+            if (0 != (result & 0x00800000))
+            {
+                result >>= 8;
+                size++;
+            }
+
+            result |= (uint)(size << 24);
+            result |= (uint)(target.Sign < 0 ? 0x00800000 : 0);
+            return result;
+        }
     }
 }

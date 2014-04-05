@@ -64,39 +64,13 @@ namespace Evercoin.ProtocolObjects
         {
             return new TypedBlock
             {
-                DifficultyTarget = TargetFromBits(this.Bits),
+                DifficultyTarget = Extensions.TargetFromBits(this.Bits),
                 Nonce = this.Nonce,
                 PreviousBlockIdentifier = this.PrevBlockId,
                 Timestamp = Instant.FromSecondsSinceUnixEpoch(this.Timestamp),
                 TransactionIdentifiers = this.MerkleRoot.ToLittleEndianUInt256Array().AsSingleElementEnumerable().ToMerkleTree(transactionHashAlgorithm),
                 Version = this.Version
             };
-        }
-
-        private static BigInteger TargetFromBits(uint bits)
-        {
-            uint mantissa = bits & 0x007fffff;
-            bool negative = (bits & 0x00800000) != 0;
-            byte exponent = (byte)(bits >> 24);
-            BigInteger result;
-
-            if (exponent <= 3)
-            {
-                mantissa >>= 8 * (3 - exponent);
-                result = mantissa;
-            }
-            else
-            {
-                result = mantissa;
-                result <<= 8 * (exponent - 3);
-            }
-
-            if ((result.Sign < 0) != negative)
-            {
-                result = -result;
-            }
-
-            return result;
         }
 
         public override bool Equals(object obj)

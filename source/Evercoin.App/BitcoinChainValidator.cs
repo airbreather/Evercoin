@@ -5,6 +5,8 @@ using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
+using NodaTime;
+
 namespace Evercoin.App
 {
     public sealed class BitcoinChainValidator : IChainValidator
@@ -23,6 +25,8 @@ namespace Evercoin.App
 
         private readonly ITransactionScriptRunner scriptRunner;
 
+        private readonly IBlockChain blockChain;
+
         public BitcoinChainValidator(IReadableChainStore chainStore, ITransactionScriptParser scriptParser, ISignatureCheckerFactory signatureCheckerFactory, ITransactionScriptRunner scriptRunner, IChainParameters chainParameters, IHashAlgorithmStore hashAlgorithmStore, IChainSerializer chainSerializer, IBlockChain blockChain)
         {
             this.chainStore = chainStore;
@@ -32,10 +36,16 @@ namespace Evercoin.App
             this.chainParameters = chainParameters;
             this.hashAlgorithmStore = hashAlgorithmStore;
             this.chainSerializer = chainSerializer;
+            this.blockChain = blockChain;
         }
 
         public ValidationResult ValidateBlock(IBlock block)
         {
+            if (Equals(block, this.chainParameters.GenesisBlock))
+            {
+                return ValidationResult.PassingResult;
+            }
+
             Guid blockHashAlgorithmIdentifier = this.chainParameters.BlockHashAlgorithmIdentifier;
             IHashAlgorithm blockHashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(blockHashAlgorithmIdentifier);
             IChainSerializer chainSerializer = this.chainSerializer;
@@ -44,10 +54,59 @@ namespace Evercoin.App
 
             if (blockIdentifier >= block.DifficultyTarget)
             {
+                // The block doesn't even meet the proof-of-work it says it's supposed to meet.
                 return ValidationResult.FailWithReason("Block does not meet difficulty target.");
             }
 
-            return ValidationResult.PassingResult;
+            ulong? blockHeight = this.blockChain.GetHeightOfBlock(blockIdentifier);
+            if (!blockHeight.HasValue)
+            {
+                // The block doesn't actually appear in the chain.
+                // TODO: I think this should actually throw instead?
+                return ValidationResult.FailWithReason("Block is unconnected");
+            }
+
+            BigInteger prevBlockIdentifier = this.blockChain.GetIdentifierOfBlockAtHeight(blockHeight.Value - 1).Value;
+            IBlock prevBlock = this.chainStore.GetBlock(prevBlockIdentifier);
+            BigInteger prevTarget = prevBlock.DifficultyTarget;
+
+            if (0 != blockHeight.Value % this.chainParameters.BlocksPerDifficultyRetarget)
+            {
+                // We're not at an adjustment boundary, so just make sure this block has the same target as the previous block.
+                return block.DifficultyTarget != prevTarget ?
+                       ValidationResult.FailWithReason("Block has a different difficulty target, but it's not on an adjustment boundary.") :
+                       ValidationResult.PassingResult;
+            }
+
+            // We're at an adjustment boundary.  Make sure that the target is accurate.
+            // For some reason, Bitcoin uses the time since the previous block for the adjustment, rather than the current one.
+            ulong prevAdjustmentHeight = blockHeight.Value - this.chainParameters.BlocksPerDifficultyRetarget;
+            BigInteger prevAdjustmentBlockIdentifier = this.blockChain.GetIdentifierOfBlockAtHeight(prevAdjustmentHeight).Value;
+            IBlock prevAdjustmentBlock = this.chainStore.GetBlock(prevAdjustmentBlockIdentifier);
+
+            Duration desiredTimeBetweenBlockIntervals = this.chainParameters.DesiredTimeBetweenBlocks * this.chainParameters.BlocksPerDifficultyRetarget;
+            Duration actualTimeBetweenBlockIntervals = prevBlock.Timestamp - prevAdjustmentBlock.Timestamp;
+
+            // Don't let the adjustment shift by more than a factor of 4 in either direction.
+            if (actualTimeBetweenBlockIntervals < desiredTimeBetweenBlockIntervals / 4)
+            {
+                actualTimeBetweenBlockIntervals = desiredTimeBetweenBlockIntervals / 4;
+            }
+
+            if (actualTimeBetweenBlockIntervals > desiredTimeBetweenBlockIntervals * 4)
+            {
+                actualTimeBetweenBlockIntervals = desiredTimeBetweenBlockIntervals * 4;
+            }
+
+            BigInteger nextTarget = prevTarget;
+            nextTarget *= actualTimeBetweenBlockIntervals.Ticks;
+            nextTarget /= desiredTimeBetweenBlockIntervals.Ticks;
+            nextTarget = Extensions.TargetFromBits(Extensions.TargetToBits(nextTarget));
+            nextTarget = BigInteger.Min(nextTarget, this.chainParameters.MaximumDifficultyTarget);
+
+            return nextTarget != block.DifficultyTarget ?
+                   ValidationResult.FailWithReason("Block has the wrong target.") :
+                   ValidationResult.PassingResult;
         }
 
         public ValidationResult ValidateTransaction(ITransaction transaction)

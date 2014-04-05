@@ -168,7 +168,10 @@ namespace Evercoin
 
         public override string ToString()
         {
-            return ByteTwiddling.ByteArrayToHexString(this.Value.Reverse().ToArray());
+            byte[] tempValue = new byte[this.Value.Length];
+            Buffer.BlockCopy(this.Value, 0, tempValue, 0, this.Value.Length);
+            Array.Reverse(tempValue);
+            return ByteTwiddling.ByteArrayToHexString(tempValue);
         }
 
         public override bool Equals(object obj)
