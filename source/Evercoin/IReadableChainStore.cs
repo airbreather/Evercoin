@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -44,7 +43,7 @@ namespace Evercoin
         /// while waiting for a block with the given identifier to exist,
         /// rather than return <c>null</c> immediately.
         /// </remarks>
-        IBlock GetBlock(BigInteger blockIdentifier);
+        IBlock GetBlock(FancyByteArray blockIdentifier);
 
         /// <summary>
         /// Gets a transaction with the given identifier from this chain store.
@@ -61,7 +60,7 @@ namespace Evercoin
         /// while waiting for a transaction with the given identifier to exist,
         /// rather than return <c>null</c> immediately.
         /// </remarks>
-        ITransaction GetTransaction(BigInteger transactionIdentifier);
+        ITransaction GetTransaction(FancyByteArray transactionIdentifier);
 
         /// <summary>
         /// Indicates whether this chain store currently contains
@@ -79,7 +78,7 @@ namespace Evercoin
         /// while waiting for a block with the given identifier to exist,
         /// rather than return <c>false</c> immediately.
         /// </remarks>
-        bool ContainsBlock(BigInteger blockIdentifier);
+        bool ContainsBlock(FancyByteArray blockIdentifier);
 
         /// <summary>
         /// Indicates whether this chain store currently contains
@@ -97,7 +96,7 @@ namespace Evercoin
         /// while waiting for a transaction with the given identifier to exist,
         /// rather than return <c>false</c> immediately.
         /// </remarks>
-        bool ContainsTransaction(BigInteger transactionIdentifier);
+        bool ContainsTransaction(FancyByteArray transactionIdentifier);
 
         /// <summary>
         /// Indicates whether this chain store currently contains
@@ -119,7 +118,7 @@ namespace Evercoin
         /// while waiting for a block with the given identifier to exist,
         /// rather than return <c>false</c> immediately.
         /// </remarks>
-        bool TryGetBlock(BigInteger blockIdentifier, out IBlock block);
+        bool TryGetBlock(FancyByteArray blockIdentifier, out IBlock block);
 
         /// <summary>
         /// Indicates whether this chain store currently contains
@@ -141,7 +140,7 @@ namespace Evercoin
         /// while waiting for a transaction with the given identifier to exist,
         /// rather than return <c>false</c> immediately.
         /// </remarks>
-        bool TryGetTransaction(BigInteger transactionIdentifier, out ITransaction transaction);
+        bool TryGetTransaction(FancyByteArray transactionIdentifier, out ITransaction transaction);
 
         /// <summary>
         /// Gets a block with the given identifier from this chain store,
@@ -153,7 +152,7 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task<IBlock> GetBlockAsync(BigInteger blockIdentifier);
+        Task<IBlock> GetBlockAsync(FancyByteArray blockIdentifier);
 
         /// <summary>
         /// Gets a block with the given identifier from this chain store,
@@ -168,7 +167,7 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task<IBlock> GetBlockAsync(BigInteger blockIdentifier, CancellationToken token);
+        Task<IBlock> GetBlockAsync(FancyByteArray blockIdentifier, CancellationToken token);
 
         /// <summary>
         /// Gets a transaction with the given identifier from this chain store,
@@ -180,7 +179,7 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task<ITransaction> GetTransactionAsync(BigInteger transactionIdentifier);
+        Task<ITransaction> GetTransactionAsync(FancyByteArray transactionIdentifier);
 
         /// <summary>
         /// Gets a transaction with the given identifier from this chain store,
@@ -195,7 +194,7 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task<ITransaction> GetTransactionAsync(BigInteger transactionIdentifier, CancellationToken token);
+        Task<ITransaction> GetTransactionAsync(FancyByteArray transactionIdentifier, CancellationToken token);
 
         /// <summary>
         /// Indicates whether this chain store currently contains
@@ -207,7 +206,7 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task<bool> ContainsBlockAsync(BigInteger blockIdentifier);
+        Task<bool> ContainsBlockAsync(FancyByteArray blockIdentifier);
 
         /// <summary>
         /// Indicates whether this chain store currently contains
@@ -222,7 +221,7 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task<bool> ContainsBlockAsync(BigInteger blockIdentifier, CancellationToken token);
+        Task<bool> ContainsBlockAsync(FancyByteArray blockIdentifier, CancellationToken token);
 
         /// <summary>
         /// Indicates whether this chain store currently contains
@@ -234,7 +233,7 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task<bool> ContainsTransactionAsync(BigInteger transactionIdentifier);
+        Task<bool> ContainsTransactionAsync(FancyByteArray transactionIdentifier);
 
         /// <summary>
         /// Indicates whether this chain store currently contains
@@ -249,6 +248,6 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task<bool> ContainsTransactionAsync(BigInteger transactionIdentifier, CancellationToken token);
+        Task<bool> ContainsTransactionAsync(FancyByteArray transactionIdentifier, CancellationToken token);
     }
 }

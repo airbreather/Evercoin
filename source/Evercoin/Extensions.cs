@@ -41,43 +41,6 @@ namespace Evercoin
         }
 
         /// <summary>
-        /// Gets a 256-bit byte array for this <see cref="BigInteger"/>.
-        /// </summary>
-        /// <param name="bigInteger">
-        /// The value to get data for.
-        /// </param>
-        /// <returns>
-        /// A little-endian 256-bit (32-byte) array that contains the data
-        /// for this value.  Differs from <see cref="BigInteger.ToByteArray"/>
-        /// in that this is guaranteed to be 32 bytes long.
-        /// </returns>
-        public static byte[] ToLittleEndianUInt256Array(this BigInteger bigInteger)
-        {
-            byte[] unpaddedResult = bigInteger.ToByteArray();
-
-            if (unpaddedResult.Length > 32)
-            {
-                throw new InvalidOperationException("Number cannot fit into a 256-bit integer.");
-            }
-
-            // Initialize the array with ones if it's negative, zeroes if it's positive.
-            byte b = bigInteger.Sign < 0 ?
-                     (byte)0xff :
-                     (byte)0x00;
-
-            byte[] result =
-            {
-                b, b, b, b, b, b, b, b,
-                b, b, b, b, b, b, b, b,
-                b, b, b, b, b, b, b, b,
-                b, b, b, b, b, b, b, b
-            };
-
-            Buffer.BlockCopy(unpaddedResult, 0, result, 0, unpaddedResult.Length);
-            return result;
-        }
-
-        /// <summary>
         /// Gets a single-element enumerable that contains just a single value.
         /// </summary>
         /// <param name="value">
@@ -148,10 +111,10 @@ namespace Evercoin
 
             IMerkleTreeNode firstNode = node.LeftChild;
             IMerkleTreeNode secondNode = node.RightChild ?? node.LeftChild;
-            IEnumerable<byte> dataToHash = firstNode.Data.Concat(secondNode.Data);
+            IEnumerable<byte> dataToHash = ByteTwiddling.ConcatenateData(firstNode.Data, secondNode.Data);
 
-            byte[] hashResult = hashAlgorithm.CalculateHash(dataToHash);
-            return hashResult.SequenceEqual(node.Data);
+            FancyByteArray hashResult = hashAlgorithm.CalculateHash(dataToHash);
+            return hashResult == node.Data;
         }
 
         /// <summary>

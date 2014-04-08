@@ -65,7 +65,7 @@ namespace Evercoin.Util
             /// <summary>
             /// Gets the data stored in this node.
             /// </summary>
-            public byte[] Data { get; set; }
+            public FancyByteArray Data { get; set; }
 
             /// <summary>
             /// Gets the left subtree.

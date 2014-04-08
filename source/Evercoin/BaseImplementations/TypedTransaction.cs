@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using System.Collections.ObjectModel;
+using System.Linq;
 
 using Evercoin.Util;
 
@@ -14,12 +15,12 @@ namespace Evercoin.BaseImplementations
         /// <summary>
         /// Gets the inputs spent by this transaction.
         /// </summary>
-        public IValueSpender[] Inputs { get; set; }
+        public ReadOnlyCollection<IValueSpender> Inputs { get; set; }
 
         /// <summary>
         /// Gets the outputs of this transaction.
         /// </summary>
-        public IValueSource[] Outputs { get; set; }
+        public ReadOnlyCollection<IValueSource> Outputs { get; set; }
 
         public uint LockTime { get; set; }
 

@@ -68,7 +68,8 @@ namespace Evercoin.App
         /// This is usually a sequence of 4 bytes that are uncommon
         /// in typical data streams.
         /// </remarks>
-        public byte[] StaticMessagePrefixData { get { return new byte[] { 0xF9, 0xBE, 0xB4, 0xD9 }; } }
+        ////public FancyByteArray StaticMessagePrefixData { get { return new byte[] { 0xF9, 0xBE, 0xB4, 0xD9 }; } }
+        public FancyByteArray StaticMessagePrefixData { get { return new byte[] { 0x0B, 0x11, 0x09, 0x07 }; } }
 
         /// <summary>
         /// A set of <see cref="DnsEndPoint"/> objects that may be used
@@ -101,7 +102,7 @@ namespace Evercoin.App
                    this.PayloadChecksumLengthInBytes == other.PayloadChecksumLengthInBytes &&
                    this.CommandLengthInBytes == other.CommandLengthInBytes &&
                    this.MessagePrefixLengthInBytes == other.MessagePrefixLengthInBytes &&
-                   this.StaticMessagePrefixData.SequenceEqual(other.StaticMessagePrefixData) &&
+                   this.StaticMessagePrefixData == other.StaticMessagePrefixData &&
                    this.Seeds.SetEquals(other.Seeds);
         }
 
@@ -131,7 +132,7 @@ namespace Evercoin.App
                 .HashWith(this.PayloadChecksumAlgorithmIdentifier)
                 .HashWith(this.PayloadChecksumLengthInBytes)
                 .HashWith(this.CommandLengthInBytes)
-                .HashWithEnumerable(this.StaticMessagePrefixData)
+                .HashWith(this.StaticMessagePrefixData)
                 .HashWithEnumerable(this.Seeds.OrderBy(x => x.ToString(), StringComparer.OrdinalIgnoreCase));
 
             return builder;

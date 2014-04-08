@@ -51,14 +51,14 @@ namespace Evercoin.App
             IHashAlgorithm blockHashAlgorithm = hashAlgorithmStore.GetHashAlgorithm(blockHashAlgorithmIdentifier);
             byte[] genesisBlockData = this.currencyParameters.ChainSerializer.GetBytesForBlock(genesisBlock);
             FancyByteArray genesisBlockIdentifier = blockHashAlgorithm.CalculateHash(genesisBlockData);
-            List<BigInteger> blockIdentifiers = new List<BigInteger> { genesisBlockIdentifier };
+            List<FancyByteArray> blockIdentifiers = new List<FancyByteArray> { genesisBlockIdentifier };
             HashSet<ulong> heights = new HashSet<ulong>();
             long validTransactions = 0;
 
             ConcurrentDictionary<ProtocolInventoryVector, ProtocolInventoryVector> knownInventory = new ConcurrentDictionary<ProtocolInventoryVector, ProtocolInventoryVector>();
             List<IPEndPoint> endPoints = new List<IPEndPoint>
                                          {
-                                             new IPEndPoint(IPAddress.Loopback, 8333),
+                                             new IPEndPoint(IPAddress.Loopback, 18333),
                                          };
 
             this.network.ReceivedVersionPackets.Subscribe(async x => await this.network.AcknowledgePeerVersionAsync(x.Item1, token).ConfigureAwait(false));
@@ -73,15 +73,19 @@ namespace Evercoin.App
                     ulong startingBlockHeight = this.blockChain.Length;
                     ulong currentBlockHeight = startingBlockHeight;
                     bool started = false;
-                    const int CurrentHighestBlockBecauseIAmCheating = 294361;
+                    ////const int CurrentHighestBlockBecauseIAmCheating = 294361;
+                    const int CurrentHighestBlockBecauseIAmCheating = 209432;
 
                     Action updateBlockIdentifiers = () =>
                     {
-                        for (ulong ii = 0; ii < currentBlockHeight; ii++)
+                        lock (blockIdentifiers)
                         {
-                            if (heights.Add(ii))
+                            for (ulong ii = 0; ii < currentBlockHeight; ii++)
                             {
-                                blockIdentifiers.Add(this.blockChain.GetIdentifierOfBlockAtHeight(ii).Value);
+                                if (heights.Add(ii))
+                                {
+                                    blockIdentifiers.Add(this.blockChain.GetIdentifierOfBlockAtHeight(ii).Value);
+                                }
                             }
                         }
                     };
@@ -118,7 +122,7 @@ namespace Evercoin.App
                     ulong i = 1;
                     while (true)
                     {
-                        Task t = this.network.RequestBlockOffersAsync(x, ((IReadOnlyList<BigInteger>)blockIdentifiers).GetRange(0, (int)i), BlockRequestType.IncludeTransactions, token);
+                        Task t = this.network.RequestBlockOffersAsync(x, ((IReadOnlyList<FancyByteArray>)blockIdentifiers).GetRange(0, (int)i), BlockRequestType.IncludeTransactions, token);
                         if (i >= currentBlockHeight)
                         {
                             await t.ConfigureAwait(false);
@@ -135,7 +139,7 @@ namespace Evercoin.App
                     IHashAlgorithm txHashAlgorithm = this.currencyParameters.HashAlgorithmStore.GetHashAlgorithm(this.currencyParameters.ChainParameters.TransactionHashAlgorithmIdentifier);
                     while (this.validationBlock < currentBlockHeight)
                     {
-                        BigInteger blockIdentifier = this.blockChain.GetIdentifierOfBlockAtHeight(this.validationBlock).Value;
+                        FancyByteArray blockIdentifier = this.blockChain.GetIdentifierOfBlockAtHeight(this.validationBlock).Value;
                         IBlock block = await this.chainStore.GetBlockAsync(blockIdentifier, token).ConfigureAwait(false);
 
                         ValidationResult blockValidationResult = this.currencyParameters.ChainValidator.ValidateBlock(block);
@@ -154,8 +158,8 @@ namespace Evercoin.App
                         while (true)
                         {
                             bool merkleRootUpdated = false;
-                            List<BigInteger> transactionsForBlock = this.blockChain.GetTransactionsForBlock(blockIdentifier).ToList();
-                            foreach (BigInteger transactionIdentifier in transactionsForBlock.Where(transactionIdentifier => foundTransactions.Add(transactionIdentifier) && !transactionIdentifier.IsZero))
+                            List<FancyByteArray> transactionsForBlock = this.blockChain.GetTransactionsForBlock(blockIdentifier).ToList();
+                            foreach (FancyByteArray transactionIdentifier in transactionsForBlock.Where(transactionIdentifier => foundTransactions.Add(transactionIdentifier) && !transactionIdentifier.NumericValue.IsZero))
                             {
                                 ITransaction transaction = await this.chainStore.GetTransactionAsync(transactionIdentifier, token).ConfigureAwait(false);
                                 ValidationResult transactionValidationResult = this.currencyParameters.ChainValidator.ValidateTransaction(transaction);
@@ -213,7 +217,7 @@ namespace Evercoin.App
                     while (!token.IsCancellationRequested)
                     {
                         await Task.Delay(50, token).ConfigureAwait(false);
-                        Console.Write("\rBlocks: ({0,8}) // Transactions: ({1,8}) [on block {3, 8}] // Valid Transactions: ({2, 8}) [on block {4, 8}]", blockIdentifiers.Count, Cheating.GetTransactionIdentifierCount(), validTransactions, this.dataBlock, this.validationBlock);
+                        Console.Write("\rBlocks: ({0,8}) // Transactions: ({1,8}) [on block {3, 8}] // Valid Transactions: ({2, 8}) [on block {4, 8}]", blockIdentifiers.Count - 1, Cheating.GetTransactionIdentifierCount(), validTransactions, this.dataBlock, this.validationBlock);
                     }
                 },
                 token
@@ -240,9 +244,9 @@ namespace Evercoin.App
             await task;
         }
 
-        private async Task HandleTransaction(ITransaction transaction, BigInteger containingBlockIdentifier, ulong indexInBlock, CancellationToken token)
+        private async Task HandleTransaction(ITransaction transaction, FancyByteArray containingBlockIdentifier, ulong indexInBlock, CancellationToken token)
         {
-            if (containingBlockIdentifier.IsZero)
+            if (containingBlockIdentifier.NumericValue.IsZero)
             {
                 // TODO: obviously, this will fail on transactions not yet in the blockchain.
                 return;

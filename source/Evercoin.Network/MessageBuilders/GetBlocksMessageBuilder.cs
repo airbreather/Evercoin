@@ -36,8 +36,8 @@ namespace Evercoin.Network.MessageBuilders
         }
 
         public INetworkMessage BuildGetBlocksMessage(INetworkPeer peer,
-                                                     IEnumerable<BigInteger> knownHashes,
-                                                     BigInteger lastKnownHash,
+                                                     IEnumerable<FancyByteArray> knownHashes,
+                                                     FancyByteArray lastKnownHash,
                                                      BlockRequestType requestType)
         {
             Message message = new Message(this.network.Parameters, this.hashAlgorithmStore, peer);
@@ -58,13 +58,13 @@ namespace Evercoin.Network.MessageBuilders
             Array.Copy(unpaddedCommandBytes, commandBytes, unpaddedCommandBytes.Length);
 
             uint protocolVersion = (uint)this.network.Parameters.ProtocolVersion;
-            BigInteger[] knownHashList = knownHashes.GetArray();
+            FancyByteArray[] knownHashList = knownHashes.GetArray();
             ProtocolCompactSize knownHashCount = (ulong)knownHashList.Length;
 
             byte[] protocolVersionBytes = BitConverter.GetBytes(protocolVersion).LittleEndianToOrFromBitConverterEndianness();
             byte[] knownHashCountBytes = knownHashCount.Data;
-            IEnumerable<byte[]> knownHashByteSources = knownHashList.Select(x => x.ToLittleEndianUInt256Array());
-            byte[] lastKnownHashBytes = lastKnownHash.ToLittleEndianUInt256Array();
+            IEnumerable<byte[]> knownHashByteSources = knownHashList.Select(x => FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(x, 32, Endianness.LittleEndian).Value);
+            byte[] lastKnownHashBytes = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(lastKnownHash, 32, Endianness.LittleEndian);
 
             byte[] knownHashBytes = ByteTwiddling.ConcatenateData(knownHashByteSources);
 

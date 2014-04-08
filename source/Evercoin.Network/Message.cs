@@ -26,7 +26,7 @@ namespace Evercoin.Network
             this.remotePeer = remotePeer;
         }
 
-        public byte[] FullData
+        public FancyByteArray FullData
         {
             get
             {
@@ -37,9 +37,9 @@ namespace Evercoin.Network
         /// <summary>
         /// Gets the command of this message.
         /// </summary>
-        public byte[] CommandBytes { get; private set; }
+        public FancyByteArray CommandBytes { get; private set; }
 
-        public byte[] Payload { get; private set; }
+        public FancyByteArray Payload { get; private set; }
 
         /// <summary>
         /// Gets the network parameters for this message.
@@ -56,7 +56,7 @@ namespace Evercoin.Network
             this.CommandBytes = command.GetArray();
             this.Payload = payload.GetArray();
 
-            uint payloadSizeInBytes = (uint)this.Payload.Length;
+            uint payloadSizeInBytes = (uint)this.Payload.Value.Length;
 
             this.payloadSize = BitConverter.GetBytes(payloadSizeInBytes)
                 .LittleEndianToOrFromBitConverterEndianness();
@@ -64,7 +64,7 @@ namespace Evercoin.Network
             IHashAlgorithm checksumAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(this.networkParameters.PayloadChecksumAlgorithmIdentifier);
             int checksumLengthInBytes = this.networkParameters.PayloadChecksumLengthInBytes;
 
-            byte[] checksum = checksumAlgorithm.CalculateHash(this.Payload);
+            byte[] checksum = checksumAlgorithm.CalculateHash(this.Payload.Value);
             Array.Resize(ref checksum, checksumLengthInBytes);
             this.payloadChecksum = checksum;
         }

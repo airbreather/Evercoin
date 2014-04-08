@@ -23,13 +23,13 @@ namespace Evercoin.Storage
         private readonly DB blockDB;
         private readonly DB txDB;
 
-        private readonly Waiter<BigInteger> blockWaiter = new Waiter<BigInteger>();
-        private readonly Waiter<BigInteger> txWaiter = new Waiter<BigInteger>();
+        private readonly Waiter<FancyByteArray> blockWaiter = new Waiter<FancyByteArray>();
+        private readonly Waiter<FancyByteArray> txWaiter = new Waiter<FancyByteArray>();
 
         private readonly object blockLock = new object();
         private readonly object txLock = new object();
 
-        private readonly ConcurrentDictionary<BigInteger, bool> transactions = new ConcurrentDictionary<BigInteger, bool>();
+        private readonly ConcurrentDictionary<FancyByteArray, bool> transactions = new ConcurrentDictionary<FancyByteArray, bool>();
 
         public LevelDBChainStore()
         {
@@ -55,7 +55,7 @@ namespace Evercoin.Storage
         [Import]
         public IChainSerializer ChainSerializer { get; set; }
 
-        protected override IBlock FindBlockCore(BigInteger blockIdentifier)
+        protected override IBlock FindBlockCore(FancyByteArray blockIdentifier)
         {
             this.blockWaiter.WaitFor(blockIdentifier);
 
@@ -67,7 +67,7 @@ namespace Evercoin.Storage
             return this.ChainSerializer.GetBlockForBytes(serializedBlock);
         }
 
-        protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
+        protected override ITransaction FindTransactionCore(FancyByteArray transactionIdentifier)
         {
             this.txWaiter.WaitFor(transactionIdentifier);
 
@@ -79,7 +79,7 @@ namespace Evercoin.Storage
             return this.ChainSerializer.GetTransactionForBytes(serializedTransaction);
         }
 
-        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
+        protected override void PutBlockCore(FancyByteArray blockIdentifier, IBlock block)
         {
             byte[] serializedBlock = this.ChainSerializer.GetBytesForBlock(block);
             string serializedBlockString = ByteTwiddling.ByteArrayToHexString(serializedBlock);
@@ -89,7 +89,7 @@ namespace Evercoin.Storage
             this.blockWaiter.SetEventFor(blockIdentifier);
         }
 
-        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
+        protected override void PutTransactionCore(FancyByteArray transactionIdentifier, ITransaction transaction)
         {
             byte[] serializedTransaction = this.ChainSerializer.GetBytesForTransaction(transaction);
             string serializedTransactionString = ByteTwiddling.ByteArrayToHexString(serializedTransaction);
@@ -100,13 +100,13 @@ namespace Evercoin.Storage
             this.transactions[transactionIdentifier] = true;
         }
 
-        protected override bool ContainsBlockCore(BigInteger blockIdentifier)
+        protected override bool ContainsBlockCore(FancyByteArray blockIdentifier)
         {
             lock (this.blockLock)
             return this.blockDB.Get(GetBlockKey(blockIdentifier)) != null;
         }
 
-        protected override bool ContainsTransactionCore(BigInteger transactionIdentifier)
+        protected override bool ContainsTransactionCore(FancyByteArray transactionIdentifier)
         {
             return this.transactions.ContainsKey(transactionIdentifier);
         }
@@ -120,14 +120,14 @@ namespace Evercoin.Storage
             base.DisposeManagedResources();
         }
 
-        private static string GetBlockKey(BigInteger blockIdentifier)
+        private static string GetBlockKey(FancyByteArray blockIdentifier)
         {
-            return Encoding.ASCII.GetString(blockIdentifier.ToByteArray());
+            return blockIdentifier.ToString();
         }
 
-        private static string GetTxKey(BigInteger transactionIdentifier)
+        private static string GetTxKey(FancyByteArray transactionIdentifier)
         {
-            return Encoding.ASCII.GetString(transactionIdentifier.ToByteArray());
+            return transactionIdentifier.ToString();
         }
 
         private static void CopyToFile(string resourceTag)

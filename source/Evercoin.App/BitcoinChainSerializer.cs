@@ -15,10 +15,10 @@ namespace Evercoin.App
     [Export(typeof(IChainSerializer))]
     public sealed class BitcoinChainSerializer : IChainSerializer
     {
-        public byte[] GetBytesForBlock(IBlock block)
+        public FancyByteArray GetBytesForBlock(IBlock block)
         {
             byte[] versionBytes = BitConverter.GetBytes(block.Version).LittleEndianToOrFromBitConverterEndianness();
-            byte[] prevBlockIdBytes = block.PreviousBlockIdentifier.ToLittleEndianUInt256Array();
+            byte[] prevBlockIdBytes = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(block.PreviousBlockIdentifier, 32, Endianness.LittleEndian);
             byte[] merkleRootBytes = block.TransactionIdentifiers.Data;
             byte[] timestampBytes = BitConverter.GetBytes((uint)((block.Timestamp - NodaConstants.UnixEpoch).Ticks / NodaConstants.TicksPerSecond)).LittleEndianToOrFromBitConverterEndianness();
             byte[] packedTargetBytes = BitConverter.GetBytes(Extensions.TargetToBits(block.DifficultyTarget)).LittleEndianToOrFromBitConverterEndianness();
@@ -27,18 +27,18 @@ namespace Evercoin.App
             return ByteTwiddling.ConcatenateData(versionBytes, prevBlockIdBytes, merkleRootBytes, timestampBytes, packedTargetBytes, nonceBytes);
         }
 
-        public byte[] GetBytesForTransaction(ITransaction transaction)
+        public FancyByteArray GetBytesForTransaction(ITransaction transaction)
         {
             // Version
             byte[] versionBytes = BitConverter.GetBytes(transaction.Version).LittleEndianToOrFromBitConverterEndianness();
 
             // Inputs
-            byte[] inputCountBytes = ((ProtocolCompactSize)(ulong)transaction.Inputs.Length).Data;
+            byte[] inputCountBytes = ((ProtocolCompactSize)(ulong)transaction.Inputs.Count).Data;
             IEnumerable<byte[]> inputByteSources = transaction.Inputs.Select(x =>
             {
                 byte[] prevOutTxIdBytes = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(x.SpentTransactionIdentifier, 32, Endianness.LittleEndian);
                 byte[] prevOutNBytes = BitConverter.GetBytes(x.SpentTransactionOutputIndex).LittleEndianToOrFromBitConverterEndianness();
-                byte[] scriptSigLengthBytes = ((ProtocolCompactSize)(ulong)x.ScriptSignature.Length).Data;
+                byte[] scriptSigLengthBytes = ((ProtocolCompactSize)(ulong)x.ScriptSignature.Value.Length).Data;
                 byte[] scriptSigBytes = x.ScriptSignature;
                 byte[] sequenceBytes = BitConverter.GetBytes(x.SequenceNumber).LittleEndianToOrFromBitConverterEndianness();
 
@@ -46,11 +46,11 @@ namespace Evercoin.App
             });
 
             // Outputs
-            byte[] outputCountBytes = ((ProtocolCompactSize)(ulong)transaction.Outputs.Length).Data;
+            byte[] outputCountBytes = ((ProtocolCompactSize)(ulong)transaction.Outputs.Count).Data;
             IEnumerable<byte[]> outputByteSources = transaction.Outputs.Select(x =>
             {
                 byte[] valueBytes = BitConverter.GetBytes((long)x.AvailableValue).LittleEndianToOrFromBitConverterEndianness();
-                byte[] scriptPubKeyLengthBytes = ((ProtocolCompactSize)(ulong)x.ScriptPublicKey.Length).Data;
+                byte[] scriptPubKeyLengthBytes = ((ProtocolCompactSize)(ulong)x.ScriptPublicKey.Value.Length).Data;
                 byte[] scriptPubKeyBytes = x.ScriptPublicKey;
 
                 return ByteTwiddling.ConcatenateData(valueBytes, scriptPubKeyLengthBytes, scriptPubKeyBytes);
@@ -74,7 +74,7 @@ namespace Evercoin.App
             {
                 Version = GetUInt32(serializedBlockArray, ref offset),
                 PreviousBlockIdentifier = GetUInt256(serializedBlockArray, ref offset),
-                TransactionIdentifiers = GetUInt256(serializedBlockArray, ref offset).ToLittleEndianUInt256Array().AsSingleElementEnumerable().ToMerkleTree(null),
+                TransactionIdentifiers = GetBytes(32, serializedBlockArray, ref offset).AsSingleElementEnumerable().ToMerkleTree(null),
                 Timestamp = Instant.FromSecondsSinceUnixEpoch(GetUInt32(serializedBlockArray, ref offset)),
                 DifficultyTarget = Extensions.TargetFromBits(GetUInt32(serializedBlockArray, ref offset)),
                 Nonce = GetUInt32(serializedBlockArray, ref offset)
@@ -93,7 +93,7 @@ namespace Evercoin.App
 
             while (inputCount-- > 0)
             {
-                BigInteger prevOutTxId = GetUInt256(serializedTransactionArray, ref offset);
+                FancyByteArray prevOutTxId = GetUInt256(serializedTransactionArray, ref offset);
 
                 uint prevOutIndex = GetUInt32(serializedTransactionArray, ref offset);
 
@@ -152,11 +152,11 @@ namespace Evercoin.App
             return BitConverter.ToInt64(subArray, 0);
         }
 
-        private static BigInteger GetUInt256(IReadOnlyList<byte> bytes, ref int offset)
+        private static FancyByteArray GetUInt256(IReadOnlyList<byte> bytes, ref int offset)
         {
             IReadOnlyList<byte> subArray = bytes.GetRange(offset, 32);
             offset += 32;
-            return FancyByteArray.CreateFromBytes(subArray).NumericValue;
+            return FancyByteArray.CreateFromBytes(subArray);
         }
 
         private static ulong GetCompactSize(IReadOnlyList<byte> bytes, ref int offset)

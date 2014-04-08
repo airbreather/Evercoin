@@ -8,7 +8,7 @@ namespace Evercoin
     /// </summary>
     public interface IValueSpender : IEquatable<IValueSpender>
     {
-        BigInteger SpentTransactionIdentifier { get; }
+        FancyByteArray SpentTransactionIdentifier { get; }
 
         uint SpentTransactionOutputIndex { get; }
 
@@ -16,7 +16,7 @@ namespace Evercoin
         /// Gets the identifier of the <see cref="ITransaction"/> that
         /// contains this spender in its inputs.
         /// </summary>
-        BigInteger SpendingTransactionIdentifier { get; }
+        FancyByteArray SpendingTransactionIdentifier { get; }
 
         /// <summary>
         /// Gets the index where this appears in
@@ -32,7 +32,7 @@ namespace Evercoin
         /// <remarks>
         /// For the coinbase found in blocks, this is usually just a data push.
         /// </remarks>
-        byte[] ScriptSignature { get; }
+        FancyByteArray ScriptSignature { get; }
 
         /// <summary>
         /// Gets the "version" of this spender.

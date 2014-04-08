@@ -30,7 +30,7 @@ namespace Evercoin.App
             {
                 CompositeHashAlgorithmStore hashAlgorithmStore = new CompositeHashAlgorithmStore();
                 container.ComposeParts(chainStorage, hashAlgorithmStore);
-                using (EvercoinModule module = new EvercoinModule(cachingChainStorage, hashAlgorithmStore))
+                using (EvercoinModule module = new EvercoinModule(/*cachingC*/chainStorage, hashAlgorithmStore))
                 using (StandardKernel kernel = new StandardKernel(module))
                 {
                     Console.WriteLine("=== Hash Algorithms ===");
@@ -51,7 +51,7 @@ namespace Evercoin.App
                     {
                         Guid identifier = (Guid)hashAlgorithmIdentifier.GetValue(null);
                         IHashAlgorithm algo = hashAlgorithmStore.GetHashAlgorithm(identifier);
-                        Console.WriteLine("{0," + outputColumnWidth + "}: {1}", hashAlgorithmIdentifier.Name, ByteTwiddling.ByteArrayToHexString(algo.CalculateHash(randomBytes)));
+                        Console.WriteLine("{0," + outputColumnWidth + "}: {1}", hashAlgorithmIdentifier.Name, ByteTwiddling.ByteArrayToHexString(algo.CalculateHash(randomBytes).Value));
                     }
 
                     Console.WriteLine();

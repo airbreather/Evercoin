@@ -37,7 +37,7 @@ namespace Evercoin
         /// <param name="block">
         /// The block to store.
         /// </param>
-        void PutBlock(BigInteger blockIdentifier, IBlock block);
+        void PutBlock(FancyByteArray blockIdentifier, IBlock block);
 
         /// <summary>
         /// Stores a transaction with the given identifier in this chain store.
@@ -48,7 +48,7 @@ namespace Evercoin
         /// <param name="transaction">
         /// The transaction to store.
         /// </param>
-        void PutTransaction(BigInteger transactionIdentifier, ITransaction transaction);
+        void PutTransaction(FancyByteArray transactionIdentifier, ITransaction transaction);
 
         /// <summary>
         /// Stores a block with the given identifier in this chain store,
@@ -63,7 +63,7 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task PutBlockAsync(BigInteger blockIdentifier, IBlock block);
+        Task PutBlockAsync(FancyByteArray blockIdentifier, IBlock block);
 
         /// <summary>
         /// Stores a block with the given identifier in this chain store,
@@ -81,7 +81,7 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task PutBlockAsync(BigInteger blockIdentifier, IBlock block, CancellationToken token);
+        Task PutBlockAsync(FancyByteArray blockIdentifier, IBlock block, CancellationToken token);
 
         /// <summary>
         /// Stores a transaction with the given identifier in this chain store,
@@ -96,7 +96,7 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task PutTransactionAsync(BigInteger transactionIdentifier, ITransaction transaction);
+        Task PutTransactionAsync(FancyByteArray transactionIdentifier, ITransaction transaction);
 
         /// <summary>
         /// Stores a transaction with the given identifier in this chain store,
@@ -114,6 +114,6 @@ namespace Evercoin
         /// <returns>
         /// A <see cref="Task"/> encapsulating the asynchronous operation.
         /// </returns>
-        Task PutTransactionAsync(BigInteger transactionIdentifier, ITransaction transaction, CancellationToken token);
+        Task PutTransactionAsync(FancyByteArray transactionIdentifier, ITransaction transaction, CancellationToken token);
     }
 }

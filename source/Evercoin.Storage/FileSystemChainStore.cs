@@ -19,8 +19,8 @@ namespace Evercoin.Storage
         private const string BlockDirName = @"C:\Freedom\blocks";
         private const string TxDirName = @"C:\Freedom\transactions";
 
-        private readonly Waiter<BigInteger> blockWaiter = new Waiter<BigInteger>();
-        private readonly Waiter<BigInteger> txWaiter = new Waiter<BigInteger>();
+        private readonly Waiter<FancyByteArray> blockWaiter = new Waiter<FancyByteArray>();
+        private readonly Waiter<FancyByteArray> txWaiter = new Waiter<FancyByteArray>();
 
         private IChainSerializer chainSerializer;
 
@@ -52,7 +52,7 @@ namespace Evercoin.Storage
             }
         }
 
-        protected override IBlock FindBlockCore(BigInteger blockIdentifier)
+        protected override IBlock FindBlockCore(FancyByteArray blockIdentifier)
         {
             this.blockWaiter.WaitFor(blockIdentifier);
             string filePath = GetBlockFileName(blockIdentifier);
@@ -60,7 +60,7 @@ namespace Evercoin.Storage
             return this.chainSerializer.GetBlockForBytes(serializedBlock);
         }
 
-        protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
+        protected override ITransaction FindTransactionCore(FancyByteArray transactionIdentifier)
         {
             this.txWaiter.WaitFor(transactionIdentifier);
             string filePath = GetTransactionFileName(transactionIdentifier);
@@ -68,7 +68,7 @@ namespace Evercoin.Storage
             return this.chainSerializer.GetTransactionForBytes(serializedTransaction);
         }
 
-        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
+        protected override void PutBlockCore(FancyByteArray blockIdentifier, IBlock block)
         {
             string filePath = GetBlockFileName(blockIdentifier);
             byte[] serializedBlock = this.chainSerializer.GetBytesForBlock(block);
@@ -76,7 +76,7 @@ namespace Evercoin.Storage
             this.blockWaiter.SetEventFor(blockIdentifier);
         }
 
-        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
+        protected override void PutTransactionCore(FancyByteArray transactionIdentifier, ITransaction transaction)
         {
             string filePath = GetTransactionFileName(transactionIdentifier);
             byte[] serializedTransaction = this.chainSerializer.GetBytesForTransaction(transaction);
@@ -84,31 +84,29 @@ namespace Evercoin.Storage
             this.txWaiter.SetEventFor(transactionIdentifier);
         }
 
-        protected override bool ContainsBlockCore(BigInteger blockIdentifier)
+        protected override bool ContainsBlockCore(FancyByteArray blockIdentifier)
         {
             return File.Exists(GetBlockFileName(blockIdentifier));
         }
 
-        protected override bool ContainsTransactionCore(BigInteger transactionIdentifier)
+        protected override bool ContainsTransactionCore(FancyByteArray transactionIdentifier)
         {
             return File.Exists(GetTransactionFileName(transactionIdentifier));
         }
 
-        private static string GetBlockFileName(BigInteger blockIdentifier)
+        private static string GetBlockFileName(FancyByteArray blockIdentifier)
         {
-            FancyByteArray bytes = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(blockIdentifier, 32, Endianness.LittleEndian);
-            return Path.Combine(BlockDirName, bytes.ToString());
+            return Path.Combine(BlockDirName, blockIdentifier.ToString());
         }
 
-        private static string GetTransactionFileName(BigInteger transactionIdentifier)
+        private static string GetTransactionFileName(FancyByteArray transactionIdentifier)
         {
-            FancyByteArray bytes = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(transactionIdentifier, 32, Endianness.LittleEndian);
-            return Path.Combine(TxDirName, bytes.ToString());
+            return Path.Combine(TxDirName, transactionIdentifier.ToString());
         }
 
         private void OnChainSerializerSet()
         {
-            ConcurrentDictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new ConcurrentDictionary<BigInteger, BigInteger>();
+            ConcurrentDictionary<FancyByteArray, FancyByteArray> blockIdToNextBlockIdMapping = new ConcurrentDictionary<FancyByteArray, FancyByteArray>();
 
             // OOH, CHEATING
             SHA256 hasher = SHA256.Create();
@@ -122,12 +120,12 @@ namespace Evercoin.Storage
                 this.blockWaiter.SetEventFor(hash);
             }
 
-            BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").AsEnumerable().Reverse().GetArray());
+            FancyByteArray genesisBlockIdentifier = FancyByteArray.CreateLittleEndianFromHexString("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F", Endianness.BigEndian);
 
-            BigInteger prevBlockId = BigInteger.Zero;
+            FancyByteArray prevBlockId = new FancyByteArray();
             for (int i = 0; i < blockIdToNextBlockIdMapping.Count; i++)
             {
-                BigInteger blockId;
+                FancyByteArray blockId;
                 if (!blockIdToNextBlockIdMapping.TryGetValue(prevBlockId, out blockId))
                 {
                     break;
@@ -136,10 +134,10 @@ namespace Evercoin.Storage
                 prevBlockId = blockId;
             }
 
-            HashSet<BigInteger> goodBlockIds = new HashSet<BigInteger>(blockIdToNextBlockIdMapping.Values);
+            HashSet<FancyByteArray> goodBlockIds = new HashSet<FancyByteArray>(blockIdToNextBlockIdMapping.Values);
             foreach (string fileName in Directory.EnumerateFiles(BlockDirName))
             {
-                BigInteger blockId = BigInteger.Parse(Path.GetFileName(fileName), NumberStyles.HexNumber, CultureInfo.InvariantCulture);
+                FancyByteArray blockId = FancyByteArray.CreateLittleEndianFromHexString(Path.GetFileName(fileName), Endianness.BigEndian);
                 if (!goodBlockIds.Contains(blockId) &&
                     blockId != genesisBlockIdentifier)
                 {

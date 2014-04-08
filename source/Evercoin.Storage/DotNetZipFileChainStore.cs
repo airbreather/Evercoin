@@ -32,8 +32,8 @@ namespace Evercoin.Storage
 
         private readonly ZipFile archive;
 
-        private readonly Waiter<BigInteger> blockWaiter = new Waiter<BigInteger>();
-        private readonly Waiter<BigInteger> txWaiter = new Waiter<BigInteger>();
+        private readonly Waiter<FancyByteArray> blockWaiter = new Waiter<FancyByteArray>();
+        private readonly Waiter<FancyByteArray> txWaiter = new Waiter<FancyByteArray>();
 
         private IChainSerializer chainSerializer;
 
@@ -84,29 +84,29 @@ namespace Evercoin.Storage
             }
         }
 
-        protected override bool ContainsBlockCore(BigInteger blockIdentifier)
+        protected override bool ContainsBlockCore(FancyByteArray blockIdentifier)
         {
             lock (this.zipLock)
             return this.archive.ContainsEntry(GetBlockEntryName(blockIdentifier));
         }
 
-        protected override bool ContainsTransactionCore(BigInteger transactionIdentifier)
+        protected override bool ContainsTransactionCore(FancyByteArray transactionIdentifier)
         {
             lock (this.zipLock)
             return this.archive.ContainsEntry(GetTransactionEntryName(transactionIdentifier));
         }
 
-        protected override async Task<bool> ContainsBlockAsyncCore(BigInteger blockIdentifier, CancellationToken token)
+        protected override async Task<bool> ContainsBlockAsyncCore(FancyByteArray blockIdentifier, CancellationToken token)
         {
             return await Task.Run(() => this.ContainsBlockCore(blockIdentifier), token);
         }
 
-        protected override async Task<bool> ContainsTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
+        protected override async Task<bool> ContainsTransactionAsyncCore(FancyByteArray transactionIdentifier, CancellationToken token)
         {
             return await Task.Run(() => this.ContainsTransactionCore(transactionIdentifier), token);
         }
 
-        protected override IBlock FindBlockCore(BigInteger blockIdentifier)
+        protected override IBlock FindBlockCore(FancyByteArray blockIdentifier)
         {
             this.blockWaiter.WaitFor(blockIdentifier);
             byte[] serializedBlock;
@@ -144,7 +144,7 @@ namespace Evercoin.Storage
             return this.chainSerializer.GetBlockForBytes(serializedBlock);
         }
 
-        protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
+        protected override ITransaction FindTransactionCore(FancyByteArray transactionIdentifier)
         {
             this.txWaiter.WaitFor(transactionIdentifier);
             byte[] serializedTransaction;
@@ -182,7 +182,7 @@ namespace Evercoin.Storage
             return this.chainSerializer.GetTransactionForBytes(serializedTransaction);
         }
 
-        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
+        protected override void PutBlockCore(FancyByteArray blockIdentifier, IBlock block)
         {
             byte[] serializedBlock = this.chainSerializer.GetBytesForBlock(block);
             lock (this.zipLock)
@@ -193,7 +193,7 @@ namespace Evercoin.Storage
             this.blockWaiter.SetEventFor(blockIdentifier);
         }
 
-        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
+        protected override void PutTransactionCore(FancyByteArray transactionIdentifier, ITransaction transaction)
         {
             byte[] serializedTransaction = this.chainSerializer.GetBytesForTransaction(transaction);
             lock (this.zipLock)
@@ -210,16 +210,14 @@ namespace Evercoin.Storage
             this.archive.Dispose();
         }
 
-        private static string GetBlockEntryName(BigInteger blockIdentifier)
+        private static string GetBlockEntryName(FancyByteArray blockIdentifier)
         {
-            FancyByteArray bytes = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(blockIdentifier, 32, Endianness.LittleEndian);
-            return String.Join(EntrySep, BlockDir, bytes);
+            return String.Join(EntrySep, BlockDir, blockIdentifier);
         }
 
-        private static string GetTransactionEntryName(BigInteger transactionIdentifier)
+        private static string GetTransactionEntryName(FancyByteArray transactionIdentifier)
         {
-            FancyByteArray bytes = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(transactionIdentifier, 32, Endianness.LittleEndian);
-            return String.Join(EntrySep, TxDir, bytes);
+            return String.Join(EntrySep, TxDir, transactionIdentifier);
         }
 
         private void Save()
@@ -231,7 +229,7 @@ namespace Evercoin.Storage
         {
             // OOH, CHEATING
             SHA256 hasher = SHA256.Create();
-            Dictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new Dictionary<BigInteger, BigInteger>();
+            Dictionary<FancyByteArray, FancyByteArray> blockIdToNextBlockIdMapping = new Dictionary<FancyByteArray, FancyByteArray>();
             foreach (var entry in this.archive.SelectEntries("*", BlockDir).Skip(1))
             {
                 byte[] serializedBlock;
@@ -253,10 +251,10 @@ namespace Evercoin.Storage
                 blockIdToNextBlockIdMapping[block.PreviousBlockIdentifier] = hash;
             }
 
-            BigInteger prevBlockId = BigInteger.Zero;
+            FancyByteArray prevBlockId = new FancyByteArray();
             for (int i = 0; i < blockIdToNextBlockIdMapping.Count; i++)
             {
-                BigInteger blockId;
+                FancyByteArray blockId;
                 if (!blockIdToNextBlockIdMapping.TryGetValue(prevBlockId, out blockId))
                 {
                     break;

@@ -18,12 +18,12 @@
         /// <summary>
         /// Gets the command of this message.
         /// </summary>
-        byte[] CommandBytes { get; }
+        FancyByteArray CommandBytes { get; }
 
         /// <summary>
         /// Gets the payload of this message.
         /// </summary>
-        byte[] Payload { get; }
+        FancyByteArray Payload { get; }
 
         /// <summary>
         /// Gets the full content of this message.
@@ -38,6 +38,6 @@
         /// where the size of each field is dictated
         /// by <see cref="NetworkParameters"/>.
         /// </remarks>
-        byte[] FullData { get; }
+        FancyByteArray FullData { get; }
     }
 }

@@ -37,7 +37,7 @@ namespace Evercoin.Network
 
         private readonly Subject<Tuple<INetworkPeer, IBlock>> blocksReceived = new Subject<Tuple<INetworkPeer, IBlock>>();
 
-        private readonly Subject<Tuple<INetworkPeer, ITransaction, BigInteger, ulong>> transactionsReceived = new Subject<Tuple<INetworkPeer, ITransaction, BigInteger, ulong>>();
+        private readonly Subject<Tuple<INetworkPeer, ITransaction, FancyByteArray, ulong>> transactionsReceived = new Subject<Tuple<INetworkPeer, ITransaction, FancyByteArray, ulong>>();
 
         private readonly Subject<Tuple<INetworkPeer, ProtocolVersionPacket>> versionOffersReceived = new Subject<Tuple<INetworkPeer, ProtocolVersionPacket>>();
 
@@ -47,7 +47,7 @@ namespace Evercoin.Network
 
         private readonly Subject<ProtocolNetworkAddress> peerOffers = new Subject<ProtocolNetworkAddress>();
 
-        private readonly Subject<Tuple<INetworkPeer, string, byte[]>> unrecognizedMessagesReceived = new Subject<Tuple<INetworkPeer, string, byte[]>>();
+        private readonly Subject<Tuple<INetworkPeer, string, FancyByteArray>> unrecognizedMessagesReceived = new Subject<Tuple<INetworkPeer, string, FancyByteArray>>();
 
         public CurrencyNetwork(IRawNetwork rawNetwork, IHashAlgorithmStore hashAlgorithmStore, ICurrencyParameters currencyParameters)
         {
@@ -97,7 +97,7 @@ namespace Evercoin.Network
         /// <remarks>
         /// Ordering, validity, etc. not guaranteed.
         /// </remarks>
-        public override IObservable<Tuple<INetworkPeer, ITransaction, BigInteger, ulong>> ReceivedTransactions { get { return this.transactionsReceived; } }
+        public override IObservable<Tuple<INetworkPeer, ITransaction, FancyByteArray, ulong>> ReceivedTransactions { get { return this.transactionsReceived; } }
 
         /// <summary>
         /// Gets the ping responses we've received.
@@ -137,7 +137,7 @@ namespace Evercoin.Network
         /// completes, observe <see cref="ReceivedInventoryOffers"/>
         /// for responses.
         /// </remarks>
-        public override async Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, BlockRequestType requestType, CancellationToken token)
+        public override async Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<FancyByteArray> knownBlockIdentifiers, BlockRequestType requestType, CancellationToken token)
         {
             switch (requestType)
             {
@@ -149,8 +149,8 @@ namespace Evercoin.Network
                     throw new ArgumentOutOfRangeException("requestType", requestType, "Unrecognized value.");
             }
 
-            IReadOnlyList<BigInteger> blockIdentifierCollection = knownBlockIdentifiers as IReadOnlyList<BigInteger> ?? knownBlockIdentifiers.GetArray();
-            List<BigInteger> listToRequest = new List<BigInteger>();
+            IReadOnlyList<FancyByteArray> blockIdentifierCollection = knownBlockIdentifiers as IReadOnlyList<FancyByteArray> ?? knownBlockIdentifiers.GetArray();
+            List<FancyByteArray> listToRequest = new List<FancyByteArray>();
 
             int step = 1;
             int start = 0;
@@ -167,7 +167,7 @@ namespace Evercoin.Network
             listToRequest.Add(blockIdentifierCollection[0]);
 
             GetBlocksMessageBuilder b = new GetBlocksMessageBuilder(this.rawNetwork, this.hashAlgorithmStore);
-            var message = b.BuildGetBlocksMessage(peer, listToRequest, BigInteger.Zero, requestType);
+            var message = b.BuildGetBlocksMessage(peer, listToRequest, new FancyByteArray(), requestType);
             await this.rawNetwork.SendMessageToClientAsync(peer, message, token).ConfigureAwait(false);
         }
 
@@ -228,7 +228,7 @@ namespace Evercoin.Network
         /// <returns>
         /// A task that encapsulates the announcement.
         /// </returns>
-        public override Task AnnounceBlockAsync(BigInteger blockIdentifier, CancellationToken token)
+        public override Task AnnounceBlockAsync(FancyByteArray blockIdentifier, CancellationToken token)
         {
             throw new NotImplementedException();
         }
@@ -393,8 +393,7 @@ namespace Evercoin.Network
                             this.blocksReceived.OnNext(Tuple.Create(x.RemotePeer, block));
 
                             IHashAlgorithm blockHashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(this.currencyParameters.ChainParameters.BlockHashAlgorithmIdentifier);
-                            byte[] blockHash = blockHashAlgorithm.CalculateHash(protoBlock.HeaderData);
-                            BigInteger blockIdentifier = new BigInteger(blockHash);
+                            FancyByteArray blockIdentifier = blockHashAlgorithm.CalculateHash(protoBlock.HeaderData);
 
                             ulong i = 0;
                             foreach (ProtocolTransaction protoTransaction in transactions)
@@ -417,7 +416,7 @@ namespace Evercoin.Network
 
                             ProtocolTransaction protoTransaction = await reader.ReadTransactionAsync(token).ConfigureAwait(false);
                             ITransaction transaction = chainSerializer.GetTransactionForBytes(protoTransaction.Data);
-                            this.transactionsReceived.OnNext(Tuple.Create(x.RemotePeer, transaction, BigInteger.Zero, (ulong)0));
+                            this.transactionsReceived.OnNext(Tuple.Create(x.RemotePeer, transaction, new FancyByteArray(), (ulong)0));
                         }
                     }
                 },

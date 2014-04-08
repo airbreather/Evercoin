@@ -19,7 +19,7 @@ namespace Evercoin
         /// this as one of its outputs.
         /// 0 if this is a coinbase.
         /// </summary>
-        BigInteger OriginatingTransactionIdentifier { get; }
+        FancyByteArray OriginatingTransactionIdentifier { get; }
 
         /// <summary>
         /// Gets the <see cref="ITransaction"/> that contains this
@@ -33,7 +33,7 @@ namespace Evercoin
         /// from this source can be spent.
         /// Undefined if this is a coinbase.
         /// </summary>
-        byte[] ScriptPublicKey { get; }
+        FancyByteArray ScriptPublicKey { get; }
 
         /// <summary>
         /// Gets how much value can be spent by this source.

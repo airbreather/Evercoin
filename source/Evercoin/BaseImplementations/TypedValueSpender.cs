@@ -1,13 +1,10 @@
-﻿using System.Linq;
-using System.Numerics;
-
-using Evercoin.Util;
+﻿using Evercoin.Util;
 
 namespace Evercoin.BaseImplementations
 {
     public sealed class TypedValueSpender : IValueSpender
     {
-        public BigInteger SpentTransactionIdentifier { get; set; }
+        public FancyByteArray SpentTransactionIdentifier { get; set; }
 
         public uint SpentTransactionOutputIndex { get; set; }
 
@@ -15,7 +12,7 @@ namespace Evercoin.BaseImplementations
         /// The identifier of the <see cref="ITransaction"/> that
         /// contains this spender in its inputs.
         /// </summary>
-        public BigInteger SpendingTransactionIdentifier { get; set; }
+        public FancyByteArray SpendingTransactionIdentifier { get; set; }
 
         /// <summary>
         /// The index where this appears in
@@ -31,7 +28,7 @@ namespace Evercoin.BaseImplementations
         /// <remarks>
         /// For the coinbase found in blocks, this is usually just a data push.
         /// </remarks>
-        public byte[] ScriptSignature { get; set; }
+        public FancyByteArray ScriptSignature { get; set; }
 
         public uint SequenceNumber { get; set; }
 
@@ -66,7 +63,7 @@ namespace Evercoin.BaseImplementations
                    this.SpendingTransactionInputIndex == other.SpendingTransactionInputIndex &&
                    this.SpentTransactionIdentifier == other.SpentTransactionIdentifier &&
                    this.SpentTransactionOutputIndex == other.SpentTransactionOutputIndex &&
-                   this.ScriptSignature.SequenceEqual(other.ScriptSignature) &&
+                   this.ScriptSignature == other.ScriptSignature &&
                    this.SequenceNumber == other.SequenceNumber;
         }
 
@@ -84,7 +81,7 @@ namespace Evercoin.BaseImplementations
                 .HashWith(this.SpendingTransactionIdentifier)
                 .HashWith(this.SpendingTransactionInputIndex)
                 .HashWith(this.SequenceNumber)
-                .HashWithEnumerable(this.ScriptSignature);
+                .HashWith(this.ScriptSignature);
 
             return builder;
         }

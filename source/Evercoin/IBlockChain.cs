@@ -2,7 +2,6 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 using System.Threading;
 
 namespace Evercoin
@@ -11,50 +10,50 @@ namespace Evercoin
     {
         ulong Length { get; }
 
-        BigInteger? GetIdentifierOfBlockAtHeight(ulong height);
+        FancyByteArray? GetIdentifierOfBlockAtHeight(ulong height);
 
-        BigInteger? GetIdentifierOfBlockWithTransaction(BigInteger transactionIdentifier);
+        FancyByteArray? GetIdentifierOfBlockWithTransaction(FancyByteArray transactionIdentifier);
 
-        ulong? GetHeightOfBlock(BigInteger blockIdentifier);
+        ulong? GetHeightOfBlock(FancyByteArray blockIdentifier);
 
-        void AddBlockAtHeight(BigInteger block, ulong height);
+        void AddBlockAtHeight(FancyByteArray block, ulong height);
 
-        void AddTransactionToBlock(BigInteger transactionIdentifier, BigInteger blockIdentifier, ulong index);
+        void AddTransactionToBlock(FancyByteArray transactionIdentifier, FancyByteArray blockIdentifier, ulong index);
 
-        IEnumerable<BigInteger> GetTransactionsForBlock(BigInteger blockIdentifier);
+        IEnumerable<FancyByteArray> GetTransactionsForBlock(FancyByteArray blockIdentifier);
     }
 
     public sealed class BlockChain : IBlockChain
     {
-        private readonly ConcurrentDictionary<FancyByteArray, List<BigInteger>> blockToTransactionMapping = new ConcurrentDictionary<FancyByteArray, List<BigInteger>>();
+        private readonly ConcurrentDictionary<FancyByteArray, List<FancyByteArray>> blockToTransactionMapping = new ConcurrentDictionary<FancyByteArray, List<FancyByteArray>>();
 
-        private readonly ConcurrentDictionary<BigInteger, BigInteger> transactionToBlockMapping = new ConcurrentDictionary<BigInteger, BigInteger>();
+        private readonly ConcurrentDictionary<FancyByteArray, FancyByteArray> transactionToBlockMapping = new ConcurrentDictionary<FancyByteArray, FancyByteArray>();
 
-        private readonly ConcurrentDictionary<BigInteger, ulong> blockToHeightMapping = new ConcurrentDictionary<BigInteger, ulong>();
+        private readonly ConcurrentDictionary<FancyByteArray, ulong> blockToHeightMapping = new ConcurrentDictionary<FancyByteArray, ulong>();
 
-        private readonly ConcurrentDictionary<ulong, BigInteger> heightToBlockMapping = new ConcurrentDictionary<ulong, BigInteger>();
+        private readonly ConcurrentDictionary<ulong, FancyByteArray> heightToBlockMapping = new ConcurrentDictionary<ulong, FancyByteArray>();
 
         private long length = Int64.MinValue + 1;
 
         public ulong Length { get { return (ulong)this.length + Int64.MaxValue; } }
 
-        public BigInteger? GetIdentifierOfBlockAtHeight(ulong height)
+        public FancyByteArray? GetIdentifierOfBlockAtHeight(ulong height)
         {
-            BigInteger result;
+            FancyByteArray result;
             return this.heightToBlockMapping.TryGetValue(height, out result) ?
                    result :
-                   default(BigInteger?);
+                   default(FancyByteArray?);
         }
 
-        public BigInteger? GetIdentifierOfBlockWithTransaction(BigInteger transactionIdentifier)
+        public FancyByteArray? GetIdentifierOfBlockWithTransaction(FancyByteArray transactionIdentifier)
         {
-            BigInteger result;
+            FancyByteArray result;
             return this.transactionToBlockMapping.TryGetValue(transactionIdentifier, out result) ?
                 result :
-                default(BigInteger?);
+                default(FancyByteArray?);
         }
 
-        public ulong? GetHeightOfBlock(BigInteger blockIdentifier)
+        public ulong? GetHeightOfBlock(FancyByteArray blockIdentifier)
         {
             ulong result;
             return this.blockToHeightMapping.TryGetValue(blockIdentifier, out result) ?
@@ -62,17 +61,17 @@ namespace Evercoin
                    default(ulong?);
         }
 
-        public void AddBlockAtHeight(BigInteger blockIdentifier, ulong height)
+        public void AddBlockAtHeight(FancyByteArray blockIdentifier, ulong height)
         {
             this.blockToHeightMapping[blockIdentifier] = height;
             this.heightToBlockMapping[height] = blockIdentifier;
-            this.blockToTransactionMapping[FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(blockIdentifier, 32, Endianness.LittleEndian)] = new List<BigInteger>();
+            this.blockToTransactionMapping[blockIdentifier] = new List<FancyByteArray>();
             Interlocked.Increment(ref length);
         }
 
-        public void AddTransactionToBlock(BigInteger transactionIdentifier, BigInteger blockIdentifier, ulong index)
+        public void AddTransactionToBlock(FancyByteArray transactionIdentifier, FancyByteArray blockIdentifier, ulong index)
         {
-            List<BigInteger> blockTransactions = this.blockToTransactionMapping.GetOrAdd(FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(blockIdentifier, 32, Endianness.LittleEndian), _ => new List<BigInteger>());
+            List<FancyByteArray> blockTransactions = this.blockToTransactionMapping.GetOrAdd(blockIdentifier, _ => new List<FancyByteArray>());
 
             if (index > Int32.MaxValue)
             {
@@ -88,19 +87,19 @@ namespace Evercoin
             {
                 while (blockTransactions.Count < intIndex + 1)
                 {
-                    blockTransactions.Add(BigInteger.Zero);
+                    blockTransactions.Add(new FancyByteArray());
                 }
 
                 blockTransactions[intIndex] = transactionIdentifier;
             }
         }
 
-        public IEnumerable<BigInteger> GetTransactionsForBlock(BigInteger blockIdentifier)
+        public IEnumerable<FancyByteArray> GetTransactionsForBlock(FancyByteArray blockIdentifier)
         {
-            List<BigInteger> blockTransactions;
-            if (!this.blockToTransactionMapping.TryGetValue(FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(blockIdentifier, 32, Endianness.LittleEndian), out blockTransactions))
+            List<FancyByteArray> blockTransactions;
+            if (!this.blockToTransactionMapping.TryGetValue(blockIdentifier, out blockTransactions))
             {
-                return Enumerable.Empty<BigInteger>();
+                return Enumerable.Empty<FancyByteArray>();
             }
 
             lock (blockTransactions)

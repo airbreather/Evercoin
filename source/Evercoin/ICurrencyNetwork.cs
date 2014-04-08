@@ -67,7 +67,7 @@ namespace Evercoin
         /// <remarks>
         /// Ordering, validity, etc. not guaranteed.
         /// </remarks>
-        IObservable<Tuple<INetworkPeer, ITransaction, BigInteger, ulong>> ReceivedTransactions { get; }
+        IObservable<Tuple<INetworkPeer, ITransaction, FancyByteArray, ulong>> ReceivedTransactions { get; }
 
         /// <summary>
         /// Gets the ping responses we've received.
@@ -104,7 +104,7 @@ namespace Evercoin
         /// completes, observe <see cref="ReceivedInventoryOffers"/>
         /// for responses.
         /// </remarks>
-        Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, BlockRequestType requestType);
+        Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<FancyByteArray> knownBlockIdentifiers, BlockRequestType requestType);
 
         /// <summary>
         /// Asks a connected client to offer us a new pack of blocks.
@@ -129,7 +129,7 @@ namespace Evercoin
         /// completes, observe <see cref="ReceivedInventoryOffers"/>
         /// for responses.
         /// </remarks>
-        Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, BlockRequestType requestType, CancellationToken token);
+        Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<FancyByteArray> knownBlockIdentifiers, BlockRequestType requestType, CancellationToken token);
 
         /// <summary>
         /// Asks connected clients to offer us a new pack
@@ -206,7 +206,7 @@ namespace Evercoin
         /// <returns>
         /// A task that encapsulates the announcement.
         /// </returns>
-        Task AnnounceBlockAsync(BigInteger blockIdentifier);
+        Task AnnounceBlockAsync(FancyByteArray blockIdentifier);
 
         /// <summary>
         /// Announces the existence of a block to the connected clients.
@@ -220,7 +220,7 @@ namespace Evercoin
         /// <returns>
         /// A task that encapsulates the announcement.
         /// </returns>
-        Task AnnounceBlockAsync(BigInteger blockIdentifier, CancellationToken token);
+        Task AnnounceBlockAsync(FancyByteArray blockIdentifier, CancellationToken token);
 
         /// <summary>
         /// Sends a ping request to a peer.

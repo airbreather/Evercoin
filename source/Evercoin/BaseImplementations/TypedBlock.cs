@@ -38,7 +38,7 @@ namespace Evercoin.BaseImplementations
         /// <summary>
         /// Gets the identifier of the previous block in the chain.
         /// </summary>
-        public BigInteger PreviousBlockIdentifier { get; set; }
+        public FancyByteArray PreviousBlockIdentifier { get; set; }
 
         /// <summary>
         /// Determines whether the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>.
@@ -72,7 +72,7 @@ namespace Evercoin.BaseImplementations
                    this.PreviousBlockIdentifier == other.PreviousBlockIdentifier &&
                    this.Version == other.Version &&
                    this.DifficultyTarget == other.DifficultyTarget &&
-                   this.TransactionIdentifiers.Data.SequenceEqual(other.TransactionIdentifiers.Data);
+                   this.TransactionIdentifiers.Data == other.TransactionIdentifiers.Data;
         }
 
         /// <summary>
@@ -89,7 +89,7 @@ namespace Evercoin.BaseImplementations
                 .HashWith(this.PreviousBlockIdentifier)
                 .HashWith(this.Version)
                 .HashWith(this.DifficultyTarget)
-                .HashWithEnumerable(this.TransactionIdentifiers.Data);
+                .HashWith(this.TransactionIdentifiers.Data);
 
             return builder;
         }

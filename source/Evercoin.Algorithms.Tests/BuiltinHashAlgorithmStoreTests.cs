@@ -76,9 +76,9 @@ namespace Evercoin.Algorithms.Tests
             BuiltinHashAlgorithmStore sut = new BuiltinHashAlgorithmStore();
             IHashAlgorithm algorithm = sut.GetHashAlgorithm(knownAlgorithmIdentifier);
 
-            IEnumerable<byte> actualResult = algorithm.CalculateHash(input);
+            FancyByteArray actualResult = algorithm.CalculateHash(input);
 
-            Assert.Equal(expectedResult, actualResult);
+            Assert.Equal(expectedResult, actualResult.Value);
         }
     }
 }

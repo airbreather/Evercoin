@@ -21,7 +21,7 @@ namespace Evercoin.App
         [ImportMany]
         public Collection<IReadableChainStore> UnderlyingReadOnlyChainStores { get { return this.underlyingReadOnlyChainStores; } }
 
-        protected override IBlock FindBlockCore(BigInteger blockIdentifier)
+        protected override IBlock FindBlockCore(FancyByteArray blockIdentifier)
         {
             IBlock foundBlock = null;
             return this.underlyingReadOnlyChainStores.Any(x => x.TryGetBlock(blockIdentifier, out foundBlock)) ?
@@ -29,7 +29,7 @@ namespace Evercoin.App
                    null;
         }
 
-        protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
+        protected override ITransaction FindTransactionCore(FancyByteArray transactionIdentifier)
         {
             ITransaction foundTransaction = null;
             return this.underlyingReadOnlyChainStores.Any(x => x.TryGetTransaction(transactionIdentifier, out foundTransaction)) ?
@@ -37,7 +37,7 @@ namespace Evercoin.App
                    null;
         }
 
-        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
+        protected override void PutBlockCore(FancyByteArray blockIdentifier, IBlock block)
         {
             foreach (IChainStore chainStore in this.underlyingChainStores)
             {
@@ -45,7 +45,7 @@ namespace Evercoin.App
             }
         }
 
-        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
+        protected override void PutTransactionCore(FancyByteArray transactionIdentifier, ITransaction transaction)
         {
             foreach (IChainStore chainStore in this.underlyingChainStores)
             {
@@ -53,31 +53,31 @@ namespace Evercoin.App
             }
         }
 
-        protected override bool ContainsBlockCore(BigInteger blockIdentifier)
+        protected override bool ContainsBlockCore(FancyByteArray blockIdentifier)
         {
             return this.underlyingReadOnlyChainStores.Any(x => x.ContainsBlock(blockIdentifier));
         }
 
-        protected override bool ContainsTransactionCore(BigInteger transactionIdentifier)
+        protected override bool ContainsTransactionCore(FancyByteArray transactionIdentifier)
         {
             return this.underlyingReadOnlyChainStores.Any(x => x.ContainsTransaction(transactionIdentifier));
         }
 
-        protected override async Task<bool> ContainsBlockAsyncCore(BigInteger blockIdentifier, CancellationToken token)
+        protected override async Task<bool> ContainsBlockAsyncCore(FancyByteArray blockIdentifier, CancellationToken token)
         {
             IEnumerable<Task<bool>> searchTasks = this.underlyingReadOnlyChainStores.Select(x => x.ContainsBlockAsync(blockIdentifier, token));
             bool[] searchResults = await Task.WhenAll(searchTasks);
             return searchResults.Contains(true);
         }
 
-        protected override async Task<bool> ContainsTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
+        protected override async Task<bool> ContainsTransactionAsyncCore(FancyByteArray transactionIdentifier, CancellationToken token)
         {
             IEnumerable<Task<bool>> searchTasks = this.underlyingReadOnlyChainStores.Select(x => x.ContainsTransactionAsync(transactionIdentifier, token));
             bool[] searchResults = await Task.WhenAll(searchTasks);
             return searchResults.Contains(true);
         }
 
-        protected override async Task<IBlock> FindBlockAsyncCore(BigInteger blockIdentifier, CancellationToken token)
+        protected override async Task<IBlock> FindBlockAsyncCore(FancyByteArray blockIdentifier, CancellationToken token)
         {
             foreach (IReadableChainStore chainStore in this.underlyingReadOnlyChainStores)
             {
@@ -91,7 +91,7 @@ namespace Evercoin.App
             return null;
         }
 
-        protected override async Task<ITransaction> FindTransactionAsyncCore(BigInteger transactionIdentifier, CancellationToken token)
+        protected override async Task<ITransaction> FindTransactionAsyncCore(FancyByteArray transactionIdentifier, CancellationToken token)
         {
             foreach (IReadableChainStore chainStore in this.underlyingReadOnlyChainStores)
             {
@@ -105,7 +105,7 @@ namespace Evercoin.App
             return null;
         }
 
-        protected override async Task PutBlockAsyncCore(BigInteger blockIdentifier, IBlock block, CancellationToken token)
+        protected override async Task PutBlockAsyncCore(FancyByteArray blockIdentifier, IBlock block, CancellationToken token)
         {
             foreach (IChainStore chainStore in this.underlyingChainStores)
             {
@@ -113,7 +113,7 @@ namespace Evercoin.App
             }
         }
 
-        protected override async Task PutTransactionAsyncCore(BigInteger transactionIdentifier, ITransaction transaction, CancellationToken token)
+        protected override async Task PutTransactionAsyncCore(FancyByteArray transactionIdentifier, ITransaction transaction, CancellationToken token)
         {
             foreach (IChainStore chainStore in this.underlyingChainStores)
             {

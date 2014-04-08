@@ -1,7 +1,4 @@
-﻿using System.Linq;
-using System.Numerics;
-
-using Evercoin.Util;
+﻿using Evercoin.Util;
 
 namespace Evercoin.BaseImplementations
 {
@@ -11,7 +8,7 @@ namespace Evercoin.BaseImplementations
         /// Gets a value indicating whether this is the coinbase value source
         /// that gets created as a subsidy for miners.
         /// </summary>
-        public bool IsCoinbase { get { return this.OriginatingTransactionIdentifier.IsZero && this.OriginatingTransactionOutputIndex == 0; } }
+        public bool IsCoinbase { get { return this.OriginatingTransactionIdentifier.NumericValue.IsZero && this.OriginatingTransactionOutputIndex == 0; } }
 
         /// <summary>
         /// Gets how much value can be spent by this source.
@@ -22,7 +19,7 @@ namespace Evercoin.BaseImplementations
         /// Gets the <see cref="ITransaction"/> that contains this
         /// as one of its outputs.
         /// </summary>
-        public BigInteger OriginatingTransactionIdentifier { get; set; }
+        public FancyByteArray OriginatingTransactionIdentifier { get; set; }
 
         /// <summary>
         /// Gets the <see cref="ITransaction"/> that contains this
@@ -34,7 +31,7 @@ namespace Evercoin.BaseImplementations
         /// The serialized script that dictates how the value
         /// from this source can be spent.
         /// </summary>
-        public byte[] ScriptPublicKey { get; set; }
+        public FancyByteArray ScriptPublicKey { get; set; }
 
         /// <summary>
         /// Determines whether the specified <see cref="T:System.Object"/> is equal to the current <see cref="T:System.Object"/>.
@@ -60,7 +57,7 @@ namespace Evercoin.BaseImplementations
                 .HashWith(this.AvailableValue)
                 .HashWith(this.OriginatingTransactionIdentifier)
                 .HashWith(this.OriginatingTransactionOutputIndex)
-                .HashWithEnumerable(this.ScriptPublicKey);
+                .HashWith(this.ScriptPublicKey);
 
             return builder;
         }
@@ -83,7 +80,7 @@ namespace Evercoin.BaseImplementations
                    this.AvailableValue == other.AvailableValue &&
                    this.OriginatingTransactionIdentifier == other.OriginatingTransactionIdentifier &&
                    this.OriginatingTransactionOutputIndex == other.OriginatingTransactionOutputIndex &&
-                   this.ScriptPublicKey.SequenceEqual(other.ScriptPublicKey);
+                   this.ScriptPublicKey == other.ScriptPublicKey;
         }
     }
 }

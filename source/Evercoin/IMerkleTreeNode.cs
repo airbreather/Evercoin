@@ -8,7 +8,7 @@
         /// <summary>
         /// Gets the data stored in this node.
         /// </summary>
-        byte[] Data { get; }
+        FancyByteArray Data { get; }
 
         /// <summary>
         /// Gets the left subtree.

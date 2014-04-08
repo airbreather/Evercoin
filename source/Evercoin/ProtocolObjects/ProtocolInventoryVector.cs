@@ -7,7 +7,7 @@ namespace Evercoin.ProtocolObjects
 {
     public sealed class ProtocolInventoryVector
     {
-        public ProtocolInventoryVector(InventoryType type, BigInteger hash)
+        public ProtocolInventoryVector(InventoryType type, FancyByteArray hash)
         {
             this.Type = type;
             this.Hash = hash;
@@ -15,7 +15,7 @@ namespace Evercoin.ProtocolObjects
 
         public InventoryType Type { get; private set; }
 
-        public BigInteger Hash { get; private set; }
+        public FancyByteArray Hash { get; private set; }
 
         public byte[] Data
         {
@@ -23,7 +23,7 @@ namespace Evercoin.ProtocolObjects
             {
                 byte[] typeBytes = BitConverter.GetBytes((uint)this.Type)
                                                .LittleEndianToOrFromBitConverterEndianness();
-                byte[] hashBytes = this.Hash.ToLittleEndianUInt256Array();
+                byte[] hashBytes = this.Hash;
 
                 return ByteTwiddling.ConcatenateData(typeBytes, hashBytes);
             }

@@ -8,7 +8,7 @@ namespace Evercoin.ProtocolObjects
 {
     public sealed class ProtocolTxIn
     {
-        public ProtocolTxIn(BigInteger prevOutTxId, uint prevOutIndex, IEnumerable<byte> scriptSig, uint seq)
+        public ProtocolTxIn(FancyByteArray prevOutTxId, uint prevOutIndex, IEnumerable<byte> scriptSig, uint seq)
         {
             this.PrevOutTxId = prevOutTxId;
             this.PrevOutN = prevOutIndex;
@@ -16,7 +16,7 @@ namespace Evercoin.ProtocolObjects
             this.Sequence = seq;
         }
 
-        public BigInteger PrevOutTxId { get; private set; }
+        public FancyByteArray PrevOutTxId { get; private set; }
 
         public uint PrevOutN { get; private set; }
 
@@ -28,7 +28,7 @@ namespace Evercoin.ProtocolObjects
         {
             get
             {
-                byte[] prevOutTxIdBytes = this.PrevOutTxId.ToLittleEndianUInt256Array();
+                byte[] prevOutTxIdBytes = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(this.PrevOutTxId, 32, Endianness.LittleEndian);
                 byte[] prevOutNBytes = BitConverter.GetBytes(this.PrevOutN).LittleEndianToOrFromBitConverterEndianness();
                 byte[] scriptSigLengthBytes = ((ProtocolCompactSize)(ulong)this.ScriptSig.Length).Data;
                 byte[] scriptSigBytes = this.ScriptSig;

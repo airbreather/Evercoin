@@ -41,25 +41,25 @@ namespace Evercoin.Algorithms
 
             byte[] hashTypeBytes = { hashType, 0, 0, 0 };
 
-            ProtocolTxIn[] inputs = new ProtocolTxIn[this.transaction.Inputs.Length];
+            ProtocolTxIn[] inputs = new ProtocolTxIn[this.transaction.Inputs.Count];
 
             for (int i = 0; i < inputs.Length; i++)
             {
                 IValueSpender spender = this.transaction.Inputs[i];
 
-                if (spender.SpentTransactionIdentifier.IsZero)
+                if (spender.SpentTransactionIdentifier.NumericValue.IsZero)
                 {
                     continue;
                 }
 
-                BigInteger originatingTransactionIdentifier = spender.SpentTransactionIdentifier;
+                FancyByteArray originatingTransactionIdentifier = spender.SpentTransactionIdentifier;
                 uint originatingTransactionOutputIndex = spender.SpentTransactionOutputIndex;
                 IEnumerable<byte> scriptSig = i == this.outputIndex ? scriptBytes : Enumerable.Empty<byte>();
                 uint seq = spender.SequenceNumber;
                 inputs[i] = new ProtocolTxIn(originatingTransactionIdentifier, originatingTransactionOutputIndex, scriptSig, seq);
-            } 
+            }
 
-            ProtocolTxOut[] outputs = new ProtocolTxOut[this.transaction.Outputs.Length];
+            ProtocolTxOut[] outputs = new ProtocolTxOut[this.transaction.Outputs.Count];
             for (int i = 0; i < outputs.Length; i++)
             {
                 IValueSource valueSource = this.transaction.Outputs[i];

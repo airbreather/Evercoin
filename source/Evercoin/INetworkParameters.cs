@@ -68,7 +68,7 @@ namespace Evercoin
         /// This is usually a sequence of 4 bytes that are uncommon
         /// in typical data streams.
         /// </remarks>
-        byte[] StaticMessagePrefixData { get; }
+        FancyByteArray StaticMessagePrefixData { get; }
 
         /// <summary>
         /// Gets a set of <see cref="DnsEndPoint"/> objects that may be used

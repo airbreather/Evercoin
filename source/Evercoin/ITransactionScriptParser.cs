@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Collections.ObjectModel;
 
 namespace Evercoin
 {
@@ -16,6 +17,6 @@ namespace Evercoin
         /// <returns>
         /// The sequence of script operations that represent the given bytes.
         /// </returns>
-        TransactionScriptOperation[] Parse(IEnumerable<byte> bytes);
+        ReadOnlyCollection<TransactionScriptOperation> Parse(IEnumerable<byte> bytes);
     }
 }

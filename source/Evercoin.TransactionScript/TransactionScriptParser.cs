@@ -1,13 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
+using System.Linq;
 
 namespace Evercoin.TransactionScript
 {
     public sealed class TransactionScriptParser : ITransactionScriptParser
     {
-        public TransactionScriptOperation[] Parse(IEnumerable<byte> bytes)
+        public ReadOnlyCollection<TransactionScriptOperation> Parse(IEnumerable<byte> bytes)
         {
-            return ParseCore(bytes).GetArray();
+            return ParseCore(bytes).ToList().AsReadOnly();
         }
 
         private static IEnumerable<TransactionScriptOperation> ParseCore(IEnumerable<byte> bytes)

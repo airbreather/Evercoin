@@ -18,7 +18,7 @@ namespace Evercoin.ProtocolObjects
             this.LockTime = lockTime;
         }
 
-        public ProtocolTransaction(ProtocolTransaction transaction, BigInteger containingBlockIdentifier)
+        public ProtocolTransaction(ProtocolTransaction transaction, FancyByteArray containingBlockIdentifier)
         {
             this.Version = transaction.Version;
             this.Inputs = transaction.Inputs;
@@ -35,15 +35,15 @@ namespace Evercoin.ProtocolObjects
 
         public uint LockTime { get; private set; }
 
-        public BigInteger TxId { get; private set; }
+        public FancyByteArray TxId { get; private set; }
 
-        public BigInteger ContainingBlockIdentifier { get; private set; }
+        public FancyByteArray ContainingBlockIdentifier { get; private set; }
 
         public void CalculateTxId(IHashAlgorithm alg)
         {
             byte[] dataToHash = this.Data;
             byte[] hashResult = alg.CalculateHash(dataToHash);
-            this.TxId = new BigInteger(hashResult);
+            this.TxId = hashResult;
         }
 
         public byte[] Data
@@ -85,14 +85,14 @@ namespace Evercoin.ProtocolObjects
                                                           SpendingTransactionInputIndex = (uint)n,
                                                           SpentTransactionOutputIndex = x.PrevOutN,
                                                           SpentTransactionIdentifier = x.PrevOutTxId
-                                                      }).GetArray<IValueSpender>(),
+                                                      }).ToList<IValueSpender>().AsReadOnly(),
                 Outputs = this.Outputs.Select((x, n) => new TypedValueSource
                                                         {
                                                             AvailableValue = x.ValueInSatoshis,
                                                             OriginatingTransactionIdentifier = this.TxId,
                                                             OriginatingTransactionOutputIndex = (uint)n,
                                                             ScriptPublicKey = x.ScriptPubKey
-                                                        }).GetArray<IValueSource>()
+                                                        }).ToList<IValueSource>().AsReadOnly()
             };
         }
 

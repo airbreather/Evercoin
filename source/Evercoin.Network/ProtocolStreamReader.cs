@@ -37,7 +37,7 @@ namespace Evercoin.Network
             return this.ReadUInt32AsyncCore(token);
         }
 
-        public Task<BigInteger> ReadUInt256Async(CancellationToken token)
+        public Task<FancyByteArray> ReadUInt256Async(CancellationToken token)
         {
             return this.ReadUInt256AsyncCore(token);
         }
@@ -122,7 +122,7 @@ namespace Evercoin.Network
         private async Task<ProtocolInventoryVector> ReadInventoryVectorAsyncCore(CancellationToken token)
         {
             ProtocolInventoryVector.InventoryType inventoryType = (ProtocolInventoryVector.InventoryType)await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
-            BigInteger hash = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
+            FancyByteArray hash = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
             return new ProtocolInventoryVector(inventoryType, hash);
         }
 
@@ -222,10 +222,9 @@ namespace Evercoin.Network
             return BitConverter.ToInt64(bytes.LittleEndianToOrFromBitConverterEndianness(), 0);
         }
 
-        private async Task<BigInteger> ReadUInt256AsyncCore(CancellationToken token)
+        private async Task<FancyByteArray> ReadUInt256AsyncCore(CancellationToken token)
         {
-            byte[] bytes = await this.ReadBytesAsyncWithIntParam(32, token).ConfigureAwait(false);
-            return new BigInteger(bytes.LittleEndianToOrFromBitConverterEndianness());
+            return await this.ReadBytesAsyncWithIntParam(32, token).ConfigureAwait(false);
         }
 
         private async Task<byte[]> ReadBytesAsync(ulong numberOfBytesToRead, CancellationToken token)
@@ -264,7 +263,7 @@ namespace Evercoin.Network
 
         private async Task<ProtocolTxIn> ReadTxInAsyncCore(CancellationToken token)
         {
-            BigInteger prevOutTxId = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
+            FancyByteArray prevOutTxId = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
 
             uint prevOutIndex = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
 
@@ -289,8 +288,8 @@ namespace Evercoin.Network
         private async Task<Tuple<ProtocolBlock, IEnumerable<ProtocolTransaction>>> ReadBlockAsyncCore(CancellationToken token)
         {
             uint version = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
-            BigInteger prevBlockId = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
-            BigInteger merkleRoot = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
+            FancyByteArray prevBlockId = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
+            FancyByteArray merkleRoot = await this.ReadUInt256AsyncCore(token).ConfigureAwait(false);
             uint timestamp = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
             uint bits = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);
             uint nonce = await this.ReadUInt32AsyncCore(token).ConfigureAwait(false);

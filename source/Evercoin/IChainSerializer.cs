@@ -7,9 +7,9 @@ namespace Evercoin
     /// </summary>
     public interface IChainSerializer
     {
-        byte[] GetBytesForBlock(IBlock block);
+        FancyByteArray GetBytesForBlock(IBlock block);
 
-        byte[] GetBytesForTransaction(ITransaction transaction);
+        FancyByteArray GetBytesForTransaction(ITransaction transaction);
 
         IBlock GetBlockForBytes(IEnumerable<byte> serializedBlock);
 

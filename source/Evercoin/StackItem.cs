@@ -58,7 +58,7 @@ namespace Evercoin
 
         public override int GetHashCode()
         {
-            return ((BigInteger)this).GetHashCode();
+            return this.data.GetHashCode();
         }
 
         public override bool Equals(object obj)

@@ -42,6 +42,6 @@ namespace Evercoin
         /// <summary>
         /// Gets the identifier of the previous block in the chain.
         /// </summary>
-        BigInteger PreviousBlockIdentifier { get; }
+        FancyByteArray PreviousBlockIdentifier { get; }
     }
 }

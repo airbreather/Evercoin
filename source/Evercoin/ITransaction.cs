@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.ObjectModel;
 
 namespace Evercoin
 {
@@ -15,12 +16,12 @@ namespace Evercoin
         /// <summary>
         /// Gets the inputs spent by this transaction.
         /// </summary>
-        IValueSpender[] Inputs { get; }
+        ReadOnlyCollection<IValueSpender> Inputs { get; }
 
         /// <summary>
         /// Gets the outputs of this transaction.
         /// </summary>
-        IValueSource[] Outputs { get; }
+        ReadOnlyCollection<IValueSource> Outputs { get; }
 
         /// <summary>
         /// Gets a value that represents the time (see remarks)

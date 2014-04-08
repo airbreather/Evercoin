@@ -52,7 +52,7 @@ namespace Evercoin.BaseImplementations
         /// <remarks>
         /// Ordering, validity, etc. not guaranteed.
         /// </remarks>
-        public abstract IObservable<Tuple<INetworkPeer, ITransaction, BigInteger, ulong>> ReceivedTransactions { get; }
+        public abstract IObservable<Tuple<INetworkPeer, ITransaction, FancyByteArray, ulong>> ReceivedTransactions { get; }
 
         /// <summary>
         /// Gets the ping responses we've received.
@@ -89,7 +89,7 @@ namespace Evercoin.BaseImplementations
         /// completes, observe <see cref="ReceivedInventoryOffers"/>
         /// for responses.
         /// </remarks>
-        public virtual Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, BlockRequestType requestType)
+        public virtual Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<FancyByteArray> knownBlockIdentifiers, BlockRequestType requestType)
         {
             return this.RequestBlockOffersAsync(peer, knownBlockIdentifiers, requestType, CancellationToken.None);
         }
@@ -117,7 +117,7 @@ namespace Evercoin.BaseImplementations
         /// completes, observe <see cref="ReceivedInventoryOffers"/>
         /// for responses.
         /// </remarks>
-        public abstract Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<BigInteger> knownBlockIdentifiers, BlockRequestType requestType, CancellationToken token);
+        public abstract Task RequestBlockOffersAsync(INetworkPeer peer, IEnumerable<FancyByteArray> knownBlockIdentifiers, BlockRequestType requestType, CancellationToken token);
 
         /// <summary>
         /// Asks connected clients to offer us a new pack
@@ -200,7 +200,7 @@ namespace Evercoin.BaseImplementations
         /// <returns>
         /// A task that encapsulates the announcement.
         /// </returns>
-        public Task AnnounceBlockAsync(BigInteger blockIdentifier)
+        public Task AnnounceBlockAsync(FancyByteArray blockIdentifier)
         {
             return this.AnnounceBlockAsync(blockIdentifier, CancellationToken.None);
         }
@@ -217,7 +217,7 @@ namespace Evercoin.BaseImplementations
         /// <returns>
         /// A task that encapsulates the announcement.
         /// </returns>
-        public abstract Task AnnounceBlockAsync(BigInteger blockIdentifier, CancellationToken token);
+        public abstract Task AnnounceBlockAsync(FancyByteArray blockIdentifier, CancellationToken token);
 
         /// <summary>
         /// Sends a ping request to a peer.

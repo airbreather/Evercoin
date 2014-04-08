@@ -13,9 +13,9 @@ namespace Evercoin.ProtocolObjects
     {
         private readonly uint version;
 
-        private readonly BigInteger prevBlockId;
+        private readonly FancyByteArray prevBlockId;
 
-        private readonly BigInteger merkleRoot;
+        private readonly FancyByteArray merkleRoot;
 
         private readonly uint timestamp;
 
@@ -23,7 +23,7 @@ namespace Evercoin.ProtocolObjects
 
         private readonly uint nonce;
 
-        public ProtocolBlock(uint version, BigInteger prevBlockId, BigInteger merkleRoot, uint timestamp, uint bits, uint nonce)
+        public ProtocolBlock(uint version, FancyByteArray prevBlockId, FancyByteArray merkleRoot, uint timestamp, uint bits, uint nonce)
         {
             this.version = version;
             this.prevBlockId = prevBlockId;
@@ -38,8 +38,8 @@ namespace Evercoin.ProtocolObjects
             get
             {
                 byte[] versionBytes = BitConverter.GetBytes(this.version).LittleEndianToOrFromBitConverterEndianness();
-                byte[] prevBlockIdBytes = this.prevBlockId.ToLittleEndianUInt256Array();
-                byte[] merkleRootBytes = this.merkleRoot.ToLittleEndianUInt256Array();
+                byte[] prevBlockIdBytes = this.prevBlockId;
+                byte[] merkleRootBytes = this.merkleRoot;
                 byte[] timestampBytes = BitConverter.GetBytes(this.timestamp).LittleEndianToOrFromBitConverterEndianness();
                 byte[] packedTargetBytes = BitConverter.GetBytes(this.bits).LittleEndianToOrFromBitConverterEndianness();
                 byte[] nonceBytes = BitConverter.GetBytes(this.nonce).LittleEndianToOrFromBitConverterEndianness();
@@ -50,9 +50,9 @@ namespace Evercoin.ProtocolObjects
 
         public uint Version { get { return this.version; } }
 
-        public BigInteger PrevBlockId  { get { return this.prevBlockId; } }
+        public FancyByteArray PrevBlockId { get { return this.prevBlockId; } }
 
-        public BigInteger MerkleRoot { get { return this.merkleRoot; } }
+        public FancyByteArray MerkleRoot { get { return this.merkleRoot; } }
 
         public uint Timestamp { get { return this.timestamp; } }
 
@@ -68,7 +68,7 @@ namespace Evercoin.ProtocolObjects
                 Nonce = this.Nonce,
                 PreviousBlockIdentifier = this.PrevBlockId,
                 Timestamp = Instant.FromSecondsSinceUnixEpoch(this.Timestamp),
-                TransactionIdentifiers = this.MerkleRoot.ToLittleEndianUInt256Array().AsSingleElementEnumerable().ToMerkleTree(transactionHashAlgorithm),
+                TransactionIdentifiers = FancyByteArray.CreateFromBigIntegerWithDesiredLengthAndEndianness(this.MerkleRoot, 32, Endianness.LittleEndian).Value.AsSingleElementEnumerable().ToMerkleTree(transactionHashAlgorithm),
                 Version = this.Version
             };
         }
