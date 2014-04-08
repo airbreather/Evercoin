@@ -4,8 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.IO;
-using System.Linq;
-using System.Numerics;
 using System.Security.Cryptography;
 
 using Evercoin.BaseImplementations;
@@ -28,13 +26,13 @@ namespace Evercoin.Storage
         private readonly object blockLock = new object();
         private readonly object txLock = new object();
 
-        private readonly ConcurrentDictionary<Guid, BigInteger> fileIdToBlockIdIndex = new ConcurrentDictionary<Guid, BigInteger>();
-        private readonly ConcurrentDictionary<BigInteger, Guid> blockIdToFileIdIndex = new ConcurrentDictionary<BigInteger, Guid>();
-        private readonly ConcurrentDictionary<Guid, BigInteger> fileIdToTxIdIndex = new ConcurrentDictionary<Guid, BigInteger>();
-        private readonly ConcurrentDictionary<BigInteger, Guid> txIdToFileIdIndex = new ConcurrentDictionary<BigInteger, Guid>();
+        private readonly ConcurrentDictionary<Guid, FancyByteArray> fileIdToBlockIdIndex = new ConcurrentDictionary<Guid, FancyByteArray>();
+        private readonly ConcurrentDictionary<FancyByteArray, Guid> blockIdToFileIdIndex = new ConcurrentDictionary<FancyByteArray, Guid>();
+        private readonly ConcurrentDictionary<Guid, FancyByteArray> fileIdToTxIdIndex = new ConcurrentDictionary<Guid, FancyByteArray>();
+        private readonly ConcurrentDictionary<FancyByteArray, Guid> txIdToFileIdIndex = new ConcurrentDictionary<FancyByteArray, Guid>();
 
-        private readonly Waiter<BigInteger> blockWaiter = new Waiter<BigInteger>();
-        private readonly Waiter<BigInteger> txWaiter = new Waiter<BigInteger>();
+        private readonly Waiter<FancyByteArray> blockWaiter = new Waiter<FancyByteArray>();
+        private readonly Waiter<FancyByteArray> txWaiter = new Waiter<FancyByteArray>();
 
         private IChainSerializer chainSerializer;
 
@@ -61,7 +59,7 @@ namespace Evercoin.Storage
             }
         }
 
-        protected override IBlock FindBlockCore(BigInteger blockIdentifier)
+        protected override IBlock FindBlockCore(FancyByteArray blockIdentifier)
         {
             this.blockWaiter.WaitFor(blockIdentifier);
             Guid fileId = this.blockIdToFileIdIndex[blockIdentifier];
@@ -80,7 +78,7 @@ namespace Evercoin.Storage
             return this.chainSerializer.GetBlockForBytes(serializedBlock);
         }
 
-        protected override ITransaction FindTransactionCore(BigInteger transactionIdentifier)
+        protected override ITransaction FindTransactionCore(FancyByteArray transactionIdentifier)
         {
             this.txWaiter.WaitFor(transactionIdentifier);
             Guid fileId = this.txIdToFileIdIndex[transactionIdentifier];
@@ -99,7 +97,7 @@ namespace Evercoin.Storage
             return this.chainSerializer.GetTransactionForBytes(serializedTransaction);
         }
 
-        protected override void PutBlockCore(BigInteger blockIdentifier, IBlock block)
+        protected override void PutBlockCore(FancyByteArray blockIdentifier, IBlock block)
         {
             Guid fileId;
 
@@ -120,7 +118,7 @@ namespace Evercoin.Storage
             this.blockWaiter.SetEventFor(blockIdentifier);
         }
 
-        protected override void PutTransactionCore(BigInteger transactionIdentifier, ITransaction transaction)
+        protected override void PutTransactionCore(FancyByteArray transactionIdentifier, ITransaction transaction)
         {
             Guid fileId;
 
@@ -141,12 +139,12 @@ namespace Evercoin.Storage
             this.txWaiter.SetEventFor(transactionIdentifier);
         }
 
-        protected override bool ContainsBlockCore(BigInteger blockIdentifier)
+        protected override bool ContainsBlockCore(FancyByteArray blockIdentifier)
         {
             return this.blockIdToFileIdIndex.ContainsKey(blockIdentifier);
         }
 
-        protected override bool ContainsTransactionCore(BigInteger transactionIdentifier)
+        protected override bool ContainsTransactionCore(FancyByteArray transactionIdentifier)
         {
             return this.txIdToFileIdIndex.ContainsKey(transactionIdentifier);
         }
@@ -164,7 +162,7 @@ namespace Evercoin.Storage
         {
             try
             {
-                ConcurrentDictionary<BigInteger, BigInteger> blockIdToNextBlockIdMapping = new ConcurrentDictionary<BigInteger, BigInteger>();
+                ConcurrentDictionary<FancyByteArray, FancyByteArray> blockIdToNextBlockIdMapping = new ConcurrentDictionary<FancyByteArray, FancyByteArray>();
 
                 // OOH, CHEATING
                 SHA256 hasher = SHA256.Create();
@@ -201,12 +199,12 @@ namespace Evercoin.Storage
                     }
                 }
 
-                BigInteger genesisBlockIdentifier = new BigInteger(ByteTwiddling.HexStringToByteArray("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F").AsEnumerable().Reverse().GetArray());
+                FancyByteArray genesisBlockIdentifier = FancyByteArray.CreateLittleEndianFromHexString("000000000019D6689C085AE165831E934FF763AE46A2A6C172B3F1B60A8CE26F", Endianness.BigEndian);
 
-                BigInteger prevBlockId = BigInteger.Zero;
+                FancyByteArray prevBlockId = new FancyByteArray();
                 for (int i = 0; i < blockIdToNextBlockIdMapping.Count; i++)
                 {
-                    BigInteger blockId;
+                    FancyByteArray blockId;
                     if (!blockIdToNextBlockIdMapping.TryGetValue(prevBlockId, out blockId))
                     {
                         break;
@@ -215,10 +213,10 @@ namespace Evercoin.Storage
                     prevBlockId = blockId;
                 }
 
-                HashSet<BigInteger> goodBlockIds = new HashSet<BigInteger>(blockIdToNextBlockIdMapping.Values);
+                HashSet<FancyByteArray> goodBlockIds = new HashSet<FancyByteArray>(blockIdToNextBlockIdMapping.Values);
                 foreach (EntryInfo entry in this.blockDb.ListFiles())
                 {
-                    BigInteger blockId = this.fileIdToBlockIdIndex[entry.ID];
+                    FancyByteArray blockId = this.fileIdToBlockIdIndex[entry.ID];
                     if (!goodBlockIds.Contains(blockId) &&
                         blockId != genesisBlockIdentifier)
                     {
