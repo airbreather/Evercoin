@@ -9,7 +9,7 @@ using NodaTime;
 
 namespace Evercoin.App
 {
-    public sealed class BitcoinChainValidator : IChainValidator
+    public sealed class Testnet3ChainValidator : IChainValidator
     {
         private readonly IChainParameters chainParameters;
 
@@ -27,7 +27,7 @@ namespace Evercoin.App
 
         private readonly IBlockChain blockChain;
 
-        public BitcoinChainValidator(IReadableChainStore chainStore, ITransactionScriptParser scriptParser, ISignatureCheckerFactory signatureCheckerFactory, ITransactionScriptRunner scriptRunner, IChainParameters chainParameters, IHashAlgorithmStore hashAlgorithmStore, IChainSerializer chainSerializer, IBlockChain blockChain)
+        public Testnet3ChainValidator(IReadableChainStore chainStore, ITransactionScriptParser scriptParser, ISignatureCheckerFactory signatureCheckerFactory, ITransactionScriptRunner scriptRunner, IChainParameters chainParameters, IHashAlgorithmStore hashAlgorithmStore, IChainSerializer chainSerializer, IBlockChain blockChain)
         {
             this.chainStore = chainStore;
             this.scriptParser = scriptParser;
@@ -46,22 +46,17 @@ namespace Evercoin.App
                 return ValidationResult.PassingResult;
             }
 
-            Guid proofOfWorkHashAlgorithmIdentifier = this.chainParameters.ProofOfWorkHashAlgorithmIdentifier;
-            IHashAlgorithm proofOfWorkHashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(proofOfWorkHashAlgorithmIdentifier);
+            Guid blockHashAlgorithmIdentifier = this.chainParameters.BlockHashAlgorithmIdentifier;
+            IHashAlgorithm blockHashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(blockHashAlgorithmIdentifier);
             IChainSerializer chainSerializer = this.chainSerializer;
 
-            FancyByteArray proofOfWork = proofOfWorkHashAlgorithm.CalculateHash(chainSerializer.GetBytesForBlock(block).Value);
+            FancyByteArray blockIdentifier = blockHashAlgorithm.CalculateHash(chainSerializer.GetBytesForBlock(block).Value);
 
-            if (proofOfWork >= block.DifficultyTarget)
+            if (blockIdentifier >= block.DifficultyTarget)
             {
                 // The block doesn't even meet the proof-of-work it says it's supposed to meet.
                 return ValidationResult.FailWithReason("Block does not meet difficulty target.");
             }
-
-            Guid blockHashAlgorithmIdentifier = this.chainParameters.BlockHashAlgorithmIdentifier;
-            IHashAlgorithm blockHashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(blockHashAlgorithmIdentifier);
-
-            FancyByteArray blockIdentifier = blockHashAlgorithm.CalculateHash(chainSerializer.GetBytesForBlock(block).Value);
 
             ulong? blockHeight = this.blockChain.GetHeightOfBlock(blockIdentifier);
             if (!blockHeight.HasValue)
@@ -78,6 +73,31 @@ namespace Evercoin.App
             if (0 != blockHeight.Value % this.chainParameters.BlocksPerDifficultyRetarget)
             {
                 // We're not at an adjustment boundary.
+                #region special-case testnet3 stuff
+
+                // TODO: since validation rules are currency-specific, this should be part of some testnet3 thing.
+                // testnet3 lets you mine a min-difficulty block if nobody has found a block in two intervals.
+                if (block.Timestamp - prevBlock.Timestamp > this.chainParameters.DesiredTimeBetweenBlocks * 2)
+                {
+                    return block.DifficultyTarget > this.chainParameters.MaximumDifficultyTarget ?
+                        ValidationResult.FailWithReason("Block doesn't meet the maximum target for testnet") :
+                        ValidationResult.PassingResult;
+                }
+
+                // If the previous block was a min-difficulty block, but we're not in the above-mentioned special case
+                // then we need to scan, often back to the previous retarget, for the "actual" target.
+                while (blockHeight.Value > this.chainParameters.BlocksPerDifficultyRetarget &&
+                       0 != (blockHeight.Value - 1) % this.chainParameters.BlocksPerDifficultyRetarget &&
+                       prevTarget == this.chainParameters.MaximumDifficultyTarget)
+                {
+                    prevBlockIdentifier = prevBlock.PreviousBlockIdentifier;
+                    prevBlock = this.chainStore.GetBlock(prevBlockIdentifier);
+                    prevTarget = prevBlock.DifficultyTarget;
+                    blockHeight = blockHeight - 1;
+                }
+
+                #endregion
+
                 return block.DifficultyTarget != prevTarget ?
                        ValidationResult.FailWithReason("Block has a different difficulty target, but it's not on an adjustment boundary.") :
                        ValidationResult.PassingResult;

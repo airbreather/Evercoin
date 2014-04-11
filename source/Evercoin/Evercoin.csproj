@@ -74,6 +74,7 @@
     <Compile Include="BaseImplementations\ChainStoreBase.cs" />
     <Compile Include="BaseImplementations\CurrencyNetworkBase.cs" />
     <Compile Include="BaseImplementations\CurrencyParameters.cs" />
+    <Compile Include="BaseImplementations\NetworkParameters.cs" />
     <Compile Include="BaseImplementations\TypedBlock.cs" />
     <Compile Include="BaseImplementations\TypedTransaction.cs" />
     <Compile Include="BaseImplementations\TypedValueSource.cs" />

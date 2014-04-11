@@ -9,7 +9,7 @@ using NodaTime;
 
 namespace Evercoin.App
 {
-    public sealed class BitcoinChainValidator : IChainValidator
+    public sealed class DogecoinChainValidator : IChainValidator
     {
         private readonly IChainParameters chainParameters;
 
@@ -27,7 +27,7 @@ namespace Evercoin.App
 
         private readonly IBlockChain blockChain;
 
-        public BitcoinChainValidator(IReadableChainStore chainStore, ITransactionScriptParser scriptParser, ISignatureCheckerFactory signatureCheckerFactory, ITransactionScriptRunner scriptRunner, IChainParameters chainParameters, IHashAlgorithmStore hashAlgorithmStore, IChainSerializer chainSerializer, IBlockChain blockChain)
+        public DogecoinChainValidator(IReadableChainStore chainStore, ITransactionScriptParser scriptParser, ISignatureCheckerFactory signatureCheckerFactory, ITransactionScriptRunner scriptRunner, IChainParameters chainParameters, IHashAlgorithmStore hashAlgorithmStore, IChainSerializer chainSerializer, IBlockChain blockChain)
         {
             this.chainStore = chainStore;
             this.scriptParser = scriptParser;
@@ -41,6 +41,7 @@ namespace Evercoin.App
 
         public ValidationResult ValidateBlock(IBlock block)
         {
+            // TODO: I think block 240 is invalid because of the Litecoin bugfix
             if (Equals(block, this.chainParameters.GenesisBlock))
             {
                 return ValidationResult.PassingResult;

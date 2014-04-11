@@ -13,6 +13,8 @@ namespace Evercoin.BaseImplementations
     {
         private readonly IBlock genesisBlock;
 
+        private readonly Guid proofOfWorkHashAlgorithmIdentifier;
+
         private readonly Guid blockHashAlgorithmIdentifier;
 
         private readonly Guid transactionHashAlgorithmIdentifier;
@@ -90,6 +92,7 @@ namespace Evercoin.BaseImplementations
         /// The value for <see cref="MaximumDifficultyTarget"/>.
         /// </param>
         public ChainParameters(IBlock genesisBlock,
+                               Guid proofOfWorkHashAlgorithmIdentifier,
                                Guid blockHashAlgorithmIdentifier,
                                Guid transactionHashAlgorithmIdentifier,
                                Guid scriptHashAlgorithmIdentifier1,
@@ -106,6 +109,7 @@ namespace Evercoin.BaseImplementations
                                BigInteger maximumDifficultyTarget)
         {
             this.genesisBlock = genesisBlock;
+            this.proofOfWorkHashAlgorithmIdentifier = proofOfWorkHashAlgorithmIdentifier;
             this.blockHashAlgorithmIdentifier = blockHashAlgorithmIdentifier;
             this.transactionHashAlgorithmIdentifier = transactionHashAlgorithmIdentifier;
             this.scriptHashAlgorithmIdentifier1 = scriptHashAlgorithmIdentifier1;
@@ -126,6 +130,18 @@ namespace Evercoin.BaseImplementations
         /// Gets the <see cref="IBlock"/> at height 0.
         /// </summary>
         public IBlock GenesisBlock { get { return this.genesisBlock; } }
+
+        /// <summary>
+        /// Gets the <see cref="Guid"/> that identifies which
+        /// <see cref="IHashAlgorithm"/> to use for calculating proof-of-work.
+        /// </summary>
+        /// <remarks>
+        /// It's likely that this will be one of the values from
+        /// <see cref="HashAlgorithmIdentifiers"/>, though algorithms that
+        /// aren't built-in could be used by implementing a custom
+        /// <see cref="IHashAlgorithmStore"/>.
+        /// </remarks>
+        public Guid ProofOfWorkHashAlgorithmIdentifier { get { return this.proofOfWorkHashAlgorithmIdentifier; } }
 
         /// <summary>
         /// Gets the <see cref="Guid"/> that identifies which

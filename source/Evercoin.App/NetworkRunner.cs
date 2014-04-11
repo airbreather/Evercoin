@@ -58,7 +58,7 @@ namespace Evercoin.App
             ConcurrentDictionary<ProtocolInventoryVector, ProtocolInventoryVector> knownInventory = new ConcurrentDictionary<ProtocolInventoryVector, ProtocolInventoryVector>();
             List<IPEndPoint> endPoints = new List<IPEndPoint>
                                          {
-                                             new IPEndPoint(IPAddress.Loopback, 18333),
+                                             new IPEndPoint(IPAddress.Loopback, 22556),
                                          };
 
             this.network.ReceivedVersionPackets.Subscribe(async x => await this.network.AcknowledgePeerVersionAsync(x.Item1, token).ConfigureAwait(false));
@@ -74,7 +74,7 @@ namespace Evercoin.App
                     ulong currentBlockHeight = startingBlockHeight;
                     bool started = false;
                     ////const int CurrentHighestBlockBecauseIAmCheating = 294361;
-                    const int CurrentHighestBlockBecauseIAmCheating = 209432;
+                    const int CurrentHighestBlockBecauseIAmCheating = 176000;
 
                     Action updateBlockIdentifiers = () =>
                     {
