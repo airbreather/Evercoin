@@ -407,17 +407,11 @@ namespace Evercoin.Network
                 },
                 {
                     txCommand,
-                    async x =>
+                    x =>
                     {
-                        using (MemoryStream stream = new MemoryStream(x.Payload))
-                        using (ProtocolStreamReader reader = new ProtocolStreamReader(stream, true, this.hashAlgorithmStore))
-                        {
-                            IChainSerializer chainSerializer = this.currencyParameters.ChainSerializer;
-
-                            ProtocolTransaction protoTransaction = await reader.ReadTransactionAsync(token).ConfigureAwait(false);
-                            ITransaction transaction = chainSerializer.GetTransactionForBytes(protoTransaction.Data);
-                            this.transactionsReceived.OnNext(Tuple.Create(x.RemotePeer, transaction, new FancyByteArray(), (ulong)0));
-                        }
+                        IChainSerializer chainSerializer = this.currencyParameters.ChainSerializer;
+                        ITransaction transaction = chainSerializer.GetTransactionForBytes(x.Payload.Value);
+                        this.transactionsReceived.OnNext(Tuple.Create(x.RemotePeer, transaction, new FancyByteArray(), (ulong)0));
                     }
                 },
                 {

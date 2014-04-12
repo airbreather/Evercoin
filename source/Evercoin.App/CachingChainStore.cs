@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Numerics;
 using System.Runtime.Caching;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,25 +11,30 @@ namespace Evercoin.App
     {
         private readonly IChainStore underlyingChainStore;
 
-        private readonly IDisposable underlyingCache;
+        private readonly IDisposable underlyingBlockCache;
 
-        private readonly BlockCache blockCache;
+        private readonly IDisposable underlyingTxCache;
 
-        private readonly TransactionCache transactionCache;
+        private readonly Cache<IBlock> blockCache;
 
-        public CachingChainStorage(IChainStore underlyingChainStore)
+        private readonly Cache<ITransaction> transactionCache;
+
+        public CachingChainStorage(IChainStore underlyingChainStore, IChainSerializer chainSerializer)
         {
             this.underlyingChainStore = underlyingChainStore;
-            MemoryCache memoryCache = MemoryCache.Default;
+            MemoryCache blockMemoryCache = new MemoryCache("blocks");
+            MemoryCache txMemoryCache = new MemoryCache("transactions");
             try
             {
-                this.underlyingCache = memoryCache;
-                this.blockCache = new BlockCache(memoryCache);
-                this.transactionCache = new TransactionCache(memoryCache);
+                this.underlyingBlockCache = blockMemoryCache;
+                this.underlyingTxCache = txMemoryCache;
+                this.blockCache = new Cache<IBlock>(blockMemoryCache, 300000, chainSerializer.GetBytesForBlock, x => chainSerializer.GetBlockForBytes(x.Value));
+                this.transactionCache = new Cache<ITransaction>(txMemoryCache, 40000, chainSerializer.GetBytesForTransaction, x => chainSerializer.GetTransactionForBytes(x.Value));
             }
             catch
             {
-                memoryCache.Dispose();
+                blockMemoryCache.Dispose();
+                txMemoryCache.Dispose();
                 throw;
             }
         }
@@ -38,7 +42,7 @@ namespace Evercoin.App
         protected override IBlock FindBlockCore(FancyByteArray blockIdentifier)
         {
             IBlock foundBlock;
-            if (this.blockCache.TryGetBlock(blockIdentifier, out foundBlock))
+            if (this.blockCache.TryGetValue(blockIdentifier, out foundBlock))
             {
                 return foundBlock;
             }
@@ -46,7 +50,7 @@ namespace Evercoin.App
             foundBlock = this.underlyingChainStore.GetBlock(blockIdentifier);
             if (foundBlock != null)
             {
-                this.blockCache.PutBlock(blockIdentifier, foundBlock);
+                this.blockCache.Put(blockIdentifier, foundBlock);
             }
 
             return foundBlock;
@@ -55,7 +59,7 @@ namespace Evercoin.App
         protected override ITransaction FindTransactionCore(FancyByteArray transactionIdentifier)
         {
             ITransaction foundTransaction;
-            if (this.transactionCache.TryGetTransaction(transactionIdentifier, out foundTransaction))
+            if (this.transactionCache.TryGetValue(transactionIdentifier, out foundTransaction))
             {
                 return foundTransaction;
             }
@@ -63,7 +67,7 @@ namespace Evercoin.App
             foundTransaction = this.underlyingChainStore.GetTransaction(transactionIdentifier);
             if (foundTransaction != null)
             {
-                this.transactionCache.PutTransaction(transactionIdentifier, foundTransaction);
+                this.transactionCache.Put(transactionIdentifier, foundTransaction);
             }
 
             return foundTransaction;
@@ -71,44 +75,44 @@ namespace Evercoin.App
 
         protected override void PutBlockCore(FancyByteArray blockIdentifier, IBlock block)
         {
-            this.blockCache.PutBlock(blockIdentifier, block);
+            this.blockCache.Put(blockIdentifier, block);
             this.underlyingChainStore.PutBlock(blockIdentifier, block);
         }
 
         protected override void PutTransactionCore(FancyByteArray transactionIdentifier, ITransaction transaction)
         {
-            this.transactionCache.PutTransaction(transactionIdentifier, transaction);
+            this.transactionCache.Put(transactionIdentifier, transaction);
             this.underlyingChainStore.PutTransaction(transactionIdentifier, transaction);
         }
 
         protected override bool ContainsBlockCore(FancyByteArray blockIdentifier)
         {
-            return this.blockCache.ContainsBlock(blockIdentifier) ||
+            return this.blockCache.Contains(blockIdentifier) ||
                    this.underlyingChainStore.ContainsBlock(blockIdentifier);
         }
 
         protected override bool ContainsTransactionCore(FancyByteArray transactionIdentifier)
         {
-            return this.transactionCache.ContainsTransaction(transactionIdentifier) ||
+            return this.transactionCache.Contains(transactionIdentifier) ||
                    this.underlyingChainStore.ContainsTransaction(transactionIdentifier);
         }
 
         protected override async Task<bool> ContainsBlockAsyncCore(FancyByteArray blockIdentifier, CancellationToken token)
         {
-            return this.blockCache.ContainsBlock(blockIdentifier) ||
+            return this.blockCache.Contains(blockIdentifier) ||
                    await this.underlyingChainStore.ContainsBlockAsync(blockIdentifier, token);
         }
 
         protected override async Task<bool> ContainsTransactionAsyncCore(FancyByteArray transactionIdentifier, CancellationToken token)
         {
-            return this.transactionCache.ContainsTransaction(transactionIdentifier) ||
+            return this.transactionCache.Contains(transactionIdentifier) ||
                    await this.underlyingChainStore.ContainsTransactionAsync(transactionIdentifier, token);
         }
 
         protected override async Task<IBlock> FindBlockAsyncCore(FancyByteArray blockIdentifier, CancellationToken token)
         {
             IBlock foundBlock;
-            if (this.blockCache.TryGetBlock(blockIdentifier, out foundBlock))
+            if (this.blockCache.TryGetValue(blockIdentifier, out foundBlock))
             {
                 return foundBlock;
             }
@@ -116,7 +120,7 @@ namespace Evercoin.App
             foundBlock = await this.underlyingChainStore.GetBlockAsync(blockIdentifier, token);
             if (foundBlock != null)
             {
-                this.blockCache.PutBlock(blockIdentifier, foundBlock);
+                this.blockCache.Put(blockIdentifier, foundBlock);
             }
 
             return foundBlock;
@@ -125,7 +129,7 @@ namespace Evercoin.App
         protected override async Task<ITransaction> FindTransactionAsyncCore(FancyByteArray transactionIdentifier, CancellationToken token)
         {
             ITransaction foundTransaction;
-            if (this.transactionCache.TryGetTransaction(transactionIdentifier, out foundTransaction))
+            if (this.transactionCache.TryGetValue(transactionIdentifier, out foundTransaction))
             {
                 return foundTransaction;
             }
@@ -133,7 +137,7 @@ namespace Evercoin.App
             foundTransaction = await this.underlyingChainStore.GetTransactionAsync(transactionIdentifier, token);
             if (foundTransaction != null)
             {
-                this.transactionCache.PutTransaction(transactionIdentifier, foundTransaction);
+                this.transactionCache.Put(transactionIdentifier, foundTransaction);
             }
 
             return foundTransaction;
@@ -141,19 +145,20 @@ namespace Evercoin.App
 
         protected override async Task PutBlockAsyncCore(FancyByteArray blockIdentifier, IBlock block, CancellationToken token)
         {
-            this.blockCache.PutBlock(blockIdentifier, block);
+            this.blockCache.Put(blockIdentifier, block);
             await this.underlyingChainStore.PutBlockAsync(blockIdentifier, block, token);
         }
 
         protected override async Task PutTransactionAsyncCore(FancyByteArray transactionIdentifier, ITransaction transaction, CancellationToken token)
         {
-            this.transactionCache.PutTransaction(transactionIdentifier, transaction);
+            this.transactionCache.Put(transactionIdentifier, transaction);
             await this.underlyingChainStore.PutTransactionAsync(transactionIdentifier, transaction, token);
         }
 
         protected override void DisposeManagedResources()
         {
-            this.underlyingCache.Dispose();
+            this.underlyingBlockCache.Dispose();
+            this.underlyingTxCache.Dispose();
             this.underlyingChainStore.Dispose();
         }
     }

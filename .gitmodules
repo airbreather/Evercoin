@@ -4,6 +4,3 @@
 [submodule "external/rx"]
 	path = external/rx
 	url = https://git01.codeplex.com/rx
-[submodule "external/leveldb-sharp"]
-	path = external/leveldb-sharp
-	url = https://github.com/meebey/leveldb-sharp.git

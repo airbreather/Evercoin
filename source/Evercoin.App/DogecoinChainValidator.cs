@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Numerics;
 using System.Threading;
@@ -41,7 +42,6 @@ namespace Evercoin.App
 
         public ValidationResult ValidateBlock(IBlock block)
         {
-            // TODO: I think block 240 is invalid because of the Litecoin bugfix
             if (Equals(block, this.chainParameters.GenesisBlock))
             {
                 return ValidationResult.PassingResult;
@@ -76,43 +76,128 @@ namespace Evercoin.App
             IBlock prevBlock = this.chainStore.GetBlock(prevBlockIdentifier);
             BigInteger prevTarget = prevBlock.DifficultyTarget;
 
-            if (0 != blockHeight.Value % this.chainParameters.BlocksPerDifficultyRetarget)
+            if (0 == blockHeight.Value % this.chainParameters.BlocksPerDifficultyRetarget)
+            {
+                // We're at an adjustment boundary.  Make sure that the target is accurate.
+                ulong prevAdjustmentHeight = blockHeight.Value - this.chainParameters.BlocksPerDifficultyRetarget;
+                if (prevAdjustmentHeight > 0)
+                {
+                    prevAdjustmentHeight--;
+                }
+
+                FancyByteArray prevAdjustmentBlockIdentifier = this.blockChain.GetIdentifierOfBlockAtHeight(prevAdjustmentHeight).Value;
+                IBlock prevAdjustmentBlock = this.chainStore.GetBlock(prevAdjustmentBlockIdentifier);
+
+                Duration desiredTimeBetweenBlockIntervals = this.chainParameters.DesiredTimeBetweenBlocks * this.chainParameters.BlocksPerDifficultyRetarget;
+                Duration actualTimeBetweenBlockIntervals = prevBlock.Timestamp - prevAdjustmentBlock.Timestamp;
+
+                if (blockHeight.Value >= 145000)
+                {
+                    actualTimeBetweenBlockIntervals = desiredTimeBetweenBlockIntervals + (actualTimeBetweenBlockIntervals - desiredTimeBetweenBlockIntervals) / 8;
+                    if (actualTimeBetweenBlockIntervals < (desiredTimeBetweenBlockIntervals - (desiredTimeBetweenBlockIntervals / 4)))
+                    {
+                        actualTimeBetweenBlockIntervals = (desiredTimeBetweenBlockIntervals - (desiredTimeBetweenBlockIntervals / 4));
+                    }
+
+                    if (actualTimeBetweenBlockIntervals > (desiredTimeBetweenBlockIntervals + (desiredTimeBetweenBlockIntervals / 2)))
+                    {
+                        actualTimeBetweenBlockIntervals = (desiredTimeBetweenBlockIntervals + (desiredTimeBetweenBlockIntervals / 2));
+                    }
+                }
+                else if (blockHeight.Value > 10000)
+                {
+                    if (actualTimeBetweenBlockIntervals < desiredTimeBetweenBlockIntervals / 4)
+                    {
+                        actualTimeBetweenBlockIntervals = desiredTimeBetweenBlockIntervals / 4;
+                    }
+
+                    if (actualTimeBetweenBlockIntervals > desiredTimeBetweenBlockIntervals * 4)
+                    {
+                        actualTimeBetweenBlockIntervals = desiredTimeBetweenBlockIntervals * 4;
+                    }
+                }
+                else if (blockHeight.Value > 5000)
+                {
+                    if (actualTimeBetweenBlockIntervals < desiredTimeBetweenBlockIntervals / 8)
+                    {
+                        actualTimeBetweenBlockIntervals = desiredTimeBetweenBlockIntervals / 8;
+                    }
+
+                    if (actualTimeBetweenBlockIntervals > desiredTimeBetweenBlockIntervals * 4)
+                    {
+                        actualTimeBetweenBlockIntervals = desiredTimeBetweenBlockIntervals * 4;
+                    }
+                }
+                else
+                {
+                    if (actualTimeBetweenBlockIntervals < desiredTimeBetweenBlockIntervals / 16)
+                    {
+                        actualTimeBetweenBlockIntervals = desiredTimeBetweenBlockIntervals / 16;
+                    }
+
+                    if (actualTimeBetweenBlockIntervals > desiredTimeBetweenBlockIntervals * 4)
+                    {
+                        actualTimeBetweenBlockIntervals = desiredTimeBetweenBlockIntervals * 4;
+                    }
+                }
+
+                BigInteger nextTarget = prevTarget;
+                nextTarget *= actualTimeBetweenBlockIntervals.Ticks;
+                nextTarget /= desiredTimeBetweenBlockIntervals.Ticks;
+                nextTarget = Extensions.TargetFromBits(Extensions.TargetToBits(nextTarget));
+                nextTarget = BigInteger.Min(nextTarget, this.chainParameters.MaximumDifficultyTarget);
+
+                if (nextTarget != block.DifficultyTarget)
+                {
+                    return ValidationResult.FailWithReason(String.Format(CultureInfo.InvariantCulture, "Block has the wrong target.  Expected: {0}, Actual: {1}", Extensions.TargetToBits(nextTarget).ToString("X"), Extensions.TargetToBits(block.DifficultyTarget).ToString("X")));
+                }
+            }
+            else
             {
                 // We're not at an adjustment boundary.
-                return block.DifficultyTarget != prevTarget ?
-                       ValidationResult.FailWithReason("Block has a different difficulty target, but it's not on an adjustment boundary.") :
-                       ValidationResult.PassingResult;
+                if (block.DifficultyTarget != prevTarget)
+                {
+                    ValidationResult.FailWithReason("Block has a different difficulty target, but it's not on an adjustment boundary.");
+                }
             }
 
-            // We're at an adjustment boundary.  Make sure that the target is accurate.
-            // For some reason, Bitcoin uses the time since the previous block for the adjustment, rather than the current one.
-            ulong prevAdjustmentHeight = blockHeight.Value - this.chainParameters.BlocksPerDifficultyRetarget;
-            FancyByteArray prevAdjustmentBlockIdentifier = this.blockChain.GetIdentifierOfBlockAtHeight(prevAdjustmentHeight).Value;
-            IBlock prevAdjustmentBlock = this.chainStore.GetBlock(prevAdjustmentBlockIdentifier);
+            // TODO: Figure out the randomness... or just hand-wave it by checkpointing.
+            ////List<ITransaction> transactions = this.blockChain.GetTransactionsForBlock(blockIdentifier).Select(this.chainStore.GetTransaction).ToList();
+            ////
+            ////decimal actualCoinbaseValue = transactions[0].Outputs.Sum(x => x.AvailableValue);
+            ////
+            ////long allowedSubsidyValue;
+            ////
+            ////string seedString = prevBlockIdentifier.ToString().Substring(7, 7);
+            ////int seed = BitConverter.ToInt32(ByteTwiddling.HexStringToByteArray("0" + seedString), 0);
+            ////Random random = new Random(seed);
+            ////if (blockHeight < 100000)
+            ////{
+            ////    allowedSubsidyValue = (1 + random.Next(999999)) * 100000000L;
+            ////}
+            ////else if (blockHeight < 145000)
+            ////{
+            ////    allowedSubsidyValue = (1 + random.Next(499999)) * 100000000L;
+            ////}
+            ////else if (blockHeight < 600000)
+            ////{
+            ////    allowedSubsidyValue = (1 + random.Next(999999)) * 100000000L;
+            ////    allowedSubsidyValue /= (int)(blockHeight.Value / 100000);
+            ////}
+            ////else
+            ////{
+            ////    allowedSubsidyValue = 1000000000000L;
+            ////}
+            ////
+            ////List<Tuple<FancyByteArray, uint, ITransaction>> prevOutputs = transactions.Select(x => Tuple.Create(x.Inputs, x)).SelectMany(x => x.Item1.Select(y => Tuple.Create(y.SpentTransactionIdentifier, y.SpentTransactionOutputIndex, x.Item2))).ToList();
+            ////Dictionary<FancyByteArray, ITransaction> prevTransactions = prevOutputs.Select(x => x.Item1).ExceptWhere(x => x.NumericValue.IsZero).Distinct().ToDictionary(x => x, this.chainStore.GetTransaction);
+            ////decimal fees = prevOutputs.ExceptWhere(x => x.Item1.NumericValue.IsZero).GroupBy(x => x.Item3).Sum(x => x.Sum(y => prevTransactions[y.Item1].Outputs[(int)y.Item2].AvailableValue) - x.Key.Outputs.Sum(y => y.AvailableValue));
+            ////if (actualCoinbaseValue != allowedSubsidyValue + fees)
+            ////{
+            ////    return ValidationResult.FailWithReason(String.Format(CultureInfo.InvariantCulture, "Invalid coinbase value.  Expected {0}, got {1}.", (long)(allowedSubsidyValue + fees) / (double)100000000, (long)actualCoinbaseValue / (double)100000000));
+            ////}
 
-            Duration desiredTimeBetweenBlockIntervals = this.chainParameters.DesiredTimeBetweenBlocks * this.chainParameters.BlocksPerDifficultyRetarget;
-            Duration actualTimeBetweenBlockIntervals = prevBlock.Timestamp - prevAdjustmentBlock.Timestamp;
-
-            // Don't let the adjustment shift by more than a factor of 4 in either direction.
-            if (actualTimeBetweenBlockIntervals < desiredTimeBetweenBlockIntervals / 4)
-            {
-                actualTimeBetweenBlockIntervals = desiredTimeBetweenBlockIntervals / 4;
-            }
-
-            if (actualTimeBetweenBlockIntervals > desiredTimeBetweenBlockIntervals * 4)
-            {
-                actualTimeBetweenBlockIntervals = desiredTimeBetweenBlockIntervals * 4;
-            }
-
-            BigInteger nextTarget = prevTarget;
-            nextTarget *= actualTimeBetweenBlockIntervals.Ticks;
-            nextTarget /= desiredTimeBetweenBlockIntervals.Ticks;
-            nextTarget = Extensions.TargetFromBits(Extensions.TargetToBits(nextTarget));
-            nextTarget = BigInteger.Min(nextTarget, this.chainParameters.MaximumDifficultyTarget);
-
-            return nextTarget != block.DifficultyTarget ?
-                   ValidationResult.FailWithReason("Block has the wrong target.") :
-                   ValidationResult.PassingResult;
+            return ValidationResult.PassingResult;
         }
 
         public ValidationResult ValidateTransaction(ITransaction transaction)

@@ -38,5 +38,7 @@ namespace Evercoin.Network
         public IPEndPoint LocalEndPoint { get { return this.localEndPoint; } }
 
         public IPEndPoint RemoteEndPoint { get { return this.remoteEndPoint; } }
+
+        public ulong HighestKnownBlock { get; set; }
     }
 }

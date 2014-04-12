@@ -73,9 +73,6 @@ namespace Evercoin.App
             if (0 != blockHeight.Value % this.chainParameters.BlocksPerDifficultyRetarget)
             {
                 // We're not at an adjustment boundary.
-                #region special-case testnet3 stuff
-
-                // TODO: since validation rules are currency-specific, this should be part of some testnet3 thing.
                 // testnet3 lets you mine a min-difficulty block if nobody has found a block in two intervals.
                 if (block.Timestamp - prevBlock.Timestamp > this.chainParameters.DesiredTimeBetweenBlocks * 2)
                 {
@@ -95,8 +92,6 @@ namespace Evercoin.App
                     prevTarget = prevBlock.DifficultyTarget;
                     blockHeight = blockHeight - 1;
                 }
-
-                #endregion
 
                 return block.DifficultyTarget != prevTarget ?
                        ValidationResult.FailWithReason("Block has a different difficulty target, but it's not on an adjustment boundary.") :

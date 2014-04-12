@@ -8,18 +8,6 @@ namespace Evercoin.Util
 {
     public static class Cheating
     {
-        private static int txCount = 0;
-
-        public static void AddTransaction(BigInteger transactionIdentifier)
-        {
-            Interlocked.Increment(ref txCount);
-        }
-
-        public static int GetTransactionIdentifierCount()
-        {
-            return txCount;
-        }
-
         public static IMerkleTreeNode ToMerkleTree(this IEnumerable<IEnumerable<byte>> inputs, IHashAlgorithm hashAlgorithm)
         {
             List<MerkleTreeNode> leaves = inputs.Select(x => new MerkleTreeNode { Data = x.GetArray() }).ToList();

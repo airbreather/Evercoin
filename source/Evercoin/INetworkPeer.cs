@@ -33,5 +33,7 @@ namespace Evercoin
         /// TODO: abstraction!
         /// </summary>
         IPEndPoint RemoteEndPoint { get; }
+
+        ulong HighestKnownBlock { get; set; }
     }
 }

@@ -1,15 +1,9 @@
 ﻿#if X64
-using System;
 using System.Collections.Concurrent;
 using System.ComponentModel.Composition;
-using System.IO;
-using System.Linq;
-using System.Numerics;
-using System.Reflection;
-using System.Text;
 using Evercoin.BaseImplementations;
 using Evercoin.Util;
-using LevelDB;
+using LevelDb;
 
 namespace Evercoin.Storage
 {
@@ -20,36 +14,30 @@ namespace Evercoin.Storage
         private const string BlockFileName = @"C:\Freedom\blocks.leveldb";
         private const string TxFileName = @"C:\Freedom\transactions.leveldb";
 
-        private readonly DB blockDB;
-        private readonly DB txDB;
+        private readonly Database blockDB;
+        private readonly Database txDB;
 
         private readonly Waiter<FancyByteArray> blockWaiter = new Waiter<FancyByteArray>();
         private readonly Waiter<FancyByteArray> txWaiter = new Waiter<FancyByteArray>();
-
-        private readonly object blockLock = new object();
-        private readonly object txLock = new object();
 
         private readonly ConcurrentDictionary<FancyByteArray, bool> transactions = new ConcurrentDictionary<FancyByteArray, bool>();
 
         public LevelDBChainStore()
         {
-            CopyToFile("leveldb.dll");
+            Cheating.CopyLevelDbDll();
 
-            Options blockOptions = new Options();
-            blockOptions.Compression = CompressionType.SnappyCompression;
+            LevelDbFactory factory = new LevelDbFactory();
+
+            DatabaseOptions blockOptions = factory.CreateDatabaseOptions();
+            blockOptions.CompressionOption = CompressionOption.SnappyCompression;
             blockOptions.CreateIfMissing = true;
 
-            Options txOptions = new Options();
-            txOptions.Compression = CompressionType.SnappyCompression;
+            DatabaseOptions txOptions = factory.CreateDatabaseOptions();
+            txOptions.CompressionOption = CompressionOption.SnappyCompression;
             txOptions.CreateIfMissing = true;
 
-            if (Directory.Exists(BlockFileName))
-            Directory.Delete(BlockFileName, true);
-            if (Directory.Exists(TxFileName))
-            Directory.Delete(TxFileName, true);
-
-            this.blockDB = new DB(blockOptions, BlockFileName);
-            this.txDB = new DB(txOptions, TxFileName);
+            this.blockDB = factory.OpenDatabase(BlockFileName, blockOptions);
+            this.txDB = factory.OpenDatabase(TxFileName, txOptions);
         }
 
         [Import]
@@ -57,34 +45,33 @@ namespace Evercoin.Storage
 
         protected override IBlock FindBlockCore(FancyByteArray blockIdentifier)
         {
-            this.blockWaiter.WaitFor(blockIdentifier);
+            if (!this.ContainsBlockCore(blockIdentifier))
+            {
+                this.blockWaiter.WaitFor(blockIdentifier);
+            }
 
-            string serializedBlockString;
-            lock (this.blockLock)
-            serializedBlockString = this.blockDB.Get(GetBlockKey(blockIdentifier));
-            byte[] serializedBlock = ByteTwiddling.HexStringToByteArray(serializedBlockString);
+            FancyByteArray serializedBlock = this.blockDB.Get(blockIdentifier);
 
-            return this.ChainSerializer.GetBlockForBytes(serializedBlock);
+            return this.ChainSerializer.GetBlockForBytes(serializedBlock.Value);
         }
 
         protected override ITransaction FindTransactionCore(FancyByteArray transactionIdentifier)
         {
-            this.txWaiter.WaitFor(transactionIdentifier);
+            if (!this.ContainsTransactionCore(transactionIdentifier))
+            {
+                this.txWaiter.WaitFor(transactionIdentifier);
+            }
 
-            string serializedTransactionString;
-            lock (this.txLock)
-            serializedTransactionString = this.txDB.Get(GetTxKey(transactionIdentifier));
-            byte[] serializedTransaction = ByteTwiddling.HexStringToByteArray(serializedTransactionString);
+            FancyByteArray serializedTransaction = this.txDB.Get(transactionIdentifier);
 
-            return this.ChainSerializer.GetTransactionForBytes(serializedTransaction);
+            return this.ChainSerializer.GetTransactionForBytes(serializedTransaction.Value);
         }
 
         protected override void PutBlockCore(FancyByteArray blockIdentifier, IBlock block)
         {
             byte[] serializedBlock = this.ChainSerializer.GetBytesForBlock(block);
-            string serializedBlockString = ByteTwiddling.ByteArrayToHexString(serializedBlock);
-            lock (this.blockLock)
-            this.blockDB.Put(GetBlockKey(blockIdentifier), serializedBlockString);
+
+            this.blockDB.Put(blockIdentifier, serializedBlock);
 
             this.blockWaiter.SetEventFor(blockIdentifier);
         }
@@ -92,9 +79,8 @@ namespace Evercoin.Storage
         protected override void PutTransactionCore(FancyByteArray transactionIdentifier, ITransaction transaction)
         {
             byte[] serializedTransaction = this.ChainSerializer.GetBytesForTransaction(transaction);
-            string serializedTransactionString = ByteTwiddling.ByteArrayToHexString(serializedTransaction);
-            lock (this.txLock)
-            this.txDB.Put(GetTxKey(transactionIdentifier), serializedTransactionString);
+
+            this.txDB.Put(transactionIdentifier, serializedTransaction);
 
             this.txWaiter.SetEventFor(transactionIdentifier);
             this.transactions[transactionIdentifier] = true;
@@ -102,13 +88,12 @@ namespace Evercoin.Storage
 
         protected override bool ContainsBlockCore(FancyByteArray blockIdentifier)
         {
-            lock (this.blockLock)
-            return this.blockDB.Get(GetBlockKey(blockIdentifier)) != null;
+            return this.blockDB.Get(blockIdentifier) != null;
         }
 
         protected override bool ContainsTransactionCore(FancyByteArray transactionIdentifier)
         {
-            return this.transactions.ContainsKey(transactionIdentifier);
+            return this.txDB.Get(transactionIdentifier) != null;
         }
 
         protected override void DisposeManagedResources()
@@ -118,43 +103,6 @@ namespace Evercoin.Storage
             this.blockWaiter.Dispose();
             this.txWaiter.Dispose();
             base.DisposeManagedResources();
-        }
-
-        private static string GetBlockKey(FancyByteArray blockIdentifier)
-        {
-            return blockIdentifier.ToString();
-        }
-
-        private static string GetTxKey(FancyByteArray transactionIdentifier)
-        {
-            return transactionIdentifier.ToString();
-        }
-
-        private static void CopyToFile(string resourceTag)
-        {
-            Assembly thisAssembly = Assembly.GetExecutingAssembly();
-
-            string thisAssemblyFolderPath = Path.GetDirectoryName(thisAssembly.Location);
-            string targetFilePath = Path.Combine(thisAssemblyFolderPath, resourceTag);
-
-            string fullResourceTag = String.Join(".", thisAssembly.GetName().Name, resourceTag);
-
-            byte[] resourceData;
-            using (var ms = new MemoryStream())
-            {
-                using (var resourceStream = thisAssembly.GetManifestResourceStream(fullResourceTag))
-                {
-                    resourceStream.CopyTo(ms);
-                }
-
-                resourceData = ms.ToArray();
-            }
-
-            if (!File.Exists(targetFilePath) ||
-                !File.ReadAllBytes(targetFilePath).SequenceEqual(resourceData))
-            {
-                File.WriteAllBytes(targetFilePath, resourceData);
-            }
         }
     }
 }

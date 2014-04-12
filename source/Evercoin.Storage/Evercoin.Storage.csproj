@@ -9,9 +9,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Evercoin.Storage</RootNamespace>
     <AssemblyName>Evercoin.Storage</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -82,6 +83,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Cheating.cs" />
+    <Compile Include="LevelDBBlockChain.cs" />
+    <Compile Include="MemoryBlockChain.cs" />
     <Compile Include="Extensions.cs" />
     <Compile Include="LevelDBChainStore.cs" />
     <Compile Include="FileDBChainStore.cs" />
@@ -91,11 +95,11 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup Condition=" '$(Platform)' == 'x64' ">
-    <ProjectReference Include="..\..\external\leveldb-sharp\leveldb-sharp.csproj">
-      <Project>{8dd96596-38ac-46dd-80c1-75d9ebe585ea}</Project>
-      <Name>leveldb-sharp</Name>
+    <EmbeddedResource Include="..\..\external\leveldb-native.dll" />
+    <ProjectReference Include="..\LevelDB.NET\LevelDB.NET.csproj">
+      <Project>{239134e9-f3bd-4879-aea7-f625c27c3594}</Project>
+      <Name>LevelDB.NET</Name>
     </ProjectReference>
-    <EmbeddedResource Include="..\..\external\leveldb.dll" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Evercoin\Evercoin.csproj">

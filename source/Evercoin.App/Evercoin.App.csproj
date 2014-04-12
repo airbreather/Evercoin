@@ -9,9 +9,10 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Evercoin.App</RootNamespace>
     <AssemblyName>Evercoin.App</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.5.1</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <TargetFrameworkProfile />
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -85,16 +86,15 @@
     <Compile Include="BitcoinChainValidator.cs" />
     <Compile Include="CompositeChainStore.cs" />
     <Compile Include="CompositeHashAlgorithmStore.cs" />
-    <Compile Include="BlockCache.cs" />
+    <Compile Include="Cache.cs" />
     <Compile Include="CachingChainStore.cs" />
     <Compile Include="EvercoinModule.cs" />
     <Compile Include="NetworkRunner.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SomeNetworkParams.cs" />
-    <Compile Include="TransactionCache.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
