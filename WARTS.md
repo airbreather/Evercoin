@@ -7,9 +7,6 @@ environment, not things related to the current work-in-progress implementations.
 
 1.  Too much repetition in translating byte arrays to/from BigInteger.
     -   A specialized struct should encapsulate this.
-1.  The version of Rx I use is technically released under a restrictive license.
-    -   It's possible to just pull in the Apache-licensed source and build it
-        myself.
 1.  ITransaction.LockTime requires the caller to know magical things in order to
     use it appropriately.
     -   A specialized struct should encapsulate this.
