@@ -1,6 +1,6 @@
 [submodule "external/Secp256k1.NET"]
 	path = external/Secp256k1.NET
-	url = https://github.com/joshlang/Secp256k1.NET
+	url = git://github.com/joshlang/Secp256k1.NET.git
 [submodule "external/rx"]
 	path = external/rx
 	url = https://git01.codeplex.com/rx
