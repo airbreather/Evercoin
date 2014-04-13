@@ -116,7 +116,7 @@ namespace Evercoin.TransactionScript
             this.hashAlgorithmStore = hashAlgorithmStore;
         }
 
-        public override ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<StackItem> mainStack, Stack<StackItem> alternateStack)
+        public override ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<FancyByteArray> mainStack, Stack<FancyByteArray> alternateStack)
         {
             if (scriptOperations == null)
             {
@@ -149,7 +149,7 @@ namespace Evercoin.TransactionScript
                    ScriptEvaluationResult.False;
         }
 
-        private bool Eval(TransactionScriptOperation[] ops, int pos, ref int lastSep, Stack<StackItem> mainStack, Stack<StackItem> alternateStack, Stack<bool> conditionalStack, ISignatureChecker signatureChecker)
+        private bool Eval(TransactionScriptOperation[] ops, int pos, ref int lastSep, Stack<FancyByteArray> mainStack, Stack<FancyByteArray> alternateStack, Stack<bool> conditionalStack, ISignatureChecker signatureChecker)
         {
             TransactionScriptOperation op = ops[pos];
             ScriptOpcode opcode = (ScriptOpcode)op.Opcode;
@@ -267,8 +267,8 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_15:
                 case ScriptOpcode.OP_16:
                 {
-                    BigInteger valueToPush = opcode - ScriptOpcode.OPCODE_IMMEDIATELY_BEFORE_OP_1;
-                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(valueToPush, Endianness.LittleEndian));
+                    byte valueToPush = opcode - ScriptOpcode.OPCODE_IMMEDIATELY_BEFORE_OP_1;
+                    mainStack.Push(FancyByteArray.CreateFromBytes(valueToPush.AsSingleElementEnumerable()));
                     return true;
                 }
 
@@ -327,7 +327,7 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_DUP:
                 case ScriptOpcode.OP_IFDUP:
                 {
-                    StackItem item = mainStack.Peek();
+                    FancyByteArray item = mainStack.Peek();
                     if (opcode == ScriptOpcode.OP_DUP || item)
                     {
                         mainStack.Push(item);
@@ -338,25 +338,25 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOpcode.OP_DEPTH:
                 {
-                    BigInteger depth = mainStack.Count;
-                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(depth, Endianness.LittleEndian));
+                    int depth = mainStack.Count;
+                    mainStack.Push(BitConverter.GetBytes(depth).LittleEndianToOrFromBitConverterEndianness());
                     return true;
                 }
 
                 case ScriptOpcode.OP_SIZE:
                 {
                     FancyByteArray item = mainStack.Peek();
-                    BigInteger size = item.Value.Length;
+                    int size = item.Value.Length;
 
-                    mainStack.Push(FancyByteArray.CreateFromBigIntegerWithDesiredEndianness(size, Endianness.LittleEndian));
+                    mainStack.Push(BitConverter.GetBytes(size).LittleEndianToOrFromBitConverterEndianness());
                     return true;
                 }
 
                 case ScriptOpcode.OP_2DROP:
                 case ScriptOpcode.OP_2DUP:
                 {
-                    StackItem firstItem = mainStack.Pop();
-                    StackItem secondItem = mainStack.Pop();
+                    FancyByteArray firstItem = mainStack.Pop();
+                    FancyByteArray secondItem = mainStack.Pop();
 
                     if (opcode == ScriptOpcode.OP_2DUP)
                     {
@@ -371,9 +371,9 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOpcode.OP_3DUP:
                 {
-                    StackItem firstItem = mainStack.Pop();
-                    StackItem secondItem = mainStack.Pop();
-                    StackItem thirdItem = mainStack.Pop();
+                    FancyByteArray firstItem = mainStack.Pop();
+                    FancyByteArray secondItem = mainStack.Pop();
+                    FancyByteArray thirdItem = mainStack.Pop();
 
                     mainStack.Push(thirdItem);
                     mainStack.Push(secondItem);
@@ -387,10 +387,10 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOpcode.OP_2OVER:
                 {
-                    StackItem firstItem = mainStack.Pop();
-                    StackItem secondItem = mainStack.Pop();
-                    StackItem thirdItem = mainStack.Pop();
-                    StackItem fourthItem = mainStack.Pop();
+                    FancyByteArray firstItem = mainStack.Pop();
+                    FancyByteArray secondItem = mainStack.Pop();
+                    FancyByteArray thirdItem = mainStack.Pop();
+                    FancyByteArray fourthItem = mainStack.Pop();
 
                     mainStack.Push(fourthItem);
                     mainStack.Push(thirdItem);
@@ -404,12 +404,12 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOpcode.OP_2ROT:
                 {
-                    StackItem firstItem = mainStack.Pop();
-                    StackItem secondItem = mainStack.Pop();
-                    StackItem thirdItem = mainStack.Pop();
-                    StackItem fourthItem = mainStack.Pop();
-                    StackItem fifthItem = mainStack.Pop();
-                    StackItem sixthItem = mainStack.Pop();
+                    FancyByteArray firstItem = mainStack.Pop();
+                    FancyByteArray secondItem = mainStack.Pop();
+                    FancyByteArray thirdItem = mainStack.Pop();
+                    FancyByteArray fourthItem = mainStack.Pop();
+                    FancyByteArray fifthItem = mainStack.Pop();
+                    FancyByteArray sixthItem = mainStack.Pop();
 
                     mainStack.Push(fourthItem);
                     mainStack.Push(thirdItem);
@@ -423,10 +423,10 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOpcode.OP_2SWAP:
                 {
-                    StackItem firstItem = mainStack.Pop();
-                    StackItem secondItem = mainStack.Pop();
-                    StackItem thirdItem = mainStack.Pop();
-                    StackItem fourthItem = mainStack.Pop();
+                    FancyByteArray firstItem = mainStack.Pop();
+                    FancyByteArray secondItem = mainStack.Pop();
+                    FancyByteArray thirdItem = mainStack.Pop();
+                    FancyByteArray fourthItem = mainStack.Pop();
 
                     mainStack.Push(secondItem);
                     mainStack.Push(firstItem);
@@ -439,8 +439,8 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_NIP:
                 case ScriptOpcode.OP_OVER:
                 {
-                    StackItem innocentBystander = mainStack.Pop();
-                    StackItem secondFromTop = mainStack.Pop();
+                    FancyByteArray innocentBystander = mainStack.Pop();
+                    FancyByteArray secondFromTop = mainStack.Pop();
                     mainStack.Push(innocentBystander);
 
                     if (opcode == ScriptOpcode.OP_OVER)
@@ -462,14 +462,14 @@ namespace Evercoin.TransactionScript
 
                     // we need somewhere to store all the stack items we pop,
                     // so we can push them back afterwards.
-                    Stack<StackItem> temporaryStack = new Stack<StackItem>();
+                    Stack<FancyByteArray> temporaryStack = new Stack<FancyByteArray>();
                     while (fetchDepth-- > 0)
                     {
-                        StackItem nextItem = mainStack.Pop();
+                        FancyByteArray nextItem = mainStack.Pop();
                         temporaryStack.Push(nextItem);
                     }
 
-                    StackItem chosenItem = mainStack.Peek();
+                    FancyByteArray chosenItem = mainStack.Peek();
                     if (opcode == ScriptOpcode.OP_ROLL)
                     {
                         mainStack.Pop();
@@ -477,7 +477,7 @@ namespace Evercoin.TransactionScript
 
                     while (temporaryStack.Count > 0)
                     {
-                        StackItem nextItem = temporaryStack.Pop();
+                        FancyByteArray nextItem = temporaryStack.Pop();
                         mainStack.Push(nextItem);
                     }
 
@@ -487,9 +487,9 @@ namespace Evercoin.TransactionScript
 
                 case ScriptOpcode.OP_ROT:
                 {
-                    StackItem firstItem = mainStack.Pop();
-                    StackItem secondItem = mainStack.Pop();
-                    StackItem thirdItem = mainStack.Pop();
+                    FancyByteArray firstItem = mainStack.Pop();
+                    FancyByteArray secondItem = mainStack.Pop();
+                    FancyByteArray thirdItem = mainStack.Pop();
 
                     mainStack.Push(secondItem);
                     mainStack.Push(firstItem);
@@ -501,8 +501,8 @@ namespace Evercoin.TransactionScript
                 case ScriptOpcode.OP_SWAP:
                 case ScriptOpcode.OP_TUCK:
                 {
-                    StackItem firstItem = mainStack.Pop();
-                    StackItem secondItem = mainStack.Pop();
+                    FancyByteArray firstItem = mainStack.Pop();
+                    FancyByteArray secondItem = mainStack.Pop();
 
                     if (opcode == ScriptOpcode.OP_TUCK)
                     {
@@ -721,8 +721,8 @@ namespace Evercoin.TransactionScript
 
                     IHashAlgorithm hashAlgorithm = this.hashAlgorithmStore.GetHashAlgorithm(hashAlgorithmIdentifier);
 
-                    FancyByteArray dataToHash = mainStack.Pop();
-                    FancyByteArray hash = hashAlgorithm.CalculateHash(dataToHash.Value);
+                    byte[] dataToHash = mainStack.Pop();
+                    FancyByteArray hash = hashAlgorithm.CalculateHash(dataToHash);
                     mainStack.Push(hash);
                     return true;
                 }
@@ -797,10 +797,10 @@ namespace Evercoin.TransactionScript
                     while (publicKeyToAttempt != null &&
                            signatureToValidate != null)
                     {
-                        FancyByteArray signature = signatureToValidate.Value;
-                        FancyByteArray publicKey = publicKeyToAttempt.Value;
+                        byte[] signature = signatureToValidate.Value;
+                        byte[] publicKey = publicKeyToAttempt.Value;
 
-                        if (signatureChecker.CheckSignature(signature.Value, publicKey.Value, subscript))
+                        if (signatureChecker.CheckSignature(signature, publicKey, subscript))
                         {
                             validSignatureCount++;
                             signatureToValidate = signatureToValidate.Next;

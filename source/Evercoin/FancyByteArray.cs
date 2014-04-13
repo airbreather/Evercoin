@@ -39,6 +39,18 @@ namespace Evercoin
             return CreateFromBytes(data);
         }
 
+        public static implicit operator FancyByteArray(bool value)
+        {
+            return value ?
+                CreateFromBytes(new byte[] { 1 }) :
+                CreateFromBytes(Enumerable.Empty<byte>());
+        }
+
+        public static implicit operator bool(FancyByteArray fancyByteArray)
+        {
+            return fancyByteArray.Value.Length > 0;
+        }
+
         public static FancyByteArray CreateLittleEndianFromHexString(string hexString, Endianness sourceEndianness)
         {
             byte[] data = ByteTwiddling.HexStringToByteArray(hexString);
@@ -191,10 +203,8 @@ namespace Evercoin
 
         public override int GetHashCode()
         {
-            HashCodeBuilder builder = new HashCodeBuilder()
-                .HashWith(this.NumericValue);
-
-            return builder;
+            return HashCodeBuilder.BeginHashCode()
+                .MixHashCodeWith(this.NumericValue);
         }
 
         public int CompareTo(FancyByteArray other)

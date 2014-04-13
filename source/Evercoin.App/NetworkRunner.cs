@@ -3,7 +3,6 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
-using System.Numerics;
 using System.Reactive.Concurrency;
 using System.Reactive.Linq;
 using System.Threading;
@@ -43,21 +42,21 @@ namespace Evercoin.App
 
         public async Task Run(int port, CancellationToken token)
         {
+            HashSet<ulong> heights = new HashSet<ulong>();
             List<FancyByteArray> blockIdentifiers = new List<FancyByteArray>();
-            ulong highestKnownBlock = 0;
-            while (true)
+
+            for (ulong highestKnownBlock = 0; highestKnownBlock < this.blockChain.BlockCount; highestKnownBlock++)
             {
-                FancyByteArray? blockIdentifier = this.blockChain.GetIdentifierOfBlockAtHeight(highestKnownBlock);
-                if (!blockIdentifier.HasValue)
+                FancyByteArray blockIdentifier;
+                if (!this.blockChain.TryGetIdentifierOfBlockAtHeight(highestKnownBlock, out blockIdentifier))
                 {
-                    break;
+                    throw new Exception("Block chain is discontinuous!");
                 }
 
                 blockIdentifiers.Add(blockIdentifier.Value);
-                highestKnownBlock++;
+                heights.Add(highestKnownBlock);
             }
 
-            HashSet<ulong> heights = new HashSet<ulong>();
             long validTransactions = 0;
 
             ConcurrentDictionary<ProtocolInventoryVector, ProtocolInventoryVector> knownInventory = new ConcurrentDictionary<ProtocolInventoryVector, ProtocolInventoryVector>();
@@ -75,62 +74,73 @@ namespace Evercoin.App
                 }
             );
             this.network.ReceivedInventoryOffers.Subscribe(async x => await this.network.RequestInventoryAsync(x.Item2.Where(y => knownInventory.TryAdd(y, y)).GetArray(), token).ConfigureAwait(false));
-            this.network.ReceivedBlocks.SubscribeOn(Scheduler.Immediate).ObserveOn(TaskPoolScheduler.Default).Subscribe(async x => await this.HandleBlock(x.Item2, token).ConfigureAwait(false));
-            this.network.ReceivedTransactions.SubscribeOn(Scheduler.Immediate).ObserveOn(TaskPoolScheduler.Default).Subscribe(async x => await this.HandleTransaction(x.Item2, x.Item3, x.Item4, token).ConfigureAwait(false));
+            this.network.ReceivedBlocks.SubscribeOn(Scheduler.Immediate).ObserveOn(TaskPoolScheduler.Default).Subscribe(x => this.HandleBlock(x.Item2));
+            this.network.ReceivedTransactions.SubscribeOn(Scheduler.Immediate).ObserveOn(TaskPoolScheduler.Default).Subscribe(x => this.HandleTransaction(x.Item2, x.Item3, x.Item4));
 
             this.network.ReceivedVersionAcknowledgements.Subscribe
             (
                 async x =>
                 {
-                    ulong startingBlockHeight = highestKnownBlock;
-                    ulong currentBlockHeight = startingBlockHeight;
                     bool started = false;
                     ulong bestHeight = x.HighestKnownBlock;
+                    ulong currentBlockCount = this.blockChain.BlockCount;
 
-                    this.blockChain.RemoveBlocksAboveHeight(bestHeight);
-
+                    SpinLock locker = new SpinLock();
                     Action updateBlockIdentifiers = () =>
                     {
-                        lock (blockIdentifiers)
+                        bool _ = false;
+                        locker.Enter(ref _);
+                        try
                         {
-                            for (ulong i = 0; i < currentBlockHeight; i++)
+                            ulong i = 0;
+                            while (true)
                             {
-                                if (heights.Add(i))
+                                if (heights.Contains(i))
                                 {
-                                    blockIdentifiers.Add(this.blockChain.GetIdentifierOfBlockAtHeight(i).Value);
+                                    i++;
+                                    continue;
                                 }
+
+                                FancyByteArray blockIdentifier;
+                                if (this.blockChain.TryGetIdentifierOfBlockAtHeight(i, out blockIdentifier))
+                                {
+                                    blockIdentifiers.Add(blockIdentifier);
+                                    heights.Add(i);
+                                }
+                                else
+                                {
+                                    break;
+                                }
+
+                                i++;
                             }
+                        }
+                        finally
+                        {
+                            locker.Exit();
                         }
                     };
 
-                    ulong lastHeadersRequestedHeight = currentBlockHeight;
+                    ulong headersLastRequestedAtCount = currentBlockCount;
 
                     // Start by pulling all the headers
                     while (!token.IsCancellationRequested &&
-                            currentBlockHeight < bestHeight)
+                            bestHeight > this.blockChain.BlockCount)
                     {
                         if (started)
                         {
                             await Task.Run(() => SpinWait.SpinUntil(() => token.IsCancellationRequested ||
-                                                                            currentBlockHeight >= bestHeight ||
-                                                                            (currentBlockHeight = this.blockChain.BlockCount) - lastHeadersRequestedHeight == 2000),
+                                                                            this.blockChain.BlockCount >= bestHeight ||
+                                                                            this.blockChain.BlockCount - headersLastRequestedAtCount == 2000),
                                 token).ConfigureAwait(false);
 
                             updateBlockIdentifiers();
                         }
 
-                        lastHeadersRequestedHeight = currentBlockHeight;
+                        headersLastRequestedAtCount = this.blockChain.BlockCount;
 
                         started = true;
                         await this.network.RequestBlockOffersAsync(x, blockIdentifiers, BlockRequestType.HeadersOnly, token).ConfigureAwait(false);
-
-                        if (currentBlockHeight >= bestHeight)
-                        {
-                            updateBlockIdentifiers();
-                            break;
-                        }
-
-                        await Task.Run(() => SpinWait.SpinUntil(() => token.IsCancellationRequested || currentBlockHeight >= bestHeight || (currentBlockHeight = this.blockChain.BlockCount) != lastHeadersRequestedHeight), token).ConfigureAwait(false);
                     }
 
                     updateBlockIdentifiers();
@@ -139,32 +149,58 @@ namespace Evercoin.App
 
                     // Now, validate all the transactions and blocks.
                     IHashAlgorithm txHashAlgorithm = this.currencyParameters.HashAlgorithmStore.GetHashAlgorithm(this.currencyParameters.ChainParameters.TransactionHashAlgorithmIdentifier);
-                    SpinWait waiter = new SpinWait();
-                    for (this.validationBlock = 1; this.validationBlock < currentBlockHeight; this.validationBlock++)
+                    for (this.validationBlock = 1; this.validationBlock < this.blockChain.BlockCount;)
                     {
-                        FancyByteArray? possibleBlockIdentifier = this.blockChain.GetIdentifierOfBlockAtHeight(this.validationBlock);
-                        if (!possibleBlockIdentifier.HasValue)
-                        {
-                            waiter.SpinOnce();
-                            continue;
-                        }
-
-                        waiter.Reset();
-
-                        FancyByteArray blockIdentifier = possibleBlockIdentifier.Value;
-
-                        IBlock block = await this.chainStore.GetBlockAsync(blockIdentifier, token).ConfigureAwait(false);
+                        FancyByteArray blockIdentifier = this.blockChain.GetIdentifierOfBlockAtHeight(this.validationBlock);
+                        IBlock block = this.chainStore.GetBlock(blockIdentifier);
 
                         FancyByteArray expectedMerkleRoot = block.TransactionIdentifiers.Data;
                         FancyByteArray actualMerkleRoot = new FancyByteArray();
-                        HashSet<BigInteger> foundTransactions = new HashSet<BigInteger>();
+                        HashSet<FancyByteArray> checkedTransactions = new HashSet<FancyByteArray>();
+                        SpinWait waiter = new SpinWait();
                         while (true)
                         {
                             bool merkleRootUpdated = false;
-                            List<FancyByteArray> transactionsForBlock = this.blockChain.GetTransactionsForBlock(blockIdentifier).ToList();
-                            foreach (FancyByteArray transactionIdentifier in transactionsForBlock.Where(transactionIdentifier => foundTransactions.Add(transactionIdentifier) && !transactionIdentifier.NumericValue.IsZero))
+                            IEnumerable<FancyByteArray> transactionsForBlock;
+                            bool foundTransactions = this.blockChain.TryGetTransactionsForBlock(blockIdentifier, out transactionsForBlock);
+                            if (foundTransactions)
                             {
-                                ITransaction transaction = await this.chainStore.GetTransactionAsync(transactionIdentifier, token).ConfigureAwait(false);
+                                transactionsForBlock = transactionsForBlock.ToList();
+                            }
+
+                            bool knownMissing = !foundTransactions || checkedTransactions.IsSupersetOf(transactionsForBlock);
+                            if (knownMissing)
+                            {
+                                if (this.validationBlock >= lastFullBlockRequestedHeight)
+                                {
+                                    const int PacketsToRequest = 10;
+                                    int packetsRequested = 0;
+
+                                    // Now, get all the transactions.
+                                    lastFullBlockRequestedHeight = this.validationBlock;
+                                    while (packetsRequested < PacketsToRequest)
+                                    {
+                                        await this.network.RequestBlockOffersAsync(x, blockIdentifiers.GetRange(0, (int)lastFullBlockRequestedHeight), BlockRequestType.IncludeTransactions, token).ConfigureAwait(false);
+
+                                        lastFullBlockRequestedHeight += 500;
+                                        if (lastFullBlockRequestedHeight >= this.blockChain.BlockCount)
+                                        {
+                                            await this.network.RequestBlockOffersAsync(x, blockIdentifiers.GetRange(0, (int)this.blockChain.BlockCount), BlockRequestType.IncludeTransactions, token).ConfigureAwait(false);
+                                            break;
+                                        }
+
+                                        packetsRequested++;
+                                    }
+                                }
+
+                                waiter.SpinOnce();
+                                continue;
+                            }
+
+                            transactionsForBlock = transactionsForBlock.ToList();
+                            Parallel.ForEach(transactionsForBlock.Where(checkedTransactions.Add), transactionIdentifier =>
+                            {
+                                ITransaction transaction = this.chainStore.GetTransaction(transactionIdentifier);
                                 ValidationResult transactionValidationResult = this.currencyParameters.ChainValidator.ValidateTransaction(transaction);
                                 if (!transactionValidationResult)
                                 {
@@ -174,9 +210,8 @@ namespace Evercoin.App
                                     throw new InvalidOperationException(exceptionMessage);
                                 }
 
-                                Interlocked.Increment(ref validTransactions);
                                 merkleRootUpdated = true;
-                            }
+                            });
 
                             if (merkleRootUpdated)
                             {
@@ -190,23 +225,6 @@ namespace Evercoin.App
                                 break;
                             }
 
-                            if (this.validationBlock > lastFullBlockRequestedHeight)
-                            {
-                                // Now, get all the transactions.
-                                lastFullBlockRequestedHeight = this.validationBlock;
-                                while (true)
-                                {
-                                    await this.network.RequestBlockOffersAsync(x, ((IReadOnlyList<FancyByteArray>)blockIdentifiers).GetRange(0, (int)lastFullBlockRequestedHeight), BlockRequestType.IncludeTransactions, token);
-                                    if (lastFullBlockRequestedHeight >= currentBlockHeight)
-                                    {
-                                        break;
-                                    }
-
-                                    lastFullBlockRequestedHeight += 500;
-                                    lastFullBlockRequestedHeight = Math.Min(lastFullBlockRequestedHeight, currentBlockHeight);
-                                }
-                            }
-
                             waiter.SpinOnce();
                         }
 
@@ -218,6 +236,9 @@ namespace Evercoin.App
                             Console.WriteLine(exceptionMessage);
                             throw new InvalidOperationException(exceptionMessage);
                         }
+
+                        validTransactions += checkedTransactions.Count;
+                        this.validationBlock++;
                     }
                 }
             );
@@ -237,41 +258,41 @@ namespace Evercoin.App
 
             this.network.Start(token);
             await Task.WhenAll(endPoints.Select(endPoint => this.network.ConnectToPeerAsync(new ProtocolNetworkAddress(null, 1, endPoint.Address, (ushort)endPoint.Port), token))).ConfigureAwait(false);
-            await Task.Run
-            (
-                async () =>
-                {
+        ////await Task.Run
+        ////(
+        ////    async () =>
+        ////    {
                     ulong transactionCount = 0;
                     ulong highestBlockWithTransactions = 1;
                     while (!token.IsCancellationRequested)
                     {
-                        await Task.Delay(1000, token).ConfigureAwait(false);
+                        await Task.Delay(50, token).ConfigureAwait(false);
                         while (true)
                         {
-                            FancyByteArray? nextBlock = this.blockChain.GetIdentifierOfBlockAtHeight(highestBlockWithTransactions + 1);
-                            if (!nextBlock.HasValue)
+                            FancyByteArray nextBlock;
+                            if (!this.blockChain.TryGetIdentifierOfBlockAtHeight(highestBlockWithTransactions + 1, out nextBlock))
                             {
                                 break;
                             }
 
-                            if (!this.blockChain.GetTransactionsForBlock(nextBlock.Value).Any())
+                            IEnumerable<FancyByteArray> transactionsForNextBlock;
+                            if (!this.blockChain.TryGetTransactionsForBlock(nextBlock, out transactionsForNextBlock))
                             {
                                 break;
                             }
 
-                            FancyByteArray currentBlock = this.blockChain.GetIdentifierOfBlockAtHeight(highestBlockWithTransactions).Value;
-                            transactionCount += (ulong)this.blockChain.GetTransactionsForBlock(currentBlock).Count();
+                            transactionCount += (ulong)transactionsForNextBlock.Count();
                             highestBlockWithTransactions++;
                         }
 
                         Console.Write("\rBlocks: ({0,8}) // Found Transactions: ({1,8}) [on block {4, 8}] // Validated Transactions: ({2, 8}) [on block {3, 8}]", this.blockChain.BlockCount, transactionCount, validTransactions, this.validationBlock, highestBlockWithTransactions);
                     }
-                },
-                token
-            );
+        ////    },
+        ////    token
+        ////);
         }
 
-        private async Task HandleBlock(IBlock block, CancellationToken token)
+        private void HandleBlock(IBlock block)
         {
             Guid blockHashAlgorithmIdentifier = this.currencyParameters.ChainParameters.BlockHashAlgorithmIdentifier;
             IHashAlgorithm blockHashAlgorithm = this.currencyParameters.HashAlgorithmStore.GetHashAlgorithm(blockHashAlgorithmIdentifier);
@@ -279,19 +300,20 @@ namespace Evercoin.App
             FancyByteArray dataToHash = this.chainSerializer.GetBytesForBlock(block);
             FancyByteArray blockIdentifier = blockHashAlgorithm.CalculateHash(dataToHash.Value);
 
-            if (this.chainStore.ContainsBlock(blockIdentifier))
+            if (!this.chainStore.ContainsBlock(blockIdentifier))
             {
-                return;
+                this.chainStore.PutBlock(blockIdentifier, block);
             }
 
-            ulong? prevBlockHeight = null;
-            var task = this.chainStore.PutBlockAsync(blockIdentifier, block, token).ConfigureAwait(false);
-            SpinWait.SpinUntil(() => (prevBlockHeight = this.blockChain.GetHeightOfBlock(block.PreviousBlockIdentifier)).HasValue);
-            this.blockChain.AddBlockAtHeight(blockIdentifier, prevBlockHeight.Value + 1);
-            await task;
+            ulong blockHeight;
+            if (!this.blockChain.TryGetHeightOfBlock(blockIdentifier, out blockHeight))
+            {
+                ulong prevBlockHeight = this.blockChain.GetHeightOfBlock(block.PreviousBlockIdentifier);
+                this.blockChain.AddBlockAtHeight(blockIdentifier, prevBlockHeight + 1);
+            }
         }
 
-        private async Task HandleTransaction(ITransaction transaction, FancyByteArray containingBlockIdentifier, ulong indexInBlock, CancellationToken token)
+        private void HandleTransaction(ITransaction transaction, FancyByteArray containingBlockIdentifier, ulong indexInBlock)
         {
             byte[] dataToHash = this.chainSerializer.GetBytesForTransaction(transaction);
             Guid txHashAlgorithmIdentifier = this.currencyParameters.ChainParameters.TransactionHashAlgorithmIdentifier;
@@ -299,9 +321,12 @@ namespace Evercoin.App
 
             FancyByteArray transactionIdentifier = txHashAlgorithm.CalculateHash(dataToHash);
 
-            await this.chainStore.PutTransactionAsync(transactionIdentifier, transaction, token).ConfigureAwait(false);
+            if (!this.chainStore.ContainsTransaction(transactionIdentifier))
+            {
+                this.chainStore.PutTransaction(transactionIdentifier, transaction);
+            }
 
-            if (!containingBlockIdentifier.NumericValue.IsZero)
+            if (containingBlockIdentifier)
             {
                 this.blockChain.AddTransactionToBlock(transactionIdentifier, containingBlockIdentifier, indexInBlock);
             }

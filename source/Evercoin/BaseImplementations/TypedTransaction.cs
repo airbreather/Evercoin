@@ -65,13 +65,11 @@ namespace Evercoin.BaseImplementations
         /// </returns>
         public override int GetHashCode()
         {
-            HashCodeBuilder builder = new HashCodeBuilder()
-                .HashWith(this.Version)
-                .HashWith(this.LockTime)
-                .HashWithEnumerable(this.Inputs)
-                .HashWithEnumerable(this.Outputs);
-
-            return builder;
+            return HashCodeBuilder.BeginHashCode()
+                .MixHashCodeWith(this.Version)
+                .MixHashCodeWith(this.LockTime)
+                .MixHashCodeWithEnumerable(this.Inputs)
+                .MixHashCodeWithEnumerable(this.Outputs);
         }
     }
 }

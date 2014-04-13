@@ -10,15 +10,7 @@ using LevelDb;
 
 namespace Evercoin.Storage
 {
-    internal enum StaticDataPrefix : byte
-    {
-        HeightToBlockId,
-        BlockIdToHeight,
-        BlockToTransaction,
-        TransactionToBlock
-    }
-
-    public sealed class LevelDBBlockChain : IBlockChain
+    public sealed class LevelDBBlockChain : DisposableObject, IBlockChain
     {
         private const byte HeightToBlock = 0;
 
@@ -36,6 +28,14 @@ namespace Evercoin.Storage
 
         private readonly ConcurrentDictionary<FancyByteArray, object> blockLocks = new ConcurrentDictionary<FancyByteArray, object>();
 
+        private readonly Waiter<ulong> blockHeightWaiter = new Waiter<ulong>();
+
+        private readonly Waiter<FancyByteArray> blockIdWaiter = new Waiter<FancyByteArray>();
+
+        private readonly Waiter<FancyByteArray> txIdWaiter = new Waiter<FancyByteArray>();
+
+        private ulong? blockCount;
+
         public LevelDBBlockChain()
         {
             Cheating.CopyLevelDbDll();
@@ -47,7 +47,7 @@ namespace Evercoin.Storage
             databaseOptions.CompressionOption = CompressionOption.SnappyCompression;
 
             // Use a 256 MB cache here.
-            databaseOptions.OverriddenLruCache = factory.CreateLRUCache(2 << 28);
+            databaseOptions.OverriddenLruCache = factory.CreateLRUCache(2 << 27);
 
             this.db = factory.OpenDatabase(Name, databaseOptions);
         }
@@ -56,101 +56,155 @@ namespace Evercoin.Storage
         {
             get
             {
-                byte[] metadataKey = { Metadata };
-                byte[] metadata = this.db.Get(metadataKey) ?? new byte[16];
-                return BitConverter.ToUInt64(metadata, 0);
+                ulong? currentBlockCount = this.blockCount;
+                if (currentBlockCount.HasValue)
+                {
+                    return currentBlockCount.Value;
+                }
+
+                lock (metadataLock)
+                {
+                    currentBlockCount = this.blockCount;
+                    if (currentBlockCount.HasValue)
+                    {
+                        return currentBlockCount.Value;
+                    }
+
+                    byte[] metadataKey = { Metadata };
+                    byte[] metadata = this.db.Get(metadataKey) ?? new byte[16];
+                    this.blockCount = BitConverter.ToUInt64(metadata, 0);
+                    return this.blockCount.Value;
+                }
             }
         }
 
-        public FancyByteArray? GetIdentifierOfBlockAtHeight(ulong height)
+        public FancyByteArray GetIdentifierOfBlockAtHeight(ulong height)
+        {
+            FancyByteArray result;
+            while (!this.TryGetIdentifierOfBlockAtHeight(height, out result))
+            {
+                this.blockHeightWaiter.WaitFor(height);
+            }
+
+            return result;
+        }
+
+        public FancyByteArray GetIdentifierOfBlockWithTransaction(FancyByteArray transactionIdentifier)
+        {
+            FancyByteArray result;
+            while (!this.TryGetIdentifierOfBlockWithTransaction(transactionIdentifier, out result))
+            {
+                this.txIdWaiter.WaitFor(transactionIdentifier);
+            }
+
+            return result;
+        }
+
+        public ulong GetHeightOfBlock(FancyByteArray blockIdentifier)
+        {
+            ulong result;
+            while (!this.TryGetHeightOfBlock(blockIdentifier, out result))
+            {
+                this.blockIdWaiter.WaitFor(blockIdentifier);
+            }
+
+            return result;
+        }
+
+        public IEnumerable<FancyByteArray> GetTransactionsForBlock(FancyByteArray blockIdentifier)
+        {
+            IEnumerable<FancyByteArray> result;
+            while (!this.TryGetTransactionsForBlock(blockIdentifier, out result))
+            {
+                this.blockIdWaiter.WaitFor(blockIdentifier);
+            }
+
+            return result;
+        }
+
+        public bool TryGetIdentifierOfBlockAtHeight(ulong height, out FancyByteArray blockIdentifier)
         {
             byte[] serializedHeight = BitConverter.GetBytes(height);
             byte[] key = new byte[serializedHeight.Length + 1];
             key[0] = HeightToBlock;
             Buffer.BlockCopy(serializedHeight, 0, key, 1, serializedHeight.Length);
 
-            byte[] value = this.db.Get(key);
-
-            if (value == null)
+            byte[] data = this.db.Get(key);
+            if (data == null)
             {
-                return default(FancyByteArray?);
+                blockIdentifier = default(FancyByteArray);
+                return false;
             }
 
-            return value;
+            blockIdentifier = data;
+            return true;
         }
 
-        public FancyByteArray? GetIdentifierOfBlockWithTransaction(FancyByteArray transactionIdentifier)
+        public bool TryGetIdentifierOfBlockWithTransaction(FancyByteArray transactionIdentifier, out FancyByteArray blockIdentifier)
         {
             byte[] serializedTransactionId = transactionIdentifier;
             byte[] key = new byte[serializedTransactionId.Length + 1];
             key[0] = TransactionToBlock;
             Buffer.BlockCopy(serializedTransactionId, 0, key, 1, serializedTransactionId.Length);
 
-            byte[] value = this.db.Get(key);
-
-            if (value == null)
+            byte[] data = this.db.Get(key);
+            if (data == null)
             {
-                return default(FancyByteArray?);
+                blockIdentifier = default(FancyByteArray);
+                return false;
             }
 
-            return value;
+            blockIdentifier = this.db.Get(key);
+            return true;
         }
 
-        public ulong? GetHeightOfBlock(FancyByteArray blockIdentifier)
+        public bool TryGetHeightOfBlock(FancyByteArray blockIdentifier, out ulong height)
         {
             byte[] serializedBlockId = blockIdentifier;
             byte[] key = new byte[serializedBlockId.Length + 1];
             key[0] = BlockToHeight;
             Buffer.BlockCopy(serializedBlockId, 0, key, 1, serializedBlockId.Length);
 
-            byte[] value = this.db.Get(key);
-
-            if (value == null)
+            byte[] data = this.db.Get(key);
+            if (data == null)
             {
-                return default(ulong?);
+                height = 0;
+                return false;
             }
 
-            return BitConverter.ToUInt64(value, 0);
+            height = BitConverter.ToUInt64(data, 0);
+            return true;
         }
 
-        public IEnumerable<FancyByteArray> GetTransactionsForBlock(FancyByteArray blockIdentifier)
+        public bool TryGetTransactionsForBlock(FancyByteArray blockIdentifier, out IEnumerable<FancyByteArray> transactionIdentifiers)
         {
             byte[] serializedBlockId = blockIdentifier;
             byte[] key = new byte[serializedBlockId.Length + 1];
             key[0] = BlockToTransaction;
             Buffer.BlockCopy(serializedBlockId, 0, key, 1, serializedBlockId.Length);
 
-            byte[] value = this.db.Get(key);
+            byte[] data = this.db.Get(key);
 
-            if (value == null)
+            if (data == null)
             {
-                yield break;
+                transactionIdentifiers = null;
+                return false;
             }
 
-            ulong transactionCount = BitConverter.ToUInt64(value, 0);
-
-            int offset = 8;
-            for (ulong i = 0; i < transactionCount; i++)
-            {
-                int l = (int)BitConverter.ToUInt64(value, offset);
-                offset += 8;
-                IReadOnlyList<byte> serializedTransaction = value.GetRange(offset, l);
-                offset += l;
-                yield return FancyByteArray.CreateFromBytes(serializedTransaction);
-            }
+            transactionIdentifiers = GetTransactionIdentifiers(data);
+            return true;
         }
 
         public void RemoveBlocksAboveHeight(ulong height)
         {
-            ulong blockCount = this.BlockCount;
-            if (height > blockCount)
+            if (height >= this.BlockCount)
             {
                 return;
             }
 
-            this.IncrementBlockCount(height++);
+            this.SetBlockCount(++height, false);
 
-            for (; height < blockCount; height++)
+            for (; height < this.BlockCount; height++)
             {
                 byte[] serializedHeight = BitConverter.GetBytes(height);
                 byte[] key = new byte[serializedHeight.Length + 1];
@@ -179,12 +233,24 @@ namespace Evercoin.Storage
             }
         }
 
+        private static IEnumerable<FancyByteArray> GetTransactionIdentifiers(byte[] data)
+        {
+            ulong transactionCount = BitConverter.ToUInt64(data, 0);
+
+            int offset = 8;
+            for (ulong i = 0; i < transactionCount; i++)
+            {
+                int l = (int)BitConverter.ToUInt64(data, offset);
+                offset += 8;
+                IReadOnlyList<byte> serializedTransaction = data.GetRange(offset, l);
+                offset += l;
+                yield return FancyByteArray.CreateFromBytes(serializedTransaction);
+            }
+        }
+
         public void AddBlockAtHeight(FancyByteArray block, ulong height)
         {
-            if (height > this.BlockCount)
-            {
-                this.IncrementBlockCount(height);
-            }
+            this.SetBlockCount(height + 1, true);
 
             byte[] serializedBlockId = block;
             byte[] serializedHeight = BitConverter.GetBytes(height);
@@ -196,15 +262,27 @@ namespace Evercoin.Storage
 
             Buffer.BlockCopy(serializedBlockId, 0, blockToHeightKey, 1, serializedBlockId.Length);
             Buffer.BlockCopy(serializedHeight, 0, heightToBlockKey, 1, serializedHeight.Length);
+
             this.db.Put(blockToHeightKey, serializedHeight);
+            this.blockHeightWaiter.SetEventFor(height);
+
             this.db.Put(heightToBlockKey, serializedBlockId);
+            this.blockIdWaiter.SetEventFor(block);
         }
 
         public void AddTransactionToBlock(FancyByteArray transactionIdentifier, FancyByteArray blockIdentifier, ulong index)
         {
             lock (this.blockLocks.GetOrAdd(blockIdentifier, _ => new object()))
             {
-                FancyByteArray[] currentTransactions = this.GetTransactionsForBlock(blockIdentifier).ToArray();
+                byte[] serializedBlockId = blockIdentifier;
+
+                IEnumerable<FancyByteArray> transactionsForBlock;
+                if (!this.TryGetTransactionsForBlock(blockIdentifier, out transactionsForBlock))
+                {
+                    transactionsForBlock = Enumerable.Empty<FancyByteArray>();
+                }
+
+                FancyByteArray[] currentTransactions = transactionsForBlock.GetArray();
 
                 if (currentTransactions.Length <= (int)index)
                 {
@@ -214,7 +292,6 @@ namespace Evercoin.Storage
                 currentTransactions[index] = transactionIdentifier;
 
                 byte[] serializedTransactionId = transactionIdentifier;
-                byte[] serializedBlockId = blockIdentifier;
 
                 byte[] transactionToBlockKey = new byte[serializedTransactionId.Length + 1];
                 byte[] blockToTransactionKey = new byte[serializedBlockId.Length + 1];
@@ -231,20 +308,37 @@ namespace Evercoin.Storage
                 byte[] serializedTransactionData = ByteTwiddling.ConcatenateData(serializedTransactions.Select(x => ByteTwiddling.ConcatenateData(BitConverter.GetBytes((ulong)x.Length), x)));
 
                 byte[] blockToTransactionValue = ByteTwiddling.ConcatenateData(serializedTransactionCount, serializedTransactionData);
-                    this.db.Put(transactionToBlockKey, blockIdentifier);
-                    this.db.Put(blockToTransactionKey, blockToTransactionValue);
+                this.db.Put(transactionToBlockKey, blockIdentifier);
+                this.db.Put(blockToTransactionKey, blockToTransactionValue);
             }
+
+            this.txIdWaiter.SetEventFor(transactionIdentifier);
         }
 
-        private void IncrementBlockCount(ulong? newBlockCount = null)
+        protected override void DisposeManagedResources()
+        {
+            this.db.Dispose();
+            this.blockHeightWaiter.Dispose();
+            this.blockIdWaiter.Dispose();
+            this.txIdWaiter.Dispose();
+            base.DisposeManagedResources();
+        }
+
+        private void SetBlockCount(ulong newBlockCount, bool max)
         {
             lock (this.metadataLock)
             {
                 byte[] metadataKey = { Metadata };
                 byte[] metadata = this.db.Get(metadataKey) ?? new byte[16];
-                ulong blockCount = newBlockCount ?? BitConverter.ToUInt64(metadata, 0) + 1;
-                Buffer.BlockCopy(BitConverter.GetBytes(blockCount), 0, metadata, 0, 8);
+
+                if (max && BitConverter.ToUInt64(metadata, 0) > newBlockCount)
+                {
+                    return;
+                }
+
+                Buffer.BlockCopy(BitConverter.GetBytes(newBlockCount), 0, metadata, 0, 8);
                 this.db.Put(metadataKey, metadata);
+                this.blockCount = newBlockCount;
             }
         }
     }

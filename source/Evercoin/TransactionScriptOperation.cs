@@ -75,11 +75,9 @@ namespace Evercoin
         /// </returns>
         public override int GetHashCode()
         {
-            HashCodeBuilder builder = new HashCodeBuilder()
-                .HashWith(this.opcode)
-                .HashWith(this.data);
-
-            return builder;
+            return HashCodeBuilder.BeginHashCode()
+                .MixHashCodeWith(this.opcode)
+                .MixHashCodeWith(this.data);
         }
     }
 }

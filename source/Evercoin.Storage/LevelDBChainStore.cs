@@ -45,26 +45,24 @@ namespace Evercoin.Storage
 
         protected override IBlock FindBlockCore(FancyByteArray blockIdentifier)
         {
-            if (!this.ContainsBlockCore(blockIdentifier))
+            IBlock block;
+            while (!this.TryGetBlock(blockIdentifier, out block))
             {
                 this.blockWaiter.WaitFor(blockIdentifier);
             }
 
-            FancyByteArray serializedBlock = this.blockDB.Get(blockIdentifier);
-
-            return this.ChainSerializer.GetBlockForBytes(serializedBlock.Value);
+            return block;
         }
 
         protected override ITransaction FindTransactionCore(FancyByteArray transactionIdentifier)
         {
-            if (!this.ContainsTransactionCore(transactionIdentifier))
+            ITransaction transaction;
+            while (!this.TryGetTransaction(transactionIdentifier, out transaction))
             {
                 this.txWaiter.WaitFor(transactionIdentifier);
             }
 
-            FancyByteArray serializedTransaction = this.txDB.Get(transactionIdentifier);
-
-            return this.ChainSerializer.GetTransactionForBytes(serializedTransaction.Value);
+            return transaction;
         }
 
         protected override void PutBlockCore(FancyByteArray blockIdentifier, IBlock block)
@@ -94,6 +92,32 @@ namespace Evercoin.Storage
         protected override bool ContainsTransactionCore(FancyByteArray transactionIdentifier)
         {
             return this.txDB.Get(transactionIdentifier) != null;
+        }
+
+        protected override bool TryGetBlockCore(FancyByteArray blockIdentifier, out IBlock block)
+        {
+            byte[] serializedBlock = this.blockDB.Get(blockIdentifier);
+            if (serializedBlock == null)
+            {
+                block = null;
+                return false;
+            }
+
+            block = this.ChainSerializer.GetBlockForBytes(serializedBlock);
+            return true;
+        }
+
+        protected override bool TryGetTransactionCore(FancyByteArray transactionIdentifier, out ITransaction transaction)
+        {
+            byte[] serializedTransaction = this.txDB.Get(transactionIdentifier);
+            if (serializedTransaction == null)
+            {
+                transaction = null;
+                return false;
+            }
+
+            transaction = this.ChainSerializer.GetTransactionForBytes(serializedTransaction);
+            return true;
         }
 
         protected override void DisposeManagedResources()

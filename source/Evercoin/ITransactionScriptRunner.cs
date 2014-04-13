@@ -40,7 +40,7 @@ namespace Evercoin
         /// <returns>
         /// The results of executing the given script.
         /// </returns>
-        ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<StackItem> mainStack);
+        ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<FancyByteArray> mainStack);
 
         /// <summary>
         /// Runs a script and returns the results of execution.
@@ -60,6 +60,6 @@ namespace Evercoin
         /// <returns>
         /// The results of executing the given script.
         /// </returns>
-        ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<StackItem> mainStack, Stack<StackItem> alternateStack);
+        ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<FancyByteArray> mainStack, Stack<FancyByteArray> alternateStack);
     }
 }

@@ -45,7 +45,7 @@ namespace Evercoin.TransactionScript
 
             ScriptEvaluationResult result = sut.EvaluateScript(script, Mock.Of<ISignatureChecker>());
 
-            Stack<StackItem> mainStack = result.MainStack;
+            Stack<FancyByteArray> mainStack = result.MainStack;
             Assert.Equal(1, mainStack.Count);
             Assert.Equal<byte>(dataArray, (byte[])mainStack.Pop());
         }

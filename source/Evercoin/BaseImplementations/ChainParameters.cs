@@ -329,22 +329,20 @@ namespace Evercoin.BaseImplementations
         /// </returns>
         public override int GetHashCode()
         {
-            HashCodeBuilder builder = new HashCodeBuilder()
-                .HashWith(this.InitialSubsidyLevel)
-                .HashWith(this.DesiredTimeBetweenBlocks)
-                .HashWith(this.BlocksAtEachSubsidyLevel)
-                .HashWith(this.MaximumDifficultyTarget)
-                .HashWith(this.BlocksPerDifficultyRetarget)
-                .HashWith(this.BlockHashAlgorithmIdentifier)
-                .HashWith(this.SubsidyLevelMultiplier)
-                .HashWith(this.ScriptHashAlgorithmIdentifier1)
-                .HashWith(this.ScriptHashAlgorithmIdentifier2)
-                .HashWith(this.ScriptHashAlgorithmIdentifier3)
-                .HashWith(this.ScriptHashAlgorithmIdentifier4)
-                .HashWith(this.ScriptHashAlgorithmIdentifier5)
-                .HashWithEnumerable(this.securityMechanisms.OrderBy(x => x));
-
-            return builder;
+            return HashCodeBuilder.BeginHashCode()
+                .MixHashCodeWith(this.InitialSubsidyLevel)
+                .MixHashCodeWith(this.DesiredTimeBetweenBlocks)
+                .MixHashCodeWith(this.BlocksAtEachSubsidyLevel)
+                .MixHashCodeWith(this.MaximumDifficultyTarget)
+                .MixHashCodeWith(this.BlocksPerDifficultyRetarget)
+                .MixHashCodeWith(this.BlockHashAlgorithmIdentifier)
+                .MixHashCodeWith(this.SubsidyLevelMultiplier)
+                .MixHashCodeWith(this.ScriptHashAlgorithmIdentifier1)
+                .MixHashCodeWith(this.ScriptHashAlgorithmIdentifier2)
+                .MixHashCodeWith(this.ScriptHashAlgorithmIdentifier3)
+                .MixHashCodeWith(this.ScriptHashAlgorithmIdentifier4)
+                .MixHashCodeWith(this.ScriptHashAlgorithmIdentifier5)
+                .MixHashCodeWithEnumerable(this.securityMechanisms.OrderBy(x => x));
         }
     }
 }

@@ -31,7 +31,7 @@ namespace Evercoin.TransactionScript
         public void EvaluateScriptShouldThrowOnNullScript()
         {
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(null, Mock.Of<ISignatureChecker>(), new Stack<StackItem>(), new Stack<StackItem>()));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(null, Mock.Of<ISignatureChecker>(), new Stack<FancyByteArray>(), new Stack<FancyByteArray>()));
             Assert.Equal("scriptOperations", thrownException.ParamName);
         }
 
@@ -39,7 +39,7 @@ namespace Evercoin.TransactionScript
         public void EvaluateScriptShouldThrowOnNullSignatureChecker()
         {
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<TransactionScriptOperation>(), null, new Stack<StackItem>(), new Stack<StackItem>()));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<TransactionScriptOperation>(), null, new Stack<FancyByteArray>(), new Stack<FancyByteArray>()));
             Assert.Equal("signatureChecker", thrownException.ParamName);
         }
 
@@ -47,7 +47,7 @@ namespace Evercoin.TransactionScript
         public void EvaluateScriptShouldThrowOnNullMainStack()
         {
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<TransactionScriptOperation>(), Mock.Of<ISignatureChecker>(), null, new Stack<StackItem>()));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<TransactionScriptOperation>(), Mock.Of<ISignatureChecker>(), null, new Stack<FancyByteArray>()));
             Assert.Equal("mainStack", thrownException.ParamName);
         }
 
@@ -55,7 +55,7 @@ namespace Evercoin.TransactionScript
         public void EvaluateScriptShouldThrowOnNullAlternateStack()
         {
             TransactionScriptRunner sut = new TransactionScriptRunnerBuilder();
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<TransactionScriptOperation>(), Mock.Of<ISignatureChecker>(), new Stack<StackItem>(), null));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => sut.EvaluateScript(Enumerable.Empty<TransactionScriptOperation>(), Mock.Of<ISignatureChecker>(), new Stack<FancyByteArray>(), null));
             Assert.Equal("alternateStack", thrownException.ParamName);
         }
 
@@ -82,7 +82,7 @@ namespace Evercoin.TransactionScript
         {
             // Execute the reserved opcode in an "if false" context,
             // and leave "true" on the stack after.
-            Stack<StackItem> stack = new Stack<StackItem>();
+            Stack<FancyByteArray> stack = new Stack<FancyByteArray>();
             stack.Push(true);
             stack.Push(false);
 
@@ -106,7 +106,7 @@ namespace Evercoin.TransactionScript
         public void ReservedOpcodesShouldCauseScriptFailureIfExecuted(ScriptOpcode reservedOpcode)
         {
             // Leave "true" on the stack so we should pass.
-            Stack<StackItem> stack = new Stack<StackItem>();
+            Stack<FancyByteArray> stack = new Stack<FancyByteArray>();
             stack.Push(true);
 
             TransactionScriptOperation[] script =
@@ -128,7 +128,7 @@ namespace Evercoin.TransactionScript
         {
             // Execute the reserved opcode in an "if false" context,
             // and leave "true" on the stack after.
-            Stack<StackItem> stack = new Stack<StackItem>();
+            Stack<FancyByteArray> stack = new Stack<FancyByteArray>();
             stack.Push(true);
             stack.Push(false);
 
@@ -198,7 +198,7 @@ namespace Evercoin.TransactionScript
         [InlineData(ScriptOpcode.OP_CHECKMULTISIGVERIFY, 1)]
         public void StackManipulationOpcodesShouldCauseScriptFailureWithoutEnoughItemsOnStack(ScriptOpcode opcode, int requiredStackDepth)
         {
-            Stack<StackItem> stack = new Stack<StackItem>();
+            Stack<FancyByteArray> stack = new Stack<FancyByteArray>();
             for (int i = 0; i < requiredStackDepth - 1; i++)
             {
                 stack.Push(true);

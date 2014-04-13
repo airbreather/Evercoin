@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using System.Numerics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -10,15 +9,13 @@ namespace Evercoin.BaseImplementations
         public bool TryGetBlock(FancyByteArray blockIdentifier, out IBlock block)
         {
             this.ThrowIfDisposed();
-            block = this.FindBlockCore(blockIdentifier);
-            return block != null;
+            return this.TryGetBlockCore(blockIdentifier, out block);
         }
 
         public bool TryGetTransaction(FancyByteArray transactionIdentifier, out ITransaction transaction)
         {
             this.ThrowIfDisposed();
-            transaction = this.FindTransactionCore(transactionIdentifier);
-            return transaction != null;
+            return this.TryGetTransactionCore(transactionIdentifier, out transaction);
         }
 
         public void PutBlock(FancyByteArray blockIdentifier, IBlock block)
@@ -142,6 +139,18 @@ namespace Evercoin.BaseImplementations
         protected abstract void PutBlockCore(FancyByteArray blockIdentifier, IBlock block);
 
         protected abstract void PutTransactionCore(FancyByteArray transactionIdentifier, ITransaction transaction);
+
+        protected virtual bool TryGetTransactionCore(FancyByteArray transactionIdentifier, out ITransaction transaction)
+        {
+            transaction = this.FindTransactionCore(transactionIdentifier);
+            return transaction != null;
+        }
+
+        protected virtual bool TryGetBlockCore(FancyByteArray blockIdentifier, out IBlock block)
+        {
+            block = this.FindBlockCore(blockIdentifier);
+            return block != null;
+        }
 
         protected virtual bool ContainsBlockCore(FancyByteArray blockIdentifier)
         {

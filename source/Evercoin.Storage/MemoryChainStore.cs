@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.ComponentModel.Composition;
-using System.Numerics;
 
 using Evercoin.BaseImplementations;
 using Evercoin.Util;

@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.ComponentModel.Composition;
 using System.Linq;
-using System.Numerics;
 
 using Evercoin.BaseImplementations;
 using Evercoin.ProtocolObjects;

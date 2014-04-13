@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Numerics;
 
 using Evercoin.BaseImplementations;
 using Evercoin.Util;
@@ -87,10 +86,8 @@ namespace Evercoin.ProtocolObjects
 
         public override int GetHashCode()
         {
-            HashCodeBuilder builder = new HashCodeBuilder()
-                .HashWithEnumerable(this.HeaderData);
-
-            return builder;
+            return HashCodeBuilder.BeginHashCode()
+                .MixHashCodeWithEnumerable(this.HeaderData);
         }
     }
 }

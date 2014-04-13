@@ -119,7 +119,6 @@
     <Compile Include="ProtocolObjects\ProtocolTxOut.cs" />
     <Compile Include="ProtocolObjects\ProtocolVersionPacket.cs" />
     <Compile Include="ScriptEvaluationResult.cs" />
-    <Compile Include="StackItem.cs" />
     <Compile Include="TransactionScriptOperation.cs" />
     <Compile Include="Util\ByteTwiddling.cs" />
     <Compile Include="ISignatureChecker.cs" />

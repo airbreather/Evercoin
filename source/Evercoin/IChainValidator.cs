@@ -1,6 +1,4 @@
-﻿using System.Threading.Tasks;
-
-namespace Evercoin
+﻿namespace Evercoin
 {
     public interface IChainValidator
     {

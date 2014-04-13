@@ -1,5 +1,4 @@
-﻿using System.Linq;
-using System.Numerics;
+﻿using System.Numerics;
 
 using Evercoin.Util;
 
@@ -83,15 +82,13 @@ namespace Evercoin.BaseImplementations
         /// </returns>
         public override int GetHashCode()
         {
-            HashCodeBuilder builder = new HashCodeBuilder()
-                .HashWith(this.Timestamp)
-                .HashWith(this.Nonce)
-                .HashWith(this.PreviousBlockIdentifier)
-                .HashWith(this.Version)
-                .HashWith(this.DifficultyTarget)
-                .HashWith(this.TransactionIdentifiers.Data);
-
-            return builder;
+            return HashCodeBuilder.BeginHashCode()
+                .MixHashCodeWith(this.Timestamp)
+                .MixHashCodeWith(this.Nonce)
+                .MixHashCodeWith(this.PreviousBlockIdentifier)
+                .MixHashCodeWith(this.Version)
+                .MixHashCodeWith(this.DifficultyTarget)
+                .MixHashCodeWith(this.TransactionIdentifiers.Data);
         }
     }
 }

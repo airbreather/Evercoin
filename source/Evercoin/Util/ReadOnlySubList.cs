@@ -43,10 +43,7 @@ namespace Evercoin.Util
 
         public IEnumerator<T> GetEnumerator()
         {
-            for (int i = 0; i < count; i++)
-            {
-                yield return this.source[offset + i];
-            }
+            return new Enumerator(this);
         }
 
         IEnumerator IEnumerable.GetEnumerator()
@@ -72,6 +69,30 @@ namespace Evercoin.Util
 
                 return this.source[index + offset];
             }
+        }
+
+        private struct Enumerator : IEnumerator<T>
+        {
+            private readonly ReadOnlySubList<T> parent;
+
+            private int currentIndex;
+
+            public Enumerator(ReadOnlySubList<T> parent)
+                : this()
+            {
+                this.parent = parent;
+                this.currentIndex = -1;
+            }
+
+            public T Current { get { return this.parent[this.currentIndex]; } }
+
+            object IEnumerator.Current { get { return this.Current; } }
+
+            public bool MoveNext() { return ++this.currentIndex < this.parent.Count; }
+
+            public void Reset() { this.currentIndex = -1; }
+
+            void IDisposable.Dispose() { }
         }
     }
 }

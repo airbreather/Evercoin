@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Numerics;
 
 using Evercoin.ProtocolObjects;
 using Evercoin.Util;
-
 #if X64
 using Secp256k1;
 #else

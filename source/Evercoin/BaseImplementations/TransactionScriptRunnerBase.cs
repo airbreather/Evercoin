@@ -6,14 +6,14 @@ namespace Evercoin.BaseImplementations
     {
         public ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker)
         {
-            return this.EvaluateScript(scriptOperations, signatureChecker, new Stack<StackItem>());
+            return this.EvaluateScript(scriptOperations, signatureChecker, new Stack<FancyByteArray>());
         }
 
-        public ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<StackItem> mainStack)
+        public ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<FancyByteArray> mainStack)
         {
-            return this.EvaluateScript(scriptOperations, signatureChecker, mainStack, new Stack<StackItem>());
+            return this.EvaluateScript(scriptOperations, signatureChecker, mainStack, new Stack<FancyByteArray>());
         }
 
-        public abstract ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<StackItem> mainStack, Stack<StackItem> alternateStack);
+        public abstract ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<FancyByteArray> mainStack, Stack<FancyByteArray> alternateStack);
     }
 }

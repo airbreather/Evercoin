@@ -1,8 +1,11 @@
+#if !X64
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+
+using Evercoin.Util;
 
 namespace Evercoin.Storage
 {
@@ -16,6 +19,12 @@ namespace Evercoin.Storage
 
         private readonly ConcurrentDictionary<ulong, FancyByteArray> heightToBlockMapping = new ConcurrentDictionary<ulong, FancyByteArray>();
 
+        private readonly Waiter<ulong> blockHeightWaiter = new Waiter<ulong>();
+
+        private readonly Waiter<FancyByteArray> blockIdWaiter = new Waiter<FancyByteArray>();
+
+        private readonly Waiter<FancyByteArray> txIdWaiter = new Waiter<FancyByteArray>();
+
         private long blockCount = Int64.MinValue + 1;
 
         private long transactionCount = Int64.MinValue + 1;
@@ -24,28 +33,79 @@ namespace Evercoin.Storage
 
         public ulong TransactionCount { get { return (ulong)this.transactionCount + Int64.MaxValue; } }
 
-        public FancyByteArray? GetIdentifierOfBlockAtHeight(ulong height)
+        public FancyByteArray GetIdentifierOfBlockAtHeight(ulong height)
         {
             FancyByteArray result;
-            return this.heightToBlockMapping.TryGetValue(height, out result) ?
-                result :
-                default(FancyByteArray?);
+            while (!this.TryGetIdentifierOfBlockAtHeight(height, out result))
+            {
+                this.blockHeightWaiter.WaitFor(height);
+            }
+
+            return result;
         }
 
-        public FancyByteArray? GetIdentifierOfBlockWithTransaction(FancyByteArray transactionIdentifier)
+        public FancyByteArray GetIdentifierOfBlockWithTransaction(FancyByteArray transactionIdentifier)
         {
             FancyByteArray result;
-            return this.transactionToBlockMapping.TryGetValue(transactionIdentifier, out result) ?
-                result :
-                default(FancyByteArray?);
+            while (!this.TryGetIdentifierOfBlockWithTransaction(transactionIdentifier, out result))
+            {
+                this.txIdWaiter.WaitFor(transactionIdentifier);
+            }
+
+            return result;
         }
 
-        public ulong? GetHeightOfBlock(FancyByteArray blockIdentifier)
+        public ulong GetHeightOfBlock(FancyByteArray blockIdentifier)
         {
             ulong result;
-            return this.blockToHeightMapping.TryGetValue(blockIdentifier, out result) ?
-                result :
-                default(ulong?);
+            while (!this.TryGetHeightOfBlock(blockIdentifier, out result))
+            {
+                this.blockIdWaiter.WaitFor(blockIdentifier);
+            }
+
+            return result;
+        }
+
+        public IEnumerable<FancyByteArray> GetTransactionsForBlock(FancyByteArray blockIdentifier)
+        {
+            IEnumerable<FancyByteArray> result;
+            while (!this.TryGetTransactionsForBlock(blockIdentifier, out result))
+            {
+                this.blockIdWaiter.WaitFor(blockIdentifier);
+            }
+
+            return result;
+        }
+
+        public bool TryGetIdentifierOfBlockAtHeight(ulong height, out FancyByteArray blockIdentifier)
+        {
+            return this.heightToBlockMapping.TryGetValue(height, out blockIdentifier);
+        }
+
+        public bool TryGetIdentifierOfBlockWithTransaction(FancyByteArray transactionIdentifier, out FancyByteArray blockIdentifier)
+        {
+            return this.transactionToBlockMapping.TryGetValue(transactionIdentifier, out blockIdentifier);
+        }
+
+        public bool TryGetHeightOfBlock(FancyByteArray blockIdentifier, out ulong height)
+        {
+            return this.blockToHeightMapping.TryGetValue(blockIdentifier, out height);
+        }
+
+        public bool TryGetTransactionsForBlock(FancyByteArray blockIdentifier, out IEnumerable<FancyByteArray> transactionIdentifiers)
+        {
+            List<FancyByteArray> blockTransactions;
+            if (!this.blockToTransactionMapping.TryGetValue(blockIdentifier, out blockTransactions))
+            {
+                transactionIdentifiers = default(IEnumerable<FancyByteArray>);
+                return false;
+            }
+
+            lock (blockTransactions)
+            {
+                transactionIdentifiers = blockTransactions.ToList();
+                return true;
+            }
         }
 
         public void AddBlockAtHeight(FancyByteArray blockIdentifier, ulong height)
@@ -54,11 +114,14 @@ namespace Evercoin.Storage
             this.heightToBlockMapping[height] = blockIdentifier;
             this.blockToTransactionMapping[blockIdentifier] = new List<FancyByteArray>();
             Interlocked.Increment(ref this.blockCount);
+            this.blockHeightWaiter.SetEventFor(height);
+            this.blockIdWaiter.SetEventFor(blockIdentifier);
         }
 
         public void AddTransactionToBlock(FancyByteArray transactionIdentifier, FancyByteArray blockIdentifier, ulong index)
         {
-            List<FancyByteArray> blockTransactions = this.blockToTransactionMapping.GetOrAdd(blockIdentifier, _ => new List<FancyByteArray>());
+            this.blockIdWaiter.WaitFor(blockIdentifier);
+            List<FancyByteArray> blockTransactions = this.blockToTransactionMapping[blockIdentifier];
 
             if (index > Int32.MaxValue)
             {
@@ -81,20 +144,7 @@ namespace Evercoin.Storage
             }
 
             Interlocked.Increment(ref this.transactionCount);
-        }
-
-        public IEnumerable<FancyByteArray> GetTransactionsForBlock(FancyByteArray blockIdentifier)
-        {
-            List<FancyByteArray> blockTransactions;
-            if (!this.blockToTransactionMapping.TryGetValue(blockIdentifier, out blockTransactions))
-            {
-                return Enumerable.Empty<FancyByteArray>();
-            }
-
-            lock (blockTransactions)
-            {
-                return blockTransactions.ToList();
-            }
+            this.txIdWaiter.SetEventFor(transactionIdentifier);
         }
 
         public void RemoveBlocksAboveHeight(ulong height)
@@ -125,3 +175,4 @@ namespace Evercoin.Storage
         }
     }
 }
+#endif

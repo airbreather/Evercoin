@@ -53,13 +53,11 @@ namespace Evercoin.BaseImplementations
         /// </returns>
         public override int GetHashCode()
         {
-            HashCodeBuilder builder = new HashCodeBuilder()
-                .HashWith(this.AvailableValue)
-                .HashWith(this.OriginatingTransactionIdentifier)
-                .HashWith(this.OriginatingTransactionOutputIndex)
-                .HashWith(this.ScriptPublicKey);
-
-            return builder;
+            return HashCodeBuilder.BeginHashCode()
+                .MixHashCodeWith(this.AvailableValue)
+                .MixHashCodeWith(this.OriginatingTransactionIdentifier)
+                .MixHashCodeWith(this.OriginatingTransactionOutputIndex)
+                .MixHashCodeWith(this.ScriptPublicKey);
         }
 
         /// <summary>

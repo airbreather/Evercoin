@@ -24,7 +24,7 @@ namespace Evercoin.TransactionScript
         [InlineData(ScriptOpcode.OP_NOP10)]
         public void NoopShouldNotAffectStacks(ScriptOpcode opcode)
         {
-            Stack<StackItem> stack = new Stack<StackItem>();
+            Stack<FancyByteArray> stack = new Stack<FancyByteArray>();
             byte[] data1 = Guid.NewGuid().ToByteArray();
             byte[] data2 = Guid.NewGuid().ToByteArray();
             byte[] data3 = Guid.NewGuid().ToByteArray();

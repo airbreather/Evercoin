@@ -206,7 +206,7 @@ namespace Evercoin.Network
             messageStream.Subscribe(this.allMessages.OnNext);
         }
 
-        private async Task SendMessageCoreAsync(TcpClient client, INetworkMessage messageToSend, CancellationToken token)
+        private Task SendMessageCoreAsync(TcpClient client, INetworkMessage messageToSend, CancellationToken token)
         {
             if (!client.Connected)
             {
@@ -216,7 +216,7 @@ namespace Evercoin.Network
             ////Console.WriteLine("Send: {0} . {1}", Encoding.ASCII.GetString(messageToSend.CommandBytes), ByteTwiddling.ByteArrayToHexString(messageToSend.Payload));
 
             byte[] messageBytes = messageToSend.FullData;
-            await client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length, token).ConfigureAwait(false);
+            return client.GetStream().WriteAsync(messageBytes, 0, messageBytes.Length, token);
         }
     }
 }

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Numerics;
 
 using Evercoin.Util;
 
@@ -57,10 +56,9 @@ namespace Evercoin.ProtocolObjects
         /// </returns>
         public override int GetHashCode()
         {
-            HashCodeBuilder builder = new HashCodeBuilder()
-                .HashWith(this.Type)
-                .HashWith(this.Hash);
-            return builder;
+            return HashCodeBuilder.BeginHashCode()
+                .MixHashCodeWith(this.Type)
+                .MixHashCodeWith(this.Hash);
         }
 
         public enum InventoryType : uint

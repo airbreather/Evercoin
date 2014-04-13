@@ -1,4 +1,5 @@
 ﻿using System;
+using System.ComponentModel.Composition;
 using System.Linq;
 using System.Net;
 using System.Numerics;
@@ -22,15 +23,24 @@ namespace Evercoin.App
     {
         private readonly string chain;
 
-        private readonly IChainStore underlyingChainStorage;
-
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
-        public EvercoinModule(string chain, IChainStore underlyingChainStorage, IHashAlgorithmStore hashAlgorithmStore)
+        private IReadableChainStore readableChainStore;
+
+        public EvercoinModule(string chain, IHashAlgorithmStore hashAlgorithmStore)
         {
             this.chain = chain;
-            this.underlyingChainStorage = underlyingChainStorage;
             this.hashAlgorithmStore = hashAlgorithmStore;
+        }
+
+        [Import(typeof(IChainStore))]
+        public IChainStore ChainStore { get; set; }
+
+        [Import(typeof(IReadableChainStore), AllowDefault = true)]
+        public IReadableChainStore ReadableChainStore
+        {
+            get { return this.readableChainStore ?? this.ChainStore; }
+            set { this.readableChainStore = value; }
         }
 
         public int Port
@@ -92,7 +102,7 @@ namespace Evercoin.App
             genesisBlock.Setup(x => x.Timestamp).Returns(Instant.FromSecondsSinceUnixEpoch(1231006505));
             genesisBlock.Setup(x => x.TransactionIdentifiers).Returns(transactionIdentifiers.Object);
 
-            this.underlyingChainStorage.PutBlock(genesisBlockIdentifier, genesisBlock.Object);
+            this.ChainStore.PutBlock(genesisBlockIdentifier, genesisBlock.Object);
 #if X64
             IBlockChain blockChain = new LevelDBBlockChain();
 #else
@@ -102,9 +112,9 @@ namespace Evercoin.App
 
             INetworkParameters networkParameters = new NetworkParameters(70002, 209, HashAlgorithmIdentifiers.DoubleSHA256, 4, 12, 16, FancyByteArray.CreateFromBytes(new byte[] { 0xF9, 0xBE, 0xB4, 0xD9 }), Enumerable.Empty<DnsEndPoint>());
 
-            ////this.Bind<IChainStore>().ToMethod(ctx => new CachingChainStorage(this.underlyingChainStorage, ctx.Kernel.Get<IChainSerializer>())).InSingletonScope();
-            this.Bind<IChainStore>().ToConstant(this.underlyingChainStorage);
-            this.Bind<IReadableChainStore>().ToMethod(ctx => ctx.Kernel.Get<IChainStore>());
+            ////this.Bind<IChainStore>().ToMethod(ctx => new CachingChainStorage(this.ChainStore, ctx.Kernel.Get<IChainSerializer>())).InSingletonScope();
+            this.Bind<IChainStore>().ToConstant(this.ChainStore);
+            this.Bind<IReadableChainStore>().ToConstant(this.ReadableChainStore);
             this.Bind<IRawNetwork>().To<RawNetwork>().InSingletonScope();
             this.Bind<ICurrencyNetwork>().To<CurrencyNetwork>().InSingletonScope();
             this.Bind<IHashAlgorithmStore>().ToConstant(this.hashAlgorithmStore);
@@ -138,7 +148,7 @@ namespace Evercoin.App
             genesisBlock.Setup(x => x.Timestamp).Returns(Instant.FromSecondsSinceUnixEpoch(1386325540));
             genesisBlock.Setup(x => x.TransactionIdentifiers).Returns(transactionIdentifiers.Object);
 
-            this.underlyingChainStorage.PutBlock(genesisBlockIdentifier, genesisBlock.Object);
+            this.ChainStore.PutBlock(genesisBlockIdentifier, genesisBlock.Object);
 #if X64
             IBlockChain blockChain = new LevelDBBlockChain();
 #else
@@ -148,9 +158,9 @@ namespace Evercoin.App
 
             INetworkParameters networkParameters = new NetworkParameters(70002, 209, HashAlgorithmIdentifiers.DoubleSHA256, 4, 12, 16, FancyByteArray.CreateFromBytes(new byte[] { 0xc0, 0xc0, 0xc0, 0xc0 }), Enumerable.Empty<DnsEndPoint>());
 
-            ////this.Bind<IChainStore>().ToMethod(ctx => new CachingChainStorage(this.underlyingChainStorage, ctx.Kernel.Get<IChainSerializer>())).InSingletonScope();
-            this.Bind<IChainStore>().ToConstant(this.underlyingChainStorage);
-            this.Bind<IReadableChainStore>().ToMethod(ctx => ctx.Kernel.Get<IChainStore>());
+            ////this.Bind<IChainStore>().ToMethod(ctx => new CachingChainStorage(this.ChainStore, ctx.Kernel.Get<IChainSerializer>())).InSingletonScope();
+            this.Bind<IChainStore>().ToConstant(this.ChainStore);
+            this.Bind<IReadableChainStore>().ToConstant(this.ReadableChainStore);
             this.Bind<IRawNetwork>().To<RawNetwork>().InSingletonScope();
             this.Bind<ICurrencyNetwork>().To<CurrencyNetwork>().InSingletonScope();
             this.Bind<IHashAlgorithmStore>().ToConstant(this.hashAlgorithmStore);
@@ -183,7 +193,7 @@ namespace Evercoin.App
             genesisBlock.Setup(x => x.Timestamp).Returns(Instant.FromSecondsSinceUnixEpoch(1296688602));
             genesisBlock.Setup(x => x.TransactionIdentifiers).Returns(transactionIdentifiers.Object);
 
-            this.underlyingChainStorage.PutBlock(genesisBlockIdentifier, genesisBlock.Object);
+            this.ChainStore.PutBlock(genesisBlockIdentifier, genesisBlock.Object);
 #if X64
             IBlockChain blockChain = new LevelDBBlockChain();
 #else
@@ -193,9 +203,9 @@ namespace Evercoin.App
 
             INetworkParameters networkParameters = new NetworkParameters(70002, 209, HashAlgorithmIdentifiers.DoubleSHA256, 4, 12, 16, FancyByteArray.CreateFromBytes(new byte[] { 0x0B, 0x11, 0x09, 0x07 }), Enumerable.Empty<DnsEndPoint>());
 
-            ////this.Bind<IChainStore>().ToMethod(ctx => new CachingChainStorage(this.underlyingChainStorage, ctx.Kernel.Get<IChainSerializer>())).InSingletonScope();
-            this.Bind<IChainStore>().ToConstant(this.underlyingChainStorage);
-            this.Bind<IReadableChainStore>().ToMethod(ctx => ctx.Kernel.Get<IChainStore>());
+            ////this.Bind<IChainStore>().ToMethod(ctx => new CachingChainStorage(this.ChainStore, ctx.Kernel.Get<IChainSerializer>())).InSingletonScope();
+            this.Bind<IChainStore>().ToConstant(this.ChainStore);
+            this.Bind<IReadableChainStore>().ToConstant(this.ReadableChainStore);
             this.Bind<IRawNetwork>().To<RawNetwork>().InSingletonScope();
             this.Bind<ICurrencyNetwork>().To<CurrencyNetwork>().InSingletonScope();
             this.Bind<IHashAlgorithmStore>().ToConstant(this.hashAlgorithmStore);
