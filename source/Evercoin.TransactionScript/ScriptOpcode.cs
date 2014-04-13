@@ -32,12 +32,6 @@ namespace Evercoin.TransactionScript
         OP_FALSE = 0x00,
 
         /// <summary>
-        /// Marks the end (inclusive) of a range of opcodes that mean
-        /// "push the next N bytes onto the stack as one vector".
-        /// </summary>
-        END_OP_DATA = 0x4b,
-
-        /// <summary>
         /// Interpret the next byte as an 8-bit integer value n.
         /// Then, read the next n bytes, and push that data
         /// onto the stack as one vector.
@@ -57,6 +51,12 @@ namespace Evercoin.TransactionScript
         /// onto the stack as one vector.
         /// </summary>
         OP_PUSHDATA4 = 0x4e,
+
+        /// <summary>
+        /// Marks the end (inclusive) of a range of opcodes that mean
+        /// "push the included data onto the stack as one vector".
+        /// </summary>
+        END_OP_DATA = 0x4e,
 
         /// <summary>
         /// Push the value -1 onto the stack.
@@ -796,6 +796,5 @@ namespace Evercoin.TransactionScript
         /// </summary>
         [Obsolete("Use OP_HASHALGORITHM5 instead.")]
         OP_HASH256 = OP_HASHALGORITHM5,
-
     }
 }

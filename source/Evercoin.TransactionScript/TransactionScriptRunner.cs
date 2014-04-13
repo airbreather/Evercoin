@@ -106,14 +106,22 @@ namespace Evercoin.TransactionScript
 
         private readonly IHashAlgorithmStore hashAlgorithmStore;
 
-        public TransactionScriptRunner(IHashAlgorithmStore hashAlgorithmStore)
+        private readonly IChainParameters chainParameters;
+
+        public TransactionScriptRunner(IHashAlgorithmStore hashAlgorithmStore, IChainParameters chainParameters)
         {
             if (hashAlgorithmStore == null)
             {
                 throw new ArgumentNullException("hashAlgorithmStore");
             }
 
+            if (chainParameters == null)
+            {
+                throw new ArgumentNullException("chainParameters");
+            }
+
             this.hashAlgorithmStore = hashAlgorithmStore;
+            this.chainParameters = chainParameters;
         }
 
         public override ScriptEvaluationResult EvaluateScript(IEnumerable<TransactionScriptOperation> scriptOperations, ISignatureChecker signatureChecker, Stack<FancyByteArray> mainStack, Stack<FancyByteArray> alternateStack)
@@ -193,12 +201,6 @@ namespace Evercoin.TransactionScript
             // defines a new local variable.
             switch (opcode)
             {
-                case ScriptOpcode.OP_PUSHDATA1:
-                case ScriptOpcode.OP_PUSHDATA2:
-                case ScriptOpcode.OP_PUSHDATA4:
-                    mainStack.Push(op.Data);
-                    return true;
-
                 #region NOOP
 
                 case ScriptOpcode.OP_NOP:
@@ -703,19 +705,19 @@ namespace Evercoin.TransactionScript
                     switch (opcode)
                     {
                         case ScriptOpcode.OP_HASHALGORITHM1:
-                            hashAlgorithmIdentifier = HashAlgorithmIdentifiers.RipeMd160;
+                            hashAlgorithmIdentifier = this.chainParameters.ScriptHashAlgorithmIdentifier1;
                             break;
                         case ScriptOpcode.OP_HASHALGORITHM2:
-                            hashAlgorithmIdentifier = HashAlgorithmIdentifiers.SHA1;
+                            hashAlgorithmIdentifier = this.chainParameters.ScriptHashAlgorithmIdentifier2;
                             break;
                         case ScriptOpcode.OP_HASHALGORITHM3:
-                            hashAlgorithmIdentifier = HashAlgorithmIdentifiers.SHA256;
+                            hashAlgorithmIdentifier = this.chainParameters.ScriptHashAlgorithmIdentifier3;
                             break;
                         case ScriptOpcode.OP_HASHALGORITHM4:
-                            hashAlgorithmIdentifier = HashAlgorithmIdentifiers.SHA256ThenRipeMd160;
+                            hashAlgorithmIdentifier = this.chainParameters.ScriptHashAlgorithmIdentifier4;
                             break;
                         case ScriptOpcode.OP_HASHALGORITHM5:
-                            hashAlgorithmIdentifier = HashAlgorithmIdentifiers.DoubleSHA256;
+                            hashAlgorithmIdentifier = this.chainParameters.ScriptHashAlgorithmIdentifier5;
                             break;
                     }
 

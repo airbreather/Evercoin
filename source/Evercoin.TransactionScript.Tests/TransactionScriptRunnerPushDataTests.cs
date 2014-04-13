@@ -22,9 +22,6 @@ namespace Evercoin.TransactionScript
 
         [Theory]
         [PropertyData("DataOpcodes")]
-        [InlineData(ScriptOpcode.OP_PUSHDATA1)]
-        [InlineData(ScriptOpcode.OP_PUSHDATA2)]
-        [InlineData(ScriptOpcode.OP_PUSHDATA4)]
         public void PushDataShouldPushData(int opcode)
         {
             int seed = Guid.NewGuid().GetHashCode();

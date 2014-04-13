@@ -23,8 +23,15 @@ namespace Evercoin.TransactionScript
         [Fact]
         public void ConstructorShouldThrowOnNullHashAlgorithmStore()
         {
-            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => new TransactionScriptRunner(null));
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => new TransactionScriptRunner(null, Mock.Of<IChainParameters>()));
             Assert.Equal("hashAlgorithmStore", thrownException.ParamName);
+        }
+
+        [Fact]
+        public void ConstructorShouldThrowOnNullChainParameters()
+        {
+            ArgumentNullException thrownException = Assert.Throws<ArgumentNullException>(() => new TransactionScriptRunner(Mock.Of<IHashAlgorithmStore>(), null));
+            Assert.Equal("chainParameters", thrownException.ParamName);
         }
 
         [Fact]
@@ -187,11 +194,11 @@ namespace Evercoin.TransactionScript
         [InlineData(ScriptOpcode.OP_MIN, 2)]
         [InlineData(ScriptOpcode.OP_MAX, 2)]
         [InlineData(ScriptOpcode.OP_WITHIN, 3)]
-        [InlineData(ScriptOpcode.OP_RIPEMD160, 1)]
-        [InlineData(ScriptOpcode.OP_SHA1, 1)]
-        [InlineData(ScriptOpcode.OP_SHA256, 1)]
-        [InlineData(ScriptOpcode.OP_HASH160, 1)]
-        [InlineData(ScriptOpcode.OP_HASH256, 1)]
+        [InlineData(ScriptOpcode.OP_HASHALGORITHM1, 1)]
+        [InlineData(ScriptOpcode.OP_HASHALGORITHM2, 1)]
+        [InlineData(ScriptOpcode.OP_HASHALGORITHM3, 1)]
+        [InlineData(ScriptOpcode.OP_HASHALGORITHM4, 1)]
+        [InlineData(ScriptOpcode.OP_HASHALGORITHM5, 1)]
         [InlineData(ScriptOpcode.OP_CHECKSIG, 2)]
         [InlineData(ScriptOpcode.OP_CHECKSIGVERIFY, 2)]
         [InlineData(ScriptOpcode.OP_CHECKMULTISIG, 1)]
