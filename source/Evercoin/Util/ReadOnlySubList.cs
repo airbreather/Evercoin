@@ -71,14 +71,13 @@ namespace Evercoin.Util
             }
         }
 
-        private struct Enumerator : IEnumerator<T>
+        private sealed class Enumerator : IEnumerator<T>
         {
             private readonly ReadOnlySubList<T> parent;
 
             private int currentIndex;
 
             public Enumerator(ReadOnlySubList<T> parent)
-                : this()
             {
                 this.parent = parent;
                 this.currentIndex = -1;
